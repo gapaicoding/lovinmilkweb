@@ -605,36 +605,36 @@ export function TransactionManager({
     mutationFn: async ({ transactionId }: RowActionVariables) => {
       ensureTransactionAccess(user?.id, hasManagementAccess);
 
-      if (isSales) {
-        const payload: TablesUpdate<"sales"> = {
-          deleted_at: new Date().toISOString(),
-          deleted_by: user!.id,
-          updated_by: user!.id,
-        };
+      const functionName = isSales
+        ? "soft_delete_sale"
+        : "soft_delete_expense";
 
-        const { error } = await supabase
-          .from("sales")
-          .update(payload)
-          .eq("id", transactionId)
-          .is("deleted_at", null);
-
-        if (error) throw error;
-        return;
-      }
-
-      const payload: TablesUpdate<"expenses"> = {
-        deleted_at: new Date().toISOString(),
-        deleted_by: user!.id,
-        updated_by: user!.id,
+      /*
+       * RPC dipakai agar Admin dapat melakukan soft delete tanpa
+       * mendapat hak SELECT terhadap baris yang sudah terhapus.
+       *
+       * Cast lokal ini menjaga build tetap aman sebelum types Supabase
+       * diregenerasi setelah migration dijalankan.
+       */
+      const response = (await supabase.rpc(
+        functionName as never,
+        {
+          p_id: transactionId,
+        } as never,
+      )) as unknown as {
+        data: boolean | null;
+        error: DatabaseError | null;
       };
 
-      const { error } = await supabase
-        .from("expenses")
-        .update(payload)
-        .eq("id", transactionId)
-        .is("deleted_at", null);
+      if (response.error) {
+        throw response.error;
+      }
 
-      if (error) throw error;
+      if (response.data !== true) {
+        throw new Error(
+          `Data ${labelLower} tidak ditemukan atau sudah dihapus.`,
+        );
+      }
     },
     onSuccess: async () => {
       await invalidateTransactionQueries();
