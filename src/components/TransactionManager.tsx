@@ -612,16 +612,13 @@ export function TransactionManager({
           updated_by: user!.id,
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("sales")
           .update(payload)
           .eq("id", transactionId)
-          .is("deleted_at", null)
-          .select("id")
-          .maybeSingle();
+          .is("deleted_at", null);
 
         if (error) throw error;
-        if (!data) throw new Error("Data penjualan tidak ditemukan.");
         return;
       }
 
@@ -631,16 +628,13 @@ export function TransactionManager({
         updated_by: user!.id,
       };
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("expenses")
         .update(payload)
         .eq("id", transactionId)
-        .is("deleted_at", null)
-        .select("id")
-        .maybeSingle();
+        .is("deleted_at", null);
 
       if (error) throw error;
-      if (!data) throw new Error("Data pengeluaran tidak ditemukan.");
     },
     onSuccess: async () => {
       await invalidateTransactionQueries();
