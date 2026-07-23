@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedItemPengeluaranRouteImport } from './routes/_authenticated/item-pengeluaran'
 import { Route as AuthenticatedKategoriPengeluaranRouteImport } from './routes/_authenticated/kategori-pengeluaran'
 import { Route as AuthenticatedKategoriPenjualanRouteImport } from './routes/_authenticated/kategori-penjualan'
 import { Route as AuthenticatedPengeluaranRouteImport } from './routes/_authenticated/pengeluaran'
@@ -40,6 +41,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedItemPengeluaranRoute =
+  AuthenticatedItemPengeluaranRouteImport.update({
+    id: '/item-pengeluaran',
+    path: '/item-pengeluaran',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKategoriPengeluaranRoute =
   AuthenticatedKategoriPengeluaranRouteImport.update({
     id: '/kategori-pengeluaran',
@@ -83,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -95,6 +103,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -109,6 +118,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/_authenticated/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/_authenticated/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/_authenticated/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
     | '/pengeluaran'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/dashboard'
+    | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
     | '/pengeluaran'
@@ -148,6 +160,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/dashboard'
+    | '/_authenticated/item-pengeluaran'
     | '/_authenticated/kategori-pengeluaran'
     | '/_authenticated/kategori-penjualan'
     | '/_authenticated/pengeluaran'
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/item-pengeluaran': {
+      id: '/_authenticated/item-pengeluaran'
+      path: '/item-pengeluaran'
+      fullPath: '/item-pengeluaran'
+      preLoaderRoute: typeof AuthenticatedItemPengeluaranRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/kategori-pengeluaran': {
@@ -247,6 +267,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedItemPengeluaranRoute: typeof AuthenticatedItemPengeluaranRoute
   AuthenticatedKategoriPengeluaranRoute: typeof AuthenticatedKategoriPengeluaranRoute
   AuthenticatedKategoriPenjualanRoute: typeof AuthenticatedKategoriPenjualanRoute
   AuthenticatedPengeluaranRoute: typeof AuthenticatedPengeluaranRoute
@@ -258,6 +279,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedItemPengeluaranRoute: AuthenticatedItemPengeluaranRoute,
   AuthenticatedKategoriPengeluaranRoute: AuthenticatedKategoriPengeluaranRoute,
   AuthenticatedKategoriPenjualanRoute: AuthenticatedKategoriPenjualanRoute,
   AuthenticatedPengeluaranRoute: AuthenticatedPengeluaranRoute,

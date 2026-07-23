@@ -80,17 +80,26 @@ import { Textarea } from "@/components/ui/textarea";
 
 const PAGE_SIZE = 10;
 const HARD_DELETE_CONFIRMATION = "HAPUS";
+const MAX_QUANTITY = 999_999_999.99;
+const MAX_UNIT_PRICE = 999_999_999_999.99;
 
 const transactionSchema = z.object({
   transaction_date: z.string().min(1, "Tanggal wajib diisi."),
-  category_id: z.string().uuid("Kategori wajib dipilih."),
-  amount: z
+  item_id: z.string().uuid("Produk atau item wajib dipilih."),
+  quantity: z
     .number({
-      message: "Nominal wajib diisi.",
+      message: "Jumlah wajib diisi.",
     })
-    .finite("Nominal tidak valid.")
-    .positive("Nominal harus lebih dari 0.")
-    .max(999_999_999_999, "Nominal terlalu besar."),
+    .finite("Jumlah tidak valid.")
+    .positive("Jumlah harus lebih dari 0.")
+    .max(MAX_QUANTITY, "Jumlah terlalu besar."),
+  unit_price: z
+    .number({
+      message: "Harga satuan wajib diisi.",
+    })
+    .finite("Harga satuan tidak valid.")
+    .positive("Harga satuan harus lebih dari 0.")
+    .max(MAX_UNIT_PRICE, "Harga satuan terlalu besar."),
   notes: z
     .string()
     .trim()
@@ -108,20 +117,40 @@ interface TransactionManagerProps {
 
 type SalesRow = Tables<"sales">;
 type ExpenseRow = Tables<"expenses">;
+type ProductRow = Tables<"products">;
+type ExpenseItemRow = Tables<"expense_items">;
 type SalesCategoryRow = Tables<"sales_categories">;
 type ExpenseCategoryRow = Tables<"expense_categories">;
 
-type CategoryRow = SalesCategoryRow | ExpenseCategoryRow;
+interface TransactionCategory {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
+interface TransactionItem {
+  id: string;
+  category_id: string;
+  name: string;
+  code: string | null;
+  unit: string;
+  default_price: number;
+  is_active: boolean;
+  deleted_at: string | null;
+}
 
 interface TransactionRow {
   id: string;
   transaction_date: string;
   category_id: string;
+  item_id: string;
+  quantity: number;
+  unit_price: number;
   amount: number;
   notes: string | null;
   created_at: string;
   updated_at: string;
-  created_by: string;
+  created_by: string | null;
   updated_by: string | null;
   deleted_at: string | null;
   deleted_by: string | null;
@@ -153,7 +182,9 @@ export function TransactionManager({
 }: TransactionManagerProps) {
   const isSales = kind === "sales";
   const label = isSales ? "Penjualan" : "Pengeluaran";
-  const labelLower = label.toLowerCase();
+  const labelLower = label.toLocaleLowerCase("id-ID");
+  const itemLabel = isSales ? "Produk" : "Item Pengeluaran";
+  const itemLabelLower = itemLabel.toLocaleLowerCase("id-ID");
 
   const {
     user,
@@ -191,12 +222,7 @@ export function TransactionManager({
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      transaction_date: toDateInput(new Date()),
-      category_id: "",
-      amount: 0,
-      notes: "",
-    },
+    defaultValues: createDefaultFormValues(),
   });
 
   const categoriesQuery = useQuery({
@@ -205,52 +231,66 @@ export function TransactionManager({
       "transaction-options",
     ],
     enabled: !authLoading && hasManagementAccess,
-    queryFn: async (): Promise<CategoryRow[]> => {
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<TransactionCategory[]> => {
       if (isSales) {
         const { data, error } = await supabase
           .from("sales_categories")
-          .select("*")
+          .select("id, name, is_active")
           .order("name", { ascending: true });
 
         if (error) throw error;
-        return data ?? [];
+
+        return (data ?? []).map(normalizeSalesCategory);
       }
 
       const { data, error } = await supabase
         .from("expense_categories")
-        .select("*")
+        .select("id, name, is_active")
         .order("name", { ascending: true });
 
       if (error) throw error;
-      return data ?? [];
+
+      return (data ?? []).map(normalizeExpenseCategory);
+    },
+  });
+
+  const itemsQuery = useQuery({
+    queryKey: [
+      isSales ? "products" : "expense_items",
+      "transaction-options",
+    ],
+    enabled: !authLoading && hasManagementAccess,
+    staleTime: 60_000,
+    queryFn: async (): Promise<TransactionItem[]> => {
+      if (isSales) {
+        const { data, error } = await supabase
+          .from("products")
+          .select(
+            "id, sales_category_id, name, sku, unit, selling_price, is_active, deleted_at",
+          )
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        return (data ?? []).map(normalizeProduct);
+      }
+
+      const { data, error } = await supabase
+        .from("expense_items")
+        .select(
+          "id, expense_category_id, name, sku, unit, default_price, is_active, deleted_at",
+        )
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+
+      return (data ?? []).map(normalizeExpenseItem);
     },
   });
 
   const categories = categoriesQuery.data ?? [];
-
-  const activeCategories = useMemo(
-    () => categories.filter((category) => category.is_active),
-    [categories],
-  );
-
-  const selectableCategories = useMemo(() => {
-    if (!editingTransaction) return activeCategories;
-
-    const currentCategory = categories.find(
-      (category) => category.id === editingTransaction.category_id,
-    );
-
-    if (currentCategory && !currentCategory.is_active) {
-      return [
-        currentCategory,
-        ...activeCategories.filter(
-          (category) => category.id !== currentCategory.id,
-        ),
-      ];
-    }
-
-    return activeCategories;
-  }, [activeCategories, categories, editingTransaction]);
+  const items = itemsQuery.data ?? [];
 
   const categoryMap = useMemo(
     () =>
@@ -259,6 +299,37 @@ export function TransactionManager({
       ),
     [categories],
   );
+
+  const itemMap = useMemo(
+    () => new Map(items.map((item) => [item.id, item])),
+    [items],
+  );
+
+  const activeItems = useMemo(
+    () =>
+      items.filter(
+        (item) => item.is_active && item.deleted_at === null,
+      ),
+    [items],
+  );
+
+  const selectableItems = useMemo(() => {
+    if (!editingTransaction) return activeItems;
+
+    const currentItem = itemMap.get(editingTransaction.item_id);
+
+    if (currentItem) {
+      return [
+        currentItem,
+        ...activeItems.filter((item) => item.id !== currentItem.id),
+      ];
+    }
+
+    return [
+      createFallbackItem(editingTransaction),
+      ...activeItems,
+    ];
+  }, [activeItems, editingTransaction, itemMap]);
 
   const matchingCategoryIds = useMemo(() => {
     if (!normalizedSearch) return [];
@@ -272,6 +343,26 @@ export function TransactionManager({
       .map((category) => category.id);
   }, [categories, normalizedSearch]);
 
+  const matchingItemIds = useMemo(() => {
+    if (!normalizedSearch) return [];
+
+    const term = normalizedSearch.toLocaleLowerCase("id-ID");
+
+    return items
+      .filter((item) => {
+        const searchable = [
+          item.name,
+          item.code ?? "",
+          item.unit,
+        ]
+          .join(" ")
+          .toLocaleLowerCase("id-ID");
+
+        return searchable.includes(term);
+      })
+      .map((item) => item.id);
+  }, [items, normalizedSearch]);
+
   const listQuery = useQuery({
     queryKey: [
       isSales ? "sales" : "expenses",
@@ -284,27 +375,19 @@ export function TransactionManager({
         dateTo,
         page,
         matchingCategoryIds,
+        matchingItemIds,
       },
     ],
     enabled:
       !authLoading &&
       hasManagementAccess &&
       !invalidDateRange &&
-      !categoriesQuery.isLoading,
+      !categoriesQuery.isLoading &&
+      !itemsQuery.isLoading &&
+      !categoriesQuery.isError &&
+      !itemsQuery.isError,
     queryFn: async (): Promise<TransactionListResult> => {
-      if (isSales) {
-        return fetchSales({
-          tab,
-          categoryFilter,
-          dateFrom,
-          dateTo,
-          page,
-          normalizedSearch,
-          matchingCategoryIds,
-        });
-      }
-
-      return fetchExpenses({
+      const params: FetchTransactionParams = {
         tab,
         categoryFilter,
         dateFrom,
@@ -312,29 +395,58 @@ export function TransactionManager({
         page,
         normalizedSearch,
         matchingCategoryIds,
-      });
+        matchingItemIds,
+      };
+
+      return isSales
+        ? fetchSales(params)
+        : fetchExpenses(params);
     },
   });
 
+  const selectedItemId = form.watch("item_id");
+  const selectedQuantity = form.watch("quantity");
+  const selectedUnitPrice = form.watch("unit_price");
+
+  const selectedItem = useMemo(
+    () =>
+      selectableItems.find((item) => item.id === selectedItemId) ??
+      null,
+    [selectableItems, selectedItemId],
+  );
+
+  const selectedCategoryId =
+    selectedItem?.category_id ??
+    (editingTransaction?.item_id === selectedItemId
+      ? editingTransaction.category_id
+      : "");
+
+  const selectedCategoryName = selectedCategoryId
+    ? categoryMap.get(selectedCategoryId) ?? "Kategori tidak tersedia"
+    : "-";
+
+  const calculatedAmount = calculateAmount(
+    selectedQuantity,
+    selectedUnitPrice,
+  );
+
   const invalidateTransactionQueries = async () => {
-  const transactionQueryKey = isSales
-    ? "sales"
-    : "expenses";
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: [isSales ? "sales" : "expenses"],
+      }),
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const rootKey = query.queryKey[0];
 
-  const dashboardQueryKey = isSales
-    ? "dashboard-sales"
-    : "dashboard-expenses";
-
-  await Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: [transactionQueryKey],
-    }),
-
-    queryClient.invalidateQueries({
-      queryKey: [dashboardQueryKey],
-    }),
-  ]);
-};
+          return (
+            typeof rootKey === "string" &&
+            rootKey.startsWith("dashboard-")
+          );
+        },
+      }),
+    ]);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async ({
@@ -343,14 +455,39 @@ export function TransactionManager({
     }: SaveTransactionVariables) => {
       ensureTransactionAccess(user?.id, hasManagementAccess);
 
+      const resolvedItem =
+        items.find((item) => item.id === values.item_id) ??
+        (editingTransaction?.item_id === values.item_id
+          ? createFallbackItem(editingTransaction)
+          : null);
+
+      if (!resolvedItem) {
+        throw new Error(
+          `${itemLabel} tidak ditemukan. Muat ulang halaman lalu coba kembali.`,
+        );
+      }
+
       const notes = values.notes?.trim() || null;
+      const amount = calculateAmount(
+        values.quantity,
+        values.unit_price,
+      );
+
+      if (amount <= 0) {
+        throw new Error(
+          "Total transaksi harus lebih dari Rp0.",
+        );
+      }
 
       if (isSales) {
         if (transactionId) {
           const payload: TablesUpdate<"sales"> = {
             transaction_date: values.transaction_date,
-            sales_category_id: values.category_id,
-            amount: values.amount,
+            sales_category_id: resolvedItem.category_id,
+            product_id: values.item_id,
+            quantity: values.quantity,
+            unit_price: values.unit_price,
+            amount,
             notes,
             updated_by: user!.id,
           };
@@ -371,8 +508,11 @@ export function TransactionManager({
 
         const payload: TablesInsert<"sales"> = {
           transaction_date: values.transaction_date,
-          sales_category_id: values.category_id,
-          amount: values.amount,
+          sales_category_id: resolvedItem.category_id,
+          product_id: values.item_id,
+          quantity: values.quantity,
+          unit_price: values.unit_price,
+          amount,
           notes,
           created_by: user!.id,
           updated_by: user!.id,
@@ -393,8 +533,11 @@ export function TransactionManager({
       if (transactionId) {
         const payload: TablesUpdate<"expenses"> = {
           transaction_date: values.transaction_date,
-          expense_category_id: values.category_id,
-          amount: values.amount,
+          expense_category_id: resolvedItem.category_id,
+          expense_item_id: values.item_id,
+          quantity: values.quantity,
+          unit_price: values.unit_price,
+          amount,
           notes,
           updated_by: user!.id,
         };
@@ -415,8 +558,11 @@ export function TransactionManager({
 
       const payload: TablesInsert<"expenses"> = {
         transaction_date: values.transaction_date,
-        expense_category_id: values.category_id,
-        amount: values.amount,
+        expense_category_id: resolvedItem.category_id,
+        expense_item_id: values.item_id,
+        quantity: values.quantity,
+        unit_price: values.unit_price,
+        amount,
         notes,
         created_by: user!.id,
         updated_by: user!.id,
@@ -446,7 +592,11 @@ export function TransactionManager({
     },
     onError: (error: unknown) => {
       toast.error(`Gagal menyimpan ${labelLower}.`, {
-        description: getTransactionErrorMessage(error, labelLower),
+        description: getTransactionErrorMessage(
+          error,
+          labelLower,
+          itemLabelLower,
+        ),
       });
     },
   });
@@ -503,7 +653,11 @@ export function TransactionManager({
     },
     onError: (error: unknown) => {
       toast.error(`Gagal menghapus ${labelLower}.`, {
-        description: getTransactionErrorMessage(error, labelLower),
+        description: getTransactionErrorMessage(
+          error,
+          labelLower,
+          itemLabelLower,
+        ),
       });
     },
   });
@@ -555,7 +709,11 @@ export function TransactionManager({
     },
     onError: (error: unknown) => {
       toast.error(`Gagal memulihkan ${labelLower}.`, {
-        description: getTransactionErrorMessage(error, labelLower),
+        description: getTransactionErrorMessage(
+          error,
+          labelLower,
+          itemLabelLower,
+        ),
       });
     },
   });
@@ -598,7 +756,11 @@ export function TransactionManager({
     },
     onError: (error: unknown) => {
       toast.error(`Gagal menghapus permanen ${labelLower}.`, {
-        description: getTransactionErrorMessage(error, labelLower),
+        description: getTransactionErrorMessage(
+          error,
+          labelLower,
+          itemLabelLower,
+        ),
       });
     },
   });
@@ -623,14 +785,7 @@ export function TransactionManager({
 
   const openCreateDialog = () => {
     setEditingTransaction(null);
-
-    form.reset({
-      transaction_date: toDateInput(new Date()),
-      category_id: "",
-      amount: 0,
-      notes: "",
-    });
-
+    form.reset(createDefaultFormValues());
     setDialogOpen(true);
   };
 
@@ -644,8 +799,9 @@ export function TransactionManager({
 
     form.reset({
       transaction_date: transaction.transaction_date,
-      category_id: transaction.category_id,
-      amount: transaction.amount,
+      item_id: transaction.item_id,
+      quantity: transaction.quantity,
+      unit_price: transaction.unit_price,
       notes: transaction.notes ?? "",
     });
 
@@ -657,13 +813,29 @@ export function TransactionManager({
 
     setDialogOpen(false);
     setEditingTransaction(null);
+    form.reset(createDefaultFormValues());
+  };
 
-    form.reset({
-      transaction_date: toDateInput(new Date()),
-      category_id: "",
-      amount: 0,
-      notes: "",
+  const handleItemChange = (itemId: string) => {
+    const item = selectableItems.find(
+      (candidate) => candidate.id === itemId,
+    );
+
+    form.setValue("item_id", itemId, {
+      shouldDirty: true,
+      shouldValidate: true,
     });
+
+    form.setValue(
+      "unit_price",
+      item && item.default_price > 0
+        ? item.default_price
+        : 0,
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    );
   };
 
   const resetFilters = () => {
@@ -680,12 +852,15 @@ export function TransactionManager({
     Boolean(dateFrom) ||
     Boolean(dateTo);
 
+  const optionsError =
+    categoriesQuery.isError || itemsQuery.isError;
+
   if (!authLoading && !hasManagementAccess) {
     return (
       <div>
         <PageHeader
           title={`Data ${label}`}
-          description={`Catat ${labelLower} harian per kategori.`}
+          description={`Catat ${labelLower} berdasarkan ${itemLabelLower}.`}
         />
 
         <Alert variant="destructive">
@@ -703,12 +878,21 @@ export function TransactionManager({
     <div>
       <PageHeader
         title={`Data ${label}`}
-        description={`Catat ${labelLower} harian per kategori. Nominal dicatat sebagai total per kategori, bukan per produk.`}
+        description={
+          isSales
+            ? "Catat penjualan berdasarkan produk, jumlah, dan harga satuan."
+            : "Catat pengeluaran berdasarkan item, jumlah, dan harga satuan."
+        }
         actions={
           <Button
             type="button"
             onClick={openCreateDialog}
-            disabled={authLoading || categoriesQuery.isLoading}
+            disabled={
+              authLoading ||
+              categoriesQuery.isLoading ||
+              itemsQuery.isLoading ||
+              optionsError
+            }
           >
             <Plus className="mr-2 h-4 w-4" />
             Tambah {label}
@@ -738,7 +922,7 @@ export function TransactionManager({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9"
-                placeholder="Cari kategori atau catatan..."
+                placeholder={`Cari ${itemLabelLower}, kategori, SKU, atau catatan...`}
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -817,11 +1001,16 @@ export function TransactionManager({
             </Alert>
           )}
 
-          {categoriesQuery.isError ? (
+          {optionsError ? (
             <QueryErrorState
-              title="Kategori gagal dimuat"
-              description="Periksa koneksi Supabase dan policy RLS kategori."
-              onRetry={() => void categoriesQuery.refetch()}
+              title="Master data transaksi gagal dimuat"
+              description={`Periksa koneksi Supabase serta policy RLS kategori dan ${itemLabelLower}.`}
+              onRetry={() => {
+                void Promise.all([
+                  categoriesQuery.refetch(),
+                  itemsQuery.refetch(),
+                ]);
+              }}
             />
           ) : listQuery.isError ? (
             <QueryErrorState
@@ -836,8 +1025,14 @@ export function TransactionManager({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Tanggal</TableHead>
+                      <TableHead>{itemLabel}</TableHead>
                       <TableHead>Kategori</TableHead>
-                      <TableHead>Nominal</TableHead>
+                      <TableHead className="text-right">Jumlah</TableHead>
+                      <TableHead>Satuan</TableHead>
+                      <TableHead className="text-right">
+                        Harga Satuan
+                      </TableHead>
+                      <TableHead className="text-right">Total</TableHead>
                       <TableHead>Catatan</TableHead>
                       <TableHead>Diperbarui</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
@@ -845,10 +1040,16 @@ export function TransactionManager({
                   </TableHeader>
 
                   <TableBody>
-                    {listQuery.isLoading || categoriesQuery.isLoading ? (
+                    {listQuery.isLoading ||
+                    categoriesQuery.isLoading ||
+                    itemsQuery.isLoading ? (
                       <TransactionTableSkeleton />
                     ) : listQuery.data?.rows.length ? (
                       listQuery.data.rows.map((transaction) => {
+                        const transactionItem = itemMap.get(
+                          transaction.item_id,
+                        );
+
                         const isRestoring =
                           restoreMutation.isPending &&
                           restoreMutation.variables?.transactionId ===
@@ -873,11 +1074,37 @@ export function TransactionManager({
                               {formatDate(transaction.transaction_date)}
                             </TableCell>
 
-                            <TableCell>
-                              {categoryMap.get(transaction.category_id) ?? "-"}
+                            <TableCell className="min-w-[180px]">
+                              <div className="font-medium">
+                                {transactionItem?.name ??
+                                  `${itemLabel} tidak tersedia`}
+                              </div>
+
+                              {transactionItem?.code && (
+                                <div className="text-xs text-muted-foreground">
+                                  {transactionItem.code}
+                                </div>
+                              )}
                             </TableCell>
 
-                            <TableCell className="font-medium">
+                            <TableCell className="whitespace-nowrap">
+                              {categoryMap.get(transaction.category_id) ??
+                                "-"}
+                            </TableCell>
+
+                            <TableCell className="text-right font-medium">
+                              {formatQuantity(transaction.quantity)}
+                            </TableCell>
+
+                            <TableCell>
+                              {transactionItem?.unit ?? "-"}
+                            </TableCell>
+
+                            <TableCell className="whitespace-nowrap text-right">
+                              {formatRupiah(transaction.unit_price)}
+                            </TableCell>
+
+                            <TableCell className="whitespace-nowrap text-right font-semibold">
                               {formatRupiah(transaction.amount)}
                             </TableCell>
 
@@ -969,7 +1196,7 @@ export function TransactionManager({
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="p-0">
+                        <TableCell colSpan={10} className="p-0">
                           <EmptyState
                             title={
                               hasActiveFilters
@@ -983,7 +1210,7 @@ export function TransactionManager({
                                 ? "Tidak ada data yang cocok dengan filter."
                                 : tab === "deleted"
                                   ? "Data yang dihapus sementara muncul di sini."
-                                  : "Tambahkan data pertama melalui tombol di atas."
+                                  : `Tambahkan ${labelLower} berdasarkan ${itemLabelLower}.`
                             }
                           />
                         </TableCell>
@@ -1048,6 +1275,7 @@ export function TransactionManager({
         }}
       >
         <DialogContent
+          className="sm:max-w-xl"
           onInteractOutside={(event) => {
             if (saveMutation.isPending) event.preventDefault();
           }}
@@ -1060,7 +1288,8 @@ export function TransactionManager({
               {editingTransaction ? `Edit ${label}` : `Tambah ${label}`}
             </DialogTitle>
             <DialogDescription>
-              Isi total nominal harian untuk kategori yang dipilih.
+              Pilih {itemLabelLower}, isi jumlah dan harga satuan.
+              Kategori serta total dihitung otomatis.
             </DialogDescription>
           </DialogHeader>
 
@@ -1090,65 +1319,160 @@ export function TransactionManager({
             </div>
 
             <div className="space-y-2">
-              <Label>Kategori {label}</Label>
+              <Label>{itemLabel}</Label>
 
               <Select
-                value={form.watch("category_id")}
+                value={selectedItemId}
                 disabled={
-                  saveMutation.isPending || categoriesQuery.isLoading
+                  saveMutation.isPending || itemsQuery.isLoading
                 }
-                onValueChange={(value) =>
-                  form.setValue("category_id", value, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
+                onValueChange={handleItemChange}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori" />
+                  <SelectValue
+                    placeholder={`Pilih ${itemLabelLower}`}
+                  />
                 </SelectTrigger>
 
                 <SelectContent>
-                  {selectableCategories.length === 0 ? (
+                  {selectableItems.length === 0 ? (
                     <div className="p-3 text-xs text-muted-foreground">
-                      Belum ada kategori aktif.
+                      Belum ada {itemLabelLower} aktif.
                     </div>
                   ) : (
-                    selectableCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                        {!category.is_active ? " (Nonaktif)" : ""}
+                    selectableItems.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                        {item.code ? ` · ${item.code}` : ""}
+                        {!item.is_active || item.deleted_at
+                          ? " (Nonaktif)"
+                          : ""}
                       </SelectItem>
                     ))
                   )}
                 </SelectContent>
               </Select>
 
-              {form.formState.errors.category_id && (
+              {form.formState.errors.item_id && (
                 <p className="text-xs text-destructive">
-                  {form.formState.errors.category_id.message}
+                  {form.formState.errors.item_id.message}
                 </p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor={`${kind}-amount`}>Nominal {label}</Label>
-              <CurrencyInput
-                id={`${kind}-amount`}
-                value={form.watch("amount")}
-                onChange={(value) =>
-                  form.setValue("amount", value, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              />
-
-              {form.formState.errors.amount && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.amount.message}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${kind}-category`}>Kategori</Label>
+                <Input
+                  id={`${kind}-category`}
+                  value={selectedCategoryName}
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mengikuti {itemLabelLower} yang dipilih.
                 </p>
-              )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${kind}-unit`}>Satuan</Label>
+                <Input
+                  id={`${kind}-unit`}
+                  value={selectedItem?.unit ?? "-"}
+                  readOnly
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${kind}-quantity`}>Jumlah</Label>
+                <Input
+                  id={`${kind}-quantity`}
+                  type="number"
+                  min="0.01"
+                  max={MAX_QUANTITY}
+                  step="0.01"
+                  inputMode="decimal"
+                  disabled={saveMutation.isPending}
+                  value={Number.isFinite(selectedQuantity)
+                    ? selectedQuantity
+                    : 0}
+                  onChange={(event) => {
+                    const value =
+                      event.target.value === ""
+                        ? 0
+                        : Number(event.target.value);
+
+                    form.setValue("quantity", value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
+                  }}
+                />
+
+                {form.formState.errors.quantity && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.quantity.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`${kind}-unit-price`}>
+                  Harga Satuan
+                </Label>
+                <CurrencyInput
+                  id={`${kind}-unit-price`}
+                  value={selectedUnitPrice}
+                  onChange={(value) =>
+                    form.setValue("unit_price", value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                />
+
+                {selectedItem && selectedItem.default_price <= 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Harga master belum ditentukan. Isi harga transaksi
+                    secara manual.
+                  </p>
+                )}
+
+                {form.formState.errors.unit_price && (
+                  <p className="text-xs text-destructive">
+                    {form.formState.errors.unit_price.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-muted/40 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Total {label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatQuantity(
+                      Number.isFinite(selectedQuantity)
+                        ? selectedQuantity
+                        : 0,
+                    )}{" "}
+                    × {formatRupiah(
+                      Number.isFinite(selectedUnitPrice)
+                        ? selectedUnitPrice
+                        : 0,
+                    )}
+                  </p>
+                </div>
+
+                <p className="text-lg font-semibold">
+                  {formatRupiah(calculatedAmount)}
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -1191,14 +1515,16 @@ export function TransactionManager({
                 type="submit"
                 disabled={
                   saveMutation.isPending ||
-                  selectableCategories.length === 0
+                  selectableItems.length === 0
                 }
               >
                 {saveMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
 
-                {editingTransaction ? "Simpan Perubahan" : `Tambah ${label}`}
+                {editingTransaction
+                  ? "Simpan Perubahan"
+                  : `Tambah ${label}`}
               </Button>
             </DialogFooter>
           </form>
@@ -1317,6 +1643,7 @@ interface FetchTransactionParams {
   page: number;
   normalizedSearch: string;
   matchingCategoryIds: string[];
+  matchingItemIds: string[];
 }
 
 async function fetchSales({
@@ -1327,6 +1654,7 @@ async function fetchSales({
   page,
   normalizedSearch,
   matchingCategoryIds,
+  matchingItemIds,
 }: FetchTransactionParams): Promise<TransactionListResult> {
   let query = supabase.from("sales").select("*", { count: "exact" });
 
@@ -1349,13 +1677,26 @@ async function fetchSales({
 
   if (normalizedSearch) {
     const safeSearch = sanitizeSearchTerm(normalizedSearch);
+    const filters: string[] = [];
+
+    if (safeSearch) {
+      filters.push(`notes.ilike.%${safeSearch}%`);
+    }
 
     if (matchingCategoryIds.length > 0) {
-      query = query.or(
-        `notes.ilike.%${safeSearch}%,sales_category_id.in.(${matchingCategoryIds.join(",")})`,
+      filters.push(
+        `sales_category_id.in.(${matchingCategoryIds.join(",")})`,
       );
-    } else {
-      query = query.ilike("notes", `%${safeSearch}%`);
+    }
+
+    if (matchingItemIds.length > 0) {
+      filters.push(
+        `product_id.in.(${matchingItemIds.join(",")})`,
+      );
+    }
+
+    if (filters.length > 0) {
+      query = query.or(filters.join(","));
     }
   }
 
@@ -1383,8 +1724,11 @@ async function fetchExpenses({
   page,
   normalizedSearch,
   matchingCategoryIds,
+  matchingItemIds,
 }: FetchTransactionParams): Promise<TransactionListResult> {
-  let query = supabase.from("expenses").select("*", { count: "exact" });
+  let query = supabase
+    .from("expenses")
+    .select("*", { count: "exact" });
 
   query =
     tab === "active"
@@ -1405,13 +1749,26 @@ async function fetchExpenses({
 
   if (normalizedSearch) {
     const safeSearch = sanitizeSearchTerm(normalizedSearch);
+    const filters: string[] = [];
+
+    if (safeSearch) {
+      filters.push(`notes.ilike.%${safeSearch}%`);
+    }
 
     if (matchingCategoryIds.length > 0) {
-      query = query.or(
-        `notes.ilike.%${safeSearch}%,expense_category_id.in.(${matchingCategoryIds.join(",")})`,
+      filters.push(
+        `expense_category_id.in.(${matchingCategoryIds.join(",")})`,
       );
-    } else {
-      query = query.ilike("notes", `%${safeSearch}%`);
+    }
+
+    if (matchingItemIds.length > 0) {
+      filters.push(
+        `expense_item_id.in.(${matchingItemIds.join(",")})`,
+      );
+    }
+
+    if (filters.length > 0) {
+      query = query.or(filters.join(","));
     }
   }
 
@@ -1436,6 +1793,9 @@ function normalizeSalesRow(row: SalesRow): TransactionRow {
     id: row.id,
     transaction_date: row.transaction_date,
     category_id: row.sales_category_id,
+    item_id: row.product_id,
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
     amount: Number(row.amount),
     notes: row.notes,
     created_at: row.created_at,
@@ -1452,6 +1812,9 @@ function normalizeExpenseRow(row: ExpenseRow): TransactionRow {
     id: row.id,
     transaction_date: row.transaction_date,
     category_id: row.expense_category_id,
+    item_id: row.expense_item_id,
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
     amount: Number(row.amount),
     notes: row.notes,
     created_at: row.created_at,
@@ -1461,6 +1824,120 @@ function normalizeExpenseRow(row: ExpenseRow): TransactionRow {
     deleted_at: row.deleted_at,
     deleted_by: row.deleted_by,
   };
+}
+
+function normalizeProduct(
+  product: Pick<
+    ProductRow,
+    | "id"
+    | "sales_category_id"
+    | "name"
+    | "sku"
+    | "unit"
+    | "selling_price"
+    | "is_active"
+    | "deleted_at"
+  >,
+): TransactionItem {
+  return {
+    id: product.id,
+    category_id: product.sales_category_id,
+    name: product.name,
+    code: product.sku,
+    unit: product.unit,
+    default_price: Number(product.selling_price),
+    is_active: product.is_active,
+    deleted_at: product.deleted_at,
+  };
+}
+
+function normalizeExpenseItem(
+  item: Pick<
+    ExpenseItemRow,
+    | "id"
+    | "expense_category_id"
+    | "name"
+    | "sku"
+    | "unit"
+    | "default_price"
+    | "is_active"
+    | "deleted_at"
+  >,
+): TransactionItem {
+  return {
+    id: item.id,
+    category_id: item.expense_category_id,
+    name: item.name,
+    code: item.sku,
+    unit: item.unit,
+    default_price: Number(item.default_price),
+    is_active: item.is_active,
+    deleted_at: item.deleted_at,
+  };
+}
+
+function normalizeSalesCategory(
+  category: Pick<
+    SalesCategoryRow,
+    "id" | "name" | "is_active"
+  >,
+): TransactionCategory {
+  return category;
+}
+
+function normalizeExpenseCategory(
+  category: Pick<
+    ExpenseCategoryRow,
+    "id" | "name" | "is_active"
+  >,
+): TransactionCategory {
+  return category;
+}
+
+function createFallbackItem(
+  transaction: TransactionRow,
+): TransactionItem {
+  return {
+    id: transaction.item_id,
+    category_id: transaction.category_id,
+    name: "Item transaksi saat ini",
+    code: null,
+    unit: "unit",
+    default_price: transaction.unit_price,
+    is_active: false,
+    deleted_at: null,
+  };
+}
+
+function createDefaultFormValues(): TransactionFormValues {
+  return {
+    transaction_date: toDateInput(new Date()),
+    item_id: "",
+    quantity: 1,
+    unit_price: 0,
+    notes: "",
+  };
+}
+
+function calculateAmount(
+  quantity: number,
+  unitPrice: number,
+): number {
+  if (
+    !Number.isFinite(quantity) ||
+    !Number.isFinite(unitPrice)
+  ) {
+    return 0;
+  }
+
+  return Math.round((quantity * unitPrice + Number.EPSILON) * 100) / 100;
+}
+
+function formatQuantity(value: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function sanitizeSearchTerm(value: string): string {
@@ -1478,7 +1955,7 @@ function TransactionTableSkeleton() {
     <>
       {Array.from({ length: 5 }).map((_, index) => (
         <TableRow key={index}>
-          <TableCell colSpan={6}>
+          <TableCell colSpan={10}>
             <Skeleton className="h-8 w-full" />
           </TableCell>
         </TableRow>
@@ -1555,16 +2032,21 @@ function ensureSuperAdminAccess(
 function getTransactionErrorMessage(
   error: unknown,
   transactionLabel: string,
+  itemLabel: string,
 ): string {
   if (typeof error === "object" && error !== null) {
     const databaseError = error as DatabaseError;
 
     if (databaseError.code === "23505") {
-      return `Data ${transactionLabel} untuk kategori dan tanggal tersebut sudah tersedia. Silakan edit data yang sudah ada.`;
+      return `Data ${transactionLabel} untuk ${itemLabel} dan tanggal tersebut sudah tersedia. Silakan edit data yang sudah ada.`;
     }
 
     if (databaseError.code === "23503") {
-      return "Kategori tidak ditemukan atau tidak valid.";
+      return `${capitalize(itemLabel)} atau kategorinya tidak ditemukan.`;
+    }
+
+    if (databaseError.code === "23514") {
+      return "Jumlah, harga satuan, atau total transaksi tidak valid.";
     }
 
     if (databaseError.code === "42501") {
@@ -1592,4 +2074,10 @@ function getTransactionErrorMessage(
   }
 
   return "Terjadi kesalahan yang tidak diketahui.";
+}
+
+function capitalize(value: string): string {
+  if (!value) return value;
+
+  return `${value.charAt(0).toLocaleUpperCase("id-ID")}${value.slice(1)}`;
 }

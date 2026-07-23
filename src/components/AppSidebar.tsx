@@ -5,6 +5,7 @@ import {
   Wallet,
   Tag,
   Receipt,
+  ClipboardList,
   Package,
   Users,
   UserCircle,
@@ -130,6 +131,18 @@ export function AppSidebar() {
                   <Link to="/kategori-pengeluaran">
                     <Receipt />
                     <span>Kategori Pengeluaran</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/item-pengeluaran")}
+                >
+                  <Link to="/item-pengeluaran">
+                    <ClipboardList />
+                    <span>Item Pengeluaran</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

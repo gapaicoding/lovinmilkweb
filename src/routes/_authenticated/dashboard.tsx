@@ -53,6 +53,7 @@ import {
 
 import {
   formatDate,
+  formatNumber,
   formatRupiah,
   toDateInput,
 } from "@/lib/format";
@@ -89,6 +90,9 @@ type SaleRow = Pick<
   | "notes"
   | "created_at"
   | "sales_category_id"
+  | "product_id"
+  | "quantity"
+  | "unit_price"
 >;
 
 type ExpenseRow = Pick<
@@ -99,6 +103,19 @@ type ExpenseRow = Pick<
   | "notes"
   | "created_at"
   | "expense_category_id"
+  | "expense_item_id"
+  | "quantity"
+  | "unit_price"
+>;
+
+type ProductRow = Pick<
+  Tables<"products">,
+  "id" | "name" | "sku" | "unit"
+>;
+
+type ExpenseItemRow = Pick<
+  Tables<"expense_items">,
+  "id" | "name" | "sku" | "unit"
 >;
 
 type SalesCategoryRow = Pick<
@@ -137,6 +154,11 @@ interface RecentTransactionItem {
   date: string;
   createdAt: string;
   categoryName: string;
+  itemName: string;
+  itemCode: string | null;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
   amount: number;
   notes: string | null;
 }
@@ -226,6 +248,18 @@ function DashboardPage() {
     queryFn: fetchExpenseCategories,
   });
 
+  const productsQuery = useQuery({
+    queryKey: ["products", "dashboard"],
+    staleTime: 5 * 60_000,
+    queryFn: fetchProducts,
+  });
+
+  const expenseItemsQuery = useQuery({
+    queryKey: ["expense_items", "dashboard"],
+    staleTime: 5 * 60_000,
+    queryFn: fetchExpenseItems,
+  });
+
   const selectedSales = useMemo(
     () =>
       filterRowsByRange(
@@ -286,6 +320,26 @@ function DashboardPage() {
         ]),
       ),
     [expenseCategoriesQuery.data],
+  );
+
+  const productMap = useMemo(
+    () =>
+      new Map(
+        (productsQuery.data ?? []).map(
+          (product) => [product.id, product],
+        ),
+      ),
+    [productsQuery.data],
+  );
+
+  const expenseItemMap = useMemo(
+    () =>
+      new Map(
+        (expenseItemsQuery.data ?? []).map(
+          (item) => [item.id, item],
+        ),
+      ),
+    [expenseItemsQuery.data],
   );
 
   const selectedSummary = useMemo(
@@ -559,8 +613,13 @@ function DashboardPage() {
       buildRecentSales(
         selectedSales,
         salesCategoryMap,
+        productMap,
       ),
-    [selectedSales, salesCategoryMap],
+    [
+      selectedSales,
+      salesCategoryMap,
+      productMap,
+    ],
   );
 
   const recentExpenses = useMemo(
@@ -568,8 +627,13 @@ function DashboardPage() {
       buildRecentExpenses(
         selectedExpenses,
         expenseCategoryMap,
+        expenseItemMap,
       ),
-    [selectedExpenses, expenseCategoryMap],
+    [
+      selectedExpenses,
+      expenseCategoryMap,
+      expenseItemMap,
+    ],
   );
 
   const mainLoading =
@@ -581,13 +645,18 @@ function DashboardPage() {
     salesCategoriesQuery.isLoading ||
     expenseCategoriesQuery.isLoading;
 
-  const recentLoading = categoryLoading;
+  const recentLoading =
+    categoryLoading ||
+    productsQuery.isLoading ||
+    expenseItemsQuery.isLoading;
 
   const queryError =
     salesQuery.error ??
     expensesQuery.error ??
     salesCategoriesQuery.error ??
-    expenseCategoriesQuery.error;
+    expenseCategoriesQuery.error ??
+    productsQuery.error ??
+    expenseItemsQuery.error;
 
   const usesMonthlyTrend =
     totalDays > DAILY_RANGE_LIMIT;
@@ -598,6 +667,8 @@ function DashboardPage() {
       expensesQuery.refetch(),
       salesCategoriesQuery.refetch(),
       expenseCategoriesQuery.refetch(),
+      productsQuery.refetch(),
+      expenseItemsQuery.refetch(),
     ]);
   };
 
@@ -605,7 +676,7 @@ function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Analisis penjualan, pengeluaran, profit, dan performa operasional Lovin Milk."
+        description="Analisis penjualan berbasis produk, pengeluaran berbasis item, profit, dan performa operasional Lovin Milk."
       />
 
       <Card className="rounded-xl">
@@ -669,7 +740,7 @@ function DashboardPage() {
           value={formatRupiah(
             selectedSummary.sales,
           )}
-          helper={`${selectedSummary.salesCount} pencatatan penjualan`}
+          helper={`${selectedSummary.salesCount} pencatatan berbasis produk`}
           icon={TrendingUp}
           loading={mainLoading}
           growth={salesGrowth}
@@ -681,7 +752,7 @@ function DashboardPage() {
           value={formatRupiah(
             selectedSummary.expenses,
           )}
-          helper={`${selectedSummary.expenseCount} pencatatan pengeluaran`}
+          helper={`${selectedSummary.expenseCount} pencatatan berbasis item`}
           icon={Wallet}
           loading={mainLoading}
           growth={expensesGrowth}
@@ -785,7 +856,7 @@ function DashboardPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <RecentTransactionCard
           title="Penjualan Terbaru"
-          description="Lima pencatatan penjualan terbaru dalam periode terpilih."
+          description="Lima penjualan berbasis produk terbaru dalam periode terpilih."
           type="sales"
           data={recentSales}
           loading={recentLoading}
@@ -793,7 +864,7 @@ function DashboardPage() {
 
         <RecentTransactionCard
           title="Pengeluaran Terbaru"
-          description="Lima pencatatan pengeluaran terbaru dalam periode terpilih."
+          description="Lima pengeluaran berbasis item terbaru dalam periode terpilih."
           type="expenses"
           data={recentExpenses}
           loading={recentLoading}
@@ -809,7 +880,7 @@ async function fetchSales(
   const { data, error } = await supabase
     .from("sales")
     .select(
-      "id, transaction_date, amount, notes, created_at, sales_category_id",
+      "id, transaction_date, amount, notes, created_at, sales_category_id, product_id, quantity, unit_price",
     )
     .is("deleted_at", null)
     .gte("transaction_date", range.from)
@@ -828,6 +899,8 @@ async function fetchSales(
   return (data ?? []).map((row) => ({
     ...row,
     amount: Number(row.amount),
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
   }));
 }
 
@@ -837,7 +910,7 @@ async function fetchExpenses(
   const { data, error } = await supabase
     .from("expenses")
     .select(
-      "id, transaction_date, amount, notes, created_at, expense_category_id",
+      "id, transaction_date, amount, notes, created_at, expense_category_id, expense_item_id, quantity, unit_price",
     )
     .is("deleted_at", null)
     .gte("transaction_date", range.from)
@@ -856,6 +929,8 @@ async function fetchExpenses(
   return (data ?? []).map((row) => ({
     ...row,
     amount: Number(row.amount),
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
   }));
 }
 
@@ -882,6 +957,38 @@ async function fetchExpenseCategories(): Promise<
   const { data, error } = await supabase
     .from("expense_categories")
     .select("id, name")
+    .order("name", {
+      ascending: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+async function fetchProducts(): Promise<ProductRow[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, sku, unit")
+    .order("name", {
+      ascending: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+async function fetchExpenseItems(): Promise<
+  ExpenseItemRow[]
+> {
+  const { data, error } = await supabase
+    .from("expense_items")
+    .select("id, name, sku, unit")
     .order("name", {
       ascending: true,
     });
@@ -1340,20 +1447,34 @@ function countActiveDays(
 function buildRecentSales(
   sales: SaleRow[],
   categoryMap: Map<string, string>,
+  productMap: Map<string, ProductRow>,
 ): RecentTransactionItem[] {
   return sales
-    .map((row) => ({
-      id: row.id,
-      type: "sales" as const,
-      date: row.transaction_date,
-      createdAt: row.created_at,
-      categoryName:
-        categoryMap.get(
-          row.sales_category_id,
-        ) ?? "Kategori tidak tersedia",
-      amount: row.amount,
-      notes: row.notes,
-    }))
+    .map((row) => {
+      const product = productMap.get(
+        row.product_id,
+      );
+
+      return {
+        id: row.id,
+        type: "sales" as const,
+        date: row.transaction_date,
+        createdAt: row.created_at,
+        categoryName:
+          categoryMap.get(
+            row.sales_category_id,
+          ) ?? "Kategori tidak tersedia",
+        itemName:
+          product?.name ??
+          "Produk tidak tersedia",
+        itemCode: product?.sku ?? null,
+        quantity: row.quantity,
+        unit: product?.unit ?? "unit",
+        unitPrice: row.unit_price,
+        amount: row.amount,
+        notes: row.notes,
+      };
+    })
     .sort(sortRecentTransactions)
     .slice(0, RECENT_TRANSACTION_LIMIT);
 }
@@ -1361,20 +1482,34 @@ function buildRecentSales(
 function buildRecentExpenses(
   expenses: ExpenseRow[],
   categoryMap: Map<string, string>,
+  expenseItemMap: Map<string, ExpenseItemRow>,
 ): RecentTransactionItem[] {
   return expenses
-    .map((row) => ({
-      id: row.id,
-      type: "expenses" as const,
-      date: row.transaction_date,
-      createdAt: row.created_at,
-      categoryName:
-        categoryMap.get(
-          row.expense_category_id,
-        ) ?? "Kategori tidak tersedia",
-      amount: row.amount,
-      notes: row.notes,
-    }))
+    .map((row) => {
+      const item = expenseItemMap.get(
+        row.expense_item_id,
+      );
+
+      return {
+        id: row.id,
+        type: "expenses" as const,
+        date: row.transaction_date,
+        createdAt: row.created_at,
+        categoryName:
+          categoryMap.get(
+            row.expense_category_id,
+          ) ?? "Kategori tidak tersedia",
+        itemName:
+          item?.name ??
+          "Item pengeluaran tidak tersedia",
+        itemCode: item?.sku ?? null,
+        quantity: row.quantity,
+        unit: item?.unit ?? "unit",
+        unitPrice: row.unit_price,
+        amount: row.amount,
+        notes: row.notes,
+      };
+    })
     .sort(sortRecentTransactions)
     .slice(0, RECENT_TRANSACTION_LIMIT);
 }
@@ -1466,11 +1601,25 @@ function RecentTransactionCard({
                 <div className="min-w-0">
                   <p
                     className="truncate text-sm font-medium"
-                    title={
-                      transaction.categoryName
-                    }
+                    title={transaction.itemName}
+                  >
+                    {transaction.itemName}
+                  </p>
+
+                  <p
+                    className="mt-0.5 truncate text-xs text-muted-foreground"
+                    title={[
+                      transaction.categoryName,
+                      transaction.itemCode,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   >
                     {transaction.categoryName}
+
+                    {transaction.itemCode
+                      ? ` · ${transaction.itemCode}`
+                      : ""}
                   </p>
 
                   <p
@@ -1482,6 +1631,16 @@ function RecentTransactionCard({
                   >
                     {formatDate(
                       transaction.date,
+                    )}
+                    {" · "}
+                    {formatNumber(
+                      transaction.quantity,
+                      2,
+                    )}{" "}
+                    {transaction.unit}
+                    {" × "}
+                    {formatRupiah(
+                      transaction.unitPrice,
                     )}
 
                     {transaction.notes
