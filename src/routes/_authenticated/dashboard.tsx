@@ -51,6 +51,8 @@ import {
   type PeriodSummaryData,
 } from "@/components/dashboard/PeriodSummary";
 
+import { ProductAnalyticsPreview } from "@/components/dashboard/ProductAnalyticsPreview";
+
 import {
   formatDate,
   formatNumber,
@@ -110,7 +112,14 @@ type ExpenseRow = Pick<
 
 type ProductRow = Pick<
   Tables<"products">,
-  "id" | "name" | "sku" | "unit"
+  | "id"
+  | "name"
+  | "sku"
+  | "unit"
+  | "sales_category_id"
+  | "selling_price"
+  | "is_active"
+  | "deleted_at"
 >;
 
 type ExpenseItemRow = Pick<
@@ -253,6 +262,7 @@ function DashboardPage() {
     staleTime: 5 * 60_000,
     queryFn: fetchProducts,
   });
+
 
   const expenseItemsQuery = useQuery({
     queryKey: ["expense_items", "dashboard"],
@@ -636,6 +646,62 @@ function DashboardPage() {
     ],
   );
 
+
+  const productAnalyticsPreview = useMemo(() => {
+    const activeProductIds = new Set(
+      (productsQuery.data ?? [])
+        .filter(
+          (product) =>
+            product.is_active &&
+            product.deleted_at === null,
+        )
+        .map((product) => product.id),
+    );
+
+    const soldActiveProductIds =
+      new Set<string>();
+
+    const totalQuantity =
+      selectedSales.reduce(
+        (total, sale) => {
+          if (
+            activeProductIds.has(
+              sale.product_id,
+            )
+          ) {
+            soldActiveProductIds.add(
+              sale.product_id,
+            );
+          }
+
+          return (
+            total +
+            Number(sale.quantity)
+          );
+        },
+        0,
+      );
+
+    return {
+      totalQuantity,
+      productsSold:
+        new Set(
+          selectedSales.map(
+            (sale) => sale.product_id,
+          ),
+        ).size,
+      productsWithoutSales:
+        Math.max(
+          activeProductIds.size -
+            soldActiveProductIds.size,
+          0,
+        ),
+    };
+  }, [
+    productsQuery.data,
+    selectedSales,
+  ]);
+
   const mainLoading =
     salesQuery.isLoading ||
     expensesQuery.isLoading;
@@ -649,6 +715,10 @@ function DashboardPage() {
     categoryLoading ||
     productsQuery.isLoading ||
     expenseItemsQuery.isLoading;
+
+  const productAnalyticsPreviewLoading =
+    salesQuery.isLoading ||
+    productsQuery.isLoading;
 
   const queryError =
     salesQuery.error ??
@@ -676,7 +746,7 @@ function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Analisis penjualan berbasis produk, pengeluaran berbasis item, profit, dan performa operasional Lovin Milk."
+        description="Ringkasan penjualan, pengeluaran, profit, kategori, dan aktivitas operasional Lovin Milk."
       />
 
       <Card className="rounded-xl">
@@ -703,7 +773,7 @@ function DashboardPage() {
             <span aria-hidden="true">•</span>
 
             <span>
-              Grafik dikelompokkan{" "}
+              Grafik keuangan dikelompokkan{" "}
               {usesMonthlyTrend
                 ? "per bulan"
                 : "per hari"}
@@ -842,6 +912,22 @@ function DashboardPage() {
         />
       </section>
 
+      <ProductAnalyticsPreview
+        totalQuantity={
+          productAnalyticsPreview.totalQuantity
+        }
+        productsSold={
+          productAnalyticsPreview.productsSold
+        }
+        productsWithoutSales={
+          productAnalyticsPreview.productsWithoutSales
+        }
+        periodLabel={selectedRangeLabel}
+        loading={
+          productAnalyticsPreviewLoading
+        }
+      />
+
       <BusinessInsights
         data={businessInsightsData}
         loading={categoryLoading}
@@ -971,7 +1057,9 @@ async function fetchExpenseCategories(): Promise<
 async function fetchProducts(): Promise<ProductRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, sku, unit")
+    .select(
+      "id, name, sku, unit, sales_category_id, selling_price, is_active, deleted_at",
+    )
     .order("name", {
       ascending: true,
     });
@@ -980,7 +1068,12 @@ async function fetchProducts(): Promise<ProductRow[]> {
     throw error;
   }
 
-  return data ?? [];
+  return (data ?? []).map((product) => ({
+    ...product,
+    selling_price: Number(
+      product.selling_price,
+    ),
+  }));
 }
 
 async function fetchExpenseItems(): Promise<

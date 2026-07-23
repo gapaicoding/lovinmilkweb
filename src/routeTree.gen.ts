@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAnalitikProdukRouteImport } from './routes/_authenticated/analitik-produk'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedItemPengeluaranRouteImport } from './routes/_authenticated/item-pengeluaran'
 import { Route as AuthenticatedKategoriPengeluaranRouteImport } from './routes/_authenticated/kategori-pengeluaran'
@@ -36,6 +37,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAnalitikProdukRoute =
+  AuthenticatedAnalitikProdukRouteImport.update({
+    id: '/analitik-produk',
+    path: '/analitik-produk',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -89,6 +96,7 @@ const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
@@ -102,6 +110,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
@@ -117,6 +126,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/_authenticated/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/analitik-produk'
     | '/dashboard'
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/analitik-produk'
     | '/dashboard'
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
@@ -159,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/analitik-produk'
     | '/_authenticated/dashboard'
     | '/_authenticated/item-pengeluaran'
     | '/_authenticated/kategori-pengeluaran'
@@ -198,6 +211,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/analitik-produk': {
+      id: '/_authenticated/analitik-produk'
+      path: '/analitik-produk'
+      fullPath: '/analitik-produk'
+      preLoaderRoute: typeof AuthenticatedAnalitikProdukRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
@@ -266,6 +286,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalitikProdukRoute: typeof AuthenticatedAnalitikProdukRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedItemPengeluaranRoute: typeof AuthenticatedItemPengeluaranRoute
   AuthenticatedKategoriPengeluaranRoute: typeof AuthenticatedKategoriPengeluaranRoute
@@ -278,6 +299,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAnalitikProdukRoute: AuthenticatedAnalitikProdukRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedItemPengeluaranRoute: AuthenticatedItemPengeluaranRoute,
   AuthenticatedKategoriPengeluaranRoute: AuthenticatedKategoriPengeluaranRoute,

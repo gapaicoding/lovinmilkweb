@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  BarChart3,
   TrendingUp,
   Wallet,
   Tag,
@@ -67,6 +68,18 @@ export function AppSidebar() {
                   <Link to="/dashboard">
                     <LayoutDashboard />
                     <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/analitik-produk")}
+                >
+                  <Link to="/analitik-produk">
+                    <BarChart3 />
+                    <span>Analitik Produk</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
