@@ -1,4 +1,7 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import {
+  Link,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   LayoutDashboard,
   BarChart3,
@@ -26,16 +29,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 
 export function AppSidebar() {
-  const { isSuperAdmin, signOut } = useAuth();
+  const {
+    isSuperAdmin,
+    signOut,
+  } = useAuth();
 
-  const currentPath = useRouterState({
-    select: (routerState) => routerState.location.pathname,
-  });
+  const currentPath =
+    useRouterState({
+      select: (routerState) =>
+        routerState.location.pathname,
+    });
 
-  const active = (path: string) => currentPath === path;
+  const active = (path: string) =>
+    currentPath === path;
 
   return (
     <Sidebar collapsible="icon">
@@ -46,7 +56,9 @@ export function AppSidebar() {
           </div>
 
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold">Lovin Milk</span>
+            <span className="text-sm font-semibold">
+              Lovin Milk
+            </span>
             <span className="text-[11px] text-muted-foreground">
               Dashboard
             </span>
@@ -56,14 +68,18 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Ringkasan</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Ringkasan
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/dashboard")}
+                  isActive={active(
+                    "/dashboard",
+                  )}
                 >
                   <Link to="/dashboard">
                     <LayoutDashboard />
@@ -75,11 +91,15 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/analitik-produk")}
+                  isActive={active(
+                    "/analitik-produk",
+                  )}
                 >
                   <Link to="/analitik-produk">
                     <BarChart3 />
-                    <span>Analitik Produk</span>
+                    <span>
+                      Analitik Produk
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -88,18 +108,24 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Data Operasional</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Data Operasional
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/penjualan")}
+                  isActive={active(
+                    "/penjualan",
+                  )}
                 >
                   <Link to="/penjualan">
                     <TrendingUp />
-                    <span>Data Penjualan</span>
+                    <span>
+                      Data Penjualan
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -107,11 +133,15 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/pengeluaran")}
+                  isActive={active(
+                    "/pengeluaran",
+                  )}
                 >
                   <Link to="/pengeluaran">
                     <Wallet />
-                    <span>Data Pengeluaran</span>
+                    <span>
+                      Data Pengeluaran
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -120,18 +150,24 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Master Data</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Master Data
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/kategori-penjualan")}
+                  isActive={active(
+                    "/kategori-penjualan",
+                  )}
                 >
                   <Link to="/kategori-penjualan">
                     <Tag />
-                    <span>Kategori Penjualan</span>
+                    <span>
+                      Kategori Penjualan
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -139,11 +175,15 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/kategori-pengeluaran")}
+                  isActive={active(
+                    "/kategori-pengeluaran",
+                  )}
                 >
                   <Link to="/kategori-pengeluaran">
                     <Receipt />
-                    <span>Kategori Pengeluaran</span>
+                    <span>
+                      Kategori Pengeluaran
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -151,11 +191,15 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/item-pengeluaran")}
+                  isActive={active(
+                    "/item-pengeluaran",
+                  )}
                 >
                   <Link to="/item-pengeluaran">
                     <ClipboardList />
-                    <span>Item Pengeluaran</span>
+                    <span>
+                      Item Pengeluaran
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -163,7 +207,9 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/produk")}
+                  isActive={active(
+                    "/produk",
+                  )}
                 >
                   <Link to="/produk">
                     <Package />
@@ -176,11 +222,15 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={active("/pengguna")}
+                    isActive={active(
+                      "/pengguna",
+                    )}
                   >
                     <Link to="/pengguna">
                       <Users />
-                      <span>Manajemen Pengguna</span>
+                      <span>
+                        Manajemen Pengguna
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -190,14 +240,18 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Akun</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Akun
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active("/profil")}
+                  isActive={active(
+                    "/profil",
+                  )}
                 >
                   <Link to="/profil">
                     <UserCircle />
@@ -207,7 +261,13 @@ export function AppSidebar() {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => signOut()}>
+                <ThemeToggle />
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => signOut()}
+                >
                   <LogOut />
                   <span>Keluar</span>
                 </SidebarMenuButton>
