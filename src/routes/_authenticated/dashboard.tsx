@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   keepPreviousData,
   useQuery,
@@ -206,6 +206,9 @@ const DASHBOARD_PERIODS: readonly RangePreset[] = [
   "custom",
 ];
 
+const DASHBOARD_PERIOD_STORAGE_KEY =
+  "lovin-milk:dashboard-period";
+
 function validateDashboardSearch(
   search: Record<string, unknown>,
 ): DashboardSearch {
@@ -257,6 +260,55 @@ function DashboardPage() {
   const navigate = Route.useNavigate();
   const period = search.period ?? "this_month";
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (search.period) {
+      try {
+        window.sessionStorage.setItem(
+          DASHBOARD_PERIOD_STORAGE_KEY,
+          JSON.stringify(search),
+        );
+      } catch {
+        // URL tetap menjadi source of truth bila storage browser tidak tersedia.
+      }
+      return;
+    }
+
+    let restoredSearch: DashboardSearch = {
+      period: "this_month",
+    };
+
+    try {
+      const storedValue = window.sessionStorage.getItem(
+        DASHBOARD_PERIOD_STORAGE_KEY,
+      );
+
+      if (storedValue) {
+        const parsedValue = JSON.parse(
+          storedValue,
+        ) as Record<string, unknown>;
+        const validatedValue =
+          validateDashboardSearch(parsedValue);
+
+        if (validatedValue.period) {
+          restoredSearch = validatedValue;
+        }
+      }
+    } catch {
+      window.sessionStorage.removeItem(
+        DASHBOARD_PERIOD_STORAGE_KEY,
+      );
+    }
+
+    void navigate({
+      search: restoredSearch,
+      replace: true,
+    });
+  }, [navigate, search]);
+
   const range = useMemo<DateRange>(() => {
     if (period === "custom") {
       const from = parseDateInput(
@@ -291,6 +343,17 @@ function DashboardPage() {
         : {
             period: nextRange.preset,
           };
+
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(
+          DASHBOARD_PERIOD_STORAGE_KEY,
+          JSON.stringify(nextSearch),
+        );
+      } catch {
+        // URL tetap menjadi source of truth bila storage browser tidak tersedia.
+      }
+    }
 
     void navigate({
       search: nextSearch,
