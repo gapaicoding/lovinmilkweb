@@ -44,8 +44,9 @@ export function AppSidebar() {
         routerState.location.pathname,
     });
 
-  const active = (path: string) =>
-    currentPath === path;
+  const active = (
+    path: string,
+  ) => currentPath === path;
 
   return (
     <Sidebar collapsible="icon">
@@ -59,6 +60,7 @@ export function AppSidebar() {
             <span className="text-sm font-semibold">
               Lovin Milk
             </span>
+
             <span className="text-[11px] text-muted-foreground">
               Dashboard
             </span>
@@ -83,7 +85,9 @@ export function AppSidebar() {
                 >
                   <Link to="/dashboard">
                     <LayoutDashboard />
-                    <span>Dashboard</span>
+                    <span>
+                      Dashboard
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -213,12 +217,14 @@ export function AppSidebar() {
                 >
                   <Link to="/produk">
                     <Package />
-                    <span>Produk</span>
+                    <span>
+                      Produk
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {isSuperAdmin && (
+              {isSuperAdmin ? (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -234,7 +240,7 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -255,7 +261,9 @@ export function AppSidebar() {
                 >
                   <Link to="/profil">
                     <UserCircle />
-                    <span>Profil</span>
+                    <span>
+                      Profil
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -266,10 +274,15 @@ export function AppSidebar() {
 
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => signOut()}
+                  type="button"
+                  onClick={() => {
+                    void signOut();
+                  }}
                 >
                   <LogOut />
-                  <span>Keluar</span>
+                  <span>
+                    Keluar
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

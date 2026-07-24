@@ -19,40 +19,6 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/useAuth";
-import {
-  ThemeProvider,
-  THEME_STORAGE_KEY,
-} from "@/components/ThemeProvider";
-
-const themeInitializationScript = `
-(function () {
-  try {
-    var storageKey = ${JSON.stringify(THEME_STORAGE_KEY)};
-    var storedTheme = localStorage.getItem(storageKey);
-    var theme =
-      storedTheme === "light" ||
-      storedTheme === "dark" ||
-      storedTheme === "system"
-        ? storedTheme
-        : "system";
-
-    var resolvedTheme =
-      theme === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : theme;
-
-    var root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(resolvedTheme);
-    root.style.colorScheme = resolvedTheme;
-  } catch (_) {
-    document.documentElement.classList.add("light");
-    document.documentElement.style.colorScheme = "light";
-  }
-})();
-`;
 
 function NotFoundComponent() {
   return (
@@ -61,13 +27,16 @@ function NotFoundComponent() {
         <h1 className="text-7xl font-bold text-foreground">
           404
         </h1>
+
         <h2 className="mt-4 text-xl font-semibold">
           Halaman tidak ditemukan
         </h2>
+
         <p className="mt-2 text-sm text-muted-foreground">
-          Halaman yang Anda cari tidak tersedia
-          atau sudah dipindahkan.
+          Halaman yang Anda cari tidak tersedia atau sudah
+          dipindahkan.
         </p>
+
         <Link
           to="/"
           className="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -101,12 +70,20 @@ function ErrorComponent({
         <h1 className="text-xl font-semibold">
           Terjadi kesalahan
         </h1>
+
         <p className="mt-2 text-sm text-muted-foreground">
-          Halaman tidak dapat dimuat. Silakan
-          coba lagi.
+          Halaman tidak dapat dimuat. Silakan coba lagi.
         </p>
+
+        {import.meta.env.DEV ? (
+          <pre className="mt-4 max-h-64 overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground">
+            {error.message}
+          </pre>
+        ) : null}
+
         <div className="mt-6 flex justify-center gap-2">
           <button
+            type="button"
             onClick={() => {
               router.invalidate();
               reset();
@@ -127,7 +104,9 @@ export const Route =
   }>()({
     head: () => ({
       meta: [
-        { charSet: "utf-8" },
+        {
+          charSet: "utf-8",
+        },
         {
           name: "viewport",
           content:
@@ -163,6 +142,7 @@ export const Route =
           content: "summary_large_image",
         },
       ],
+
       links: [
         {
           rel: "stylesheet",
@@ -191,6 +171,7 @@ export const Route =
         },
       ],
     }),
+
     shellComponent: RootShell,
     component: RootComponent,
     notFoundComponent: NotFoundComponent,
@@ -209,12 +190,6 @@ function RootShell({
     >
       <head>
         <HeadContent />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              themeInitializationScript,
-          }}
-        />
       </head>
 
       <body>
@@ -233,20 +208,14 @@ function RootComponent() {
     <QueryClientProvider
       client={queryClient}
     >
-      <ThemeProvider
-        defaultTheme="system"
-        storageKey={
-          THEME_STORAGE_KEY
-        }
-      >
-        <AuthProvider>
-          <Outlet />
-          <Toaster
-            position="top-right"
-            richColors
-          />
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <Outlet />
+
+        <Toaster
+          position="top-right"
+          richColors
+        />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
