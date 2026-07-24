@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Route } from "@/routes/_authenticated/kunjungan";
 import { Loader2, Plus, Search, ShoppingBag, UserRoundCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +20,12 @@ import { formatRupiah } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { VisitorStatusBadge } from "@/components/visitor/VisitorStatusBadge";
+import { VisitorDateFilter } from "@/components/visitor/VisitorDateFilter";
+import {
+  resolveVisitorDateRange,
+  normalizeVisitorDateFilter,
+  type VisitorDateFilterValue,
+} from "@/lib/visitorDatePeriod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -71,6 +78,8 @@ interface PurchaseItem {
 export function VisitorVisitManager() {
   const { canManageVisitorVisits } = useAuth();
   const queryClient = useQueryClient();
+  const dateFilter = normalizeVisitorDateFilter(Route.useSearch());
+  const navigate = Route.useNavigate();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [search, setSearch] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
@@ -85,8 +94,14 @@ export function VisitorVisitManager() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([{ product_id: "", quantity: 1 }]);
 
-  const activeQuery = useVisitQuery("active", search, 1);
-  const historyQuery = useVisitQuery("history", search, historyPage);
+  const summaryActiveQuery = useVisitQuery("active", "", 1, { period: "all" });
+  const summaryHistoryQuery = useVisitQuery("history", "", 1, { period: "all" });
+  const activeQuery = useVisitQuery("active", search, 1, dateFilter);
+  const historyQuery = useVisitQuery("history", search, historyPage, dateFilter);
+  const updateDateFilter = (next: VisitorDateFilterValue) => {
+    setHistoryPage(1);
+    void navigate({ search: next });
+  };
   const productsQuery = useQuery({
     queryKey: ["products", "visitor-options"],
     enabled: canManageVisitorVisits && (formOpen || Boolean(addingTo)),
@@ -234,18 +249,18 @@ export function VisitorVisitManager() {
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard title="Sedang Berkunjung" value={activeQuery.data?.total ?? 0} />
+        <SummaryCard title="Sedang Berkunjung" value={summaryActiveQuery.data?.total ?? 0} />
         <SummaryCard
           title="Pengunjung Hari Ini"
           value={
-            (activeQuery.data?.rows ?? []).filter(isToday).length +
-            (historyQuery.data?.rows ?? []).filter(isToday).length
+            (summaryActiveQuery.data?.rows ?? []).filter(isToday).length +
+            (summaryHistoryQuery.data?.rows ?? []).filter(isToday).length
           }
         />
         <SummaryCard
           title="Sudah Pulang Hari Ini"
           value={
-            (historyQuery.data?.rows ?? []).filter(
+            (summaryHistoryQuery.data?.rows ?? []).filter(
               (row) => row.check_out_at && jakartaDate(row.check_out_at) === jakartaToday(),
             ).length
           }
@@ -254,16 +269,24 @@ export function VisitorVisitManager() {
 
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Cari nama, kode, atau nomor telepon..."
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setHistoryPage(1);
-              }}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Cari nama, kode, atau nomor telepon..."
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setHistoryPage(1);
+                }}
+              />
+            </div>
+            <VisitorDateFilter
+              idPrefix="visit-list"
+              value={dateFilter}
+              onChange={updateDateFilter}
+              disabled={activeQuery.isFetching || historyQuery.isFetching}
             />
           </div>
           <Tabs value={tab} onValueChange={(value) => setTab(value as "active" | "history")}>
@@ -276,12 +299,17 @@ export function VisitorVisitManager() {
                 rows={activeQuery.data?.rows ?? []}
                 loading={activeQuery.isLoading}
                 active
+                filtered={dateFilter.period !== "all" || Boolean(search.trim())}
                 onAdd={openAdd}
                 onCheckout={setCheckoutVisit}
               />
             </TabsContent>
             <TabsContent value="history">
-              <VisitTable rows={historyQuery.data?.rows ?? []} loading={historyQuery.isLoading} />
+              <VisitTable
+                rows={historyQuery.data?.rows ?? []}
+                loading={historyQuery.isLoading}
+                filtered={dateFilter.period !== "all" || Boolean(search.trim())}
+              />
               <Pagination
                 page={historyPage}
                 total={historyQuery.data?.total ?? 0}
@@ -433,13 +461,29 @@ export function VisitorVisitManager() {
   );
 }
 
-function useVisitQuery(status: "active" | "history", search: string, page: number) {
+function useVisitQuery(
+  status: "active" | "history",
+  search: string,
+  page: number,
+  dateFilter: VisitorDateFilterValue,
+) {
+  const range = resolveVisitorDateRange(dateFilter);
   return useQuery({
-    queryKey: ["visitor-visits", status, search.trim(), page],
+    queryKey: [
+      "visitor-visits",
+      status,
+      search.trim(),
+      dateFilter.period,
+      dateFilter.from,
+      dateFilter.to,
+      page,
+    ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("list_visitor_visits", {
         p_status: status,
         p_query: search.trim(),
+        p_from: range.from ?? undefined,
+        p_to: range.to ?? undefined,
         p_page: page,
         p_page_size: PAGE_SIZE,
       });
@@ -453,12 +497,14 @@ function VisitTable({
   rows,
   loading,
   active = false,
+  filtered = false,
   onAdd,
   onCheckout,
 }: {
   rows: VisitorVisitRow[];
   loading: boolean;
   active?: boolean;
+  filtered?: boolean;
   onAdd?: (row: VisitorVisitRow) => void;
   onCheckout?: (row: VisitorVisitRow) => void;
 }) {
@@ -472,8 +518,18 @@ function VisitTable({
   if (!rows.length)
     return (
       <EmptyState
-        title={active ? "Belum ada pengunjung aktif" : "Riwayat kunjungan belum tersedia"}
-        description="Data akan tampil setelah transaksi kunjungan dicatat."
+        title={
+          filtered
+            ? "Tidak ada kunjungan pada periode ini"
+            : active
+              ? "Belum ada pengunjung aktif"
+              : "Riwayat kunjungan belum tersedia"
+        }
+        description={
+          filtered
+            ? "Coba pilih periode lain atau ubah kata pencarian."
+            : "Data akan tampil setelah transaksi kunjungan dicatat."
+        }
       />
     );
   return (

@@ -1,16 +1,22 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, RotateCcw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Route } from "@/routes/_authenticated/pengunjung";
 
 import { supabase } from "@/integrations/supabase/client";
-import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { formatJakartaDateTime } from "@/lib/visitor";
 import { formatRupiah } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { VisitorStatusBadge } from "@/components/visitor/VisitorStatusBadge";
+import { VisitorDateFilter } from "@/components/visitor/VisitorDateFilter";
+import {
+  resolveVisitorDateRange,
+  normalizeVisitorDateFilter,
+  type VisitorDateFilterValue,
+} from "@/lib/visitorDatePeriod";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -60,9 +66,38 @@ interface VisitorSummary {
   deleted_at: string | null;
 }
 
+interface RawVisitorSale {
+  quantity: number;
+  amount: number;
+  deleted_at: string | null;
+}
+
+interface RawVisitorVisit {
+  check_in_at: string;
+  check_out_at: string | null;
+  deleted_at: string | null;
+  sales: RawVisitorSale[];
+}
+
+interface RawVisitor {
+  id: string;
+  visitor_code: string;
+  full_name: string;
+  phone: string | null;
+  notes: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+  visitor_visits: RawVisitorVisit[];
+}
+
+const MASTER_PAGE_SIZE = 20;
+const FETCH_BATCH_SIZE = 500;
+
 export function VisitorManager() {
   const { canManageVisitors, canViewDeletedData } = useAuth();
   const queryClient = useQueryClient();
+  const dateFilter = normalizeVisitorDateFilter(Route.useSearch());
+  const navigate = Route.useNavigate();
   const [tab, setTab] = useState<"active" | "deleted">("active");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -72,20 +107,65 @@ export function VisitorManager() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
 
+  const resolvedRange = useMemo(() => resolveVisitorDateRange(dateFilter), [dateFilter]);
   const query = useQuery({
-    queryKey: ["visitors", tab, search.trim(), page],
+    queryKey: ["visitors", tab, search.trim(), dateFilter.period, dateFilter.from, dateFilter.to],
     enabled: canManageVisitors,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_visitors_admin", {
-        p_query: search.trim(),
-        p_deleted: tab === "deleted",
-        p_page: page,
-        p_page_size: 20,
-      });
-      if (error) throw error;
-      return parseVisitors(data);
+      const allRows: RawVisitor[] = [];
+      let offset = 0;
+
+      while (true) {
+        let request = supabase
+          .from("visitors")
+          .select(
+            "id, visitor_code, full_name, phone, notes, updated_at, deleted_at, visitor_visits(check_in_at, check_out_at, deleted_at, sales(quantity, amount, deleted_at))",
+          )
+          .order("updated_at", { ascending: false })
+          .range(offset, offset + FETCH_BATCH_SIZE - 1);
+
+        request =
+          tab === "deleted"
+            ? request.not("deleted_at", "is", null)
+            : request.is("deleted_at", null);
+
+        const { data, error } = await request;
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as RawVisitor[];
+        allRows.push(...batch);
+        if (batch.length < FETCH_BATCH_SIZE) break;
+        offset += FETCH_BATCH_SIZE;
+      }
+
+      const keyword = search.trim().toLocaleLowerCase("id-ID");
+      const rows = allRows
+        .map(summarizeVisitor)
+        .filter(
+          (visitor) =>
+            !keyword ||
+            visitor.visitor_code.toLocaleLowerCase("id-ID").includes(keyword) ||
+            visitor.full_name.toLocaleLowerCase("id-ID").includes(keyword) ||
+            visitor.phone?.toLocaleLowerCase("id-ID").includes(keyword),
+        )
+        .filter((visitor) => {
+          if (!resolvedRange.startIso || !resolvedRange.endExclusiveIso) return true;
+          return (
+            visitor.last_visit_at !== null &&
+            visitor.last_visit_at >= resolvedRange.startIso &&
+            visitor.last_visit_at < resolvedRange.endExclusiveIso
+          );
+        });
+      return { rows, total: rows.length };
     },
   });
+  const pagedRows = useMemo(
+    () => (query.data?.rows ?? []).slice((page - 1) * MASTER_PAGE_SIZE, page * MASTER_PAGE_SIZE),
+    [page, query.data?.rows],
+  );
+  const updateDateFilter = (next: VisitorDateFilterValue) => {
+    setPage(1);
+    void navigate({ search: next });
+  };
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["visitors"] });
   const editMutation = useMutation({
     mutationFn: async () => {
@@ -156,16 +236,24 @@ export function VisitorManager() {
       ) : null}
       <Card>
         <CardContent className="space-y-4 p-4">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Cari kode, nama, atau telepon..."
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Cari kode, nama, atau telepon..."
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <VisitorDateFilter
+              idPrefix="visitor-master"
+              value={dateFilter}
+              onChange={updateDateFilter}
+              disabled={query.isFetching}
             />
           </div>
           {query.isLoading ? (
@@ -173,7 +261,7 @@ export function VisitorManager() {
               <Skeleton className="h-12" />
               <Skeleton className="h-12" />
             </>
-          ) : query.data?.rows.length ? (
+          ) : pagedRows.length ? (
             <div className="overflow-auto rounded-lg border">
               <Table>
                 <TableHeader>
@@ -188,7 +276,7 @@ export function VisitorManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {query.data.rows.map((visitor) => (
+                  {pagedRows.map((visitor) => (
                     <TableRow key={visitor.id}>
                       <TableCell>
                         <div className="font-medium">{visitor.full_name}</div>
@@ -255,8 +343,16 @@ export function VisitorManager() {
             </div>
           ) : (
             <EmptyState
-              title="Data pengunjung belum tersedia"
-              description="Pengunjung dibuat otomatis saat kunjungan pertama dicatat."
+              title={
+                dateFilter.period === "all" && !search.trim()
+                  ? "Data pengunjung belum tersedia"
+                  : "Tidak ada pengunjung pada periode ini"
+              }
+              description={
+                dateFilter.period === "all" && !search.trim()
+                  ? "Pengunjung dibuat otomatis saat kunjungan pertama dicatat."
+                  : "Coba pilih periode lain atau ubah kata pencarian."
+              }
             />
           )}
           <div className="flex justify-end gap-2">
@@ -265,7 +361,7 @@ export function VisitorManager() {
             </Button>
             <Button
               variant="outline"
-              disabled={page * 20 >= (query.data?.total ?? 0)}
+              disabled={page * MASTER_PAGE_SIZE >= (query.data?.total ?? 0)}
               onClick={() => setPage(page + 1)}
             >
               Berikutnya
@@ -333,32 +429,36 @@ export function VisitorManager() {
   );
 }
 
-function parseVisitors(value: Json): { rows: VisitorSummary[]; total: number } {
-  const root = record(value);
-  const rows = Array.isArray(root.rows)
-    ? root.rows
-        .map(record)
-        .filter((row) => typeof row.id === "string")
-        .map((row) => ({
-          id: String(row.id),
-          visitor_code: String(row.visitor_code ?? ""),
-          full_name: String(row.full_name ?? ""),
-          phone: typeof row.phone === "string" ? row.phone : null,
-          notes: typeof row.notes === "string" ? row.notes : null,
-          first_visit_at: typeof row.first_visit_at === "string" ? row.first_visit_at : null,
-          last_visit_at: typeof row.last_visit_at === "string" ? row.last_visit_at : null,
-          visit_count: Number(row.visit_count ?? 0),
-          total_quantity: Number(row.total_quantity ?? 0),
-          total_amount: Number(row.total_amount ?? 0),
-          is_visiting: Boolean(row.is_visiting),
-          updated_at: String(row.updated_at ?? ""),
-          deleted_at: typeof row.deleted_at === "string" ? row.deleted_at : null,
-        }))
-    : [];
-  return { rows, total: Number(root.total ?? 0) };
-}
-function record(value: Json | undefined): Record<string, Json | undefined> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+function summarizeVisitor(visitor: RawVisitor): VisitorSummary {
+  const visits = visitor.visitor_visits.filter((visit) => visit.deleted_at === null);
+  const checkIns = visits.map((visit) => visit.check_in_at).sort();
+  let totalQuantity = 0;
+  let totalAmount = 0;
+
+  for (const visit of visits) {
+    for (const sale of visit.sales) {
+      if (sale.deleted_at === null) {
+        totalQuantity += Number(sale.quantity);
+        totalAmount += Number(sale.amount);
+      }
+    }
+  }
+
+  return {
+    id: visitor.id,
+    visitor_code: visitor.visitor_code,
+    full_name: visitor.full_name,
+    phone: visitor.phone,
+    notes: visitor.notes,
+    first_visit_at: checkIns.at(0) ?? null,
+    last_visit_at: checkIns.at(-1) ?? null,
+    visit_count: visits.length,
+    total_quantity: totalQuantity,
+    total_amount: totalAmount,
+    is_visiting: visits.some((visit) => visit.check_out_at === null),
+    updated_at: visitor.updated_at,
+    deleted_at: visitor.deleted_at,
+  };
 }
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
