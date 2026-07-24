@@ -356,6 +356,10 @@ function UserManagementPage() {
                                 </SelectTrigger>
 
                                 <SelectContent>
+                                  <SelectItem value="staff">
+                                    Staf
+                                  </SelectItem>
+
                                   <SelectItem value="admin">
                                     Admin
                                   </SelectItem>

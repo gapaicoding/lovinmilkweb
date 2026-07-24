@@ -33,15 +33,17 @@ const signupSchema = z.object({
 type SignupValues = z.infer<typeof signupSchema>;
 
 function AuthPage() {
-  const { session, loading } = useAuth();
+  const { session, role, loading } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: "/dashboard", replace: true });
-  }, [loading, session, navigate]);
+    if (!loading && session && role) {
+      navigate({ to: role === "staff" ? "/kunjungan" : "/dashboard", replace: true });
+    }
+  }, [loading, session, role, navigate]);
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -64,7 +66,7 @@ function AuthPage() {
       return;
     }
     toast.success("Berhasil masuk");
-    navigate({ to: "/dashboard", replace: true });
+    // AuthProvider memuat role dan effect di atas mengarahkan ke halaman yang tepat.
   };
 
   const onSignup = async (values: SignupValues) => {

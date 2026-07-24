@@ -154,6 +154,7 @@ interface TransactionRow {
   updated_by: string | null;
   deleted_at: string | null;
   deleted_by: string | null;
+  entry_source: "manual" | "visitor" | null;
 }
 
 interface TransactionListResult {
@@ -188,8 +189,10 @@ export function TransactionManager({
 
   const {
     user,
-    isAdmin,
     isSuperAdmin,
+    canViewOperationalData,
+    canManageSales,
+    canManageExpenses,
     loading: authLoading,
   } = useAuth();
 
@@ -214,7 +217,7 @@ export function TransactionManager({
 
   const [hardConfirmText, setHardConfirmText] = useState("");
 
-  const hasManagementAccess = isAdmin || isSuperAdmin;
+  const hasManagementAccess = isSales ? canManageSales : canManageExpenses;
   const normalizedSearch = search.trim();
 
   const invalidDateRange =
@@ -230,7 +233,7 @@ export function TransactionManager({
       isSales ? "sales_categories" : "expense_categories",
       "transaction-options",
     ],
-    enabled: !authLoading && hasManagementAccess,
+    enabled: !authLoading && canViewOperationalData,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<TransactionCategory[]> => {
       if (isSales) {
@@ -260,7 +263,7 @@ export function TransactionManager({
       isSales ? "products" : "expense_items",
       "transaction-options",
     ],
-    enabled: !authLoading && hasManagementAccess,
+    enabled: !authLoading && canViewOperationalData,
     staleTime: 60_000,
     queryFn: async (): Promise<TransactionItem[]> => {
       if (isSales) {
@@ -380,7 +383,7 @@ export function TransactionManager({
     ],
     enabled:
       !authLoading &&
-      hasManagementAccess &&
+      canViewOperationalData &&
       !invalidDateRange &&
       !categoriesQuery.isLoading &&
       !itemsQuery.isLoading &&
@@ -849,7 +852,7 @@ export function TransactionManager({
   const optionsError =
     categoriesQuery.isError || itemsQuery.isError;
 
-  if (!authLoading && !hasManagementAccess) {
+  if (!authLoading && !canViewOperationalData) {
     return (
       <div>
         <PageHeader
@@ -877,7 +880,7 @@ export function TransactionManager({
             ? "Catat penjualan berdasarkan produk, jumlah, dan harga satuan."
             : "Catat pengeluaran berdasarkan item, jumlah, dan harga satuan."
         }
-        actions={
+        actions={hasManagementAccess ? (
           <Button
             type="button"
             onClick={openCreateDialog}
@@ -891,7 +894,7 @@ export function TransactionManager({
             <Plus className="mr-2 h-4 w-4" />
             Tambah {label}
           </Button>
-        }
+        ) : undefined}
       />
 
       <Tabs
@@ -1079,6 +1082,14 @@ export function TransactionManager({
                                   {transactionItem.code}
                                 </div>
                               )}
+                              {isSales && (
+                                <Badge
+                                  variant={transaction.entry_source === "visitor" ? "default" : "secondary"}
+                                  className="mt-1"
+                                >
+                                  {transaction.entry_source === "visitor" ? "Pengunjung" : "Manual"}
+                                </Badge>
+                              )}
                             </TableCell>
 
                             <TableCell className="whitespace-nowrap">
@@ -1114,7 +1125,7 @@ export function TransactionManager({
                             </TableCell>
 
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
+                              {hasManagementAccess ? <div className="flex justify-end gap-1">
                                 {isRowBusy && (
                                   <Loader2 className="my-auto mr-1 h-4 w-4 animate-spin text-muted-foreground" />
                                 )}
@@ -1183,7 +1194,7 @@ export function TransactionManager({
                                     </Button>
                                   </>
                                 )}
-                              </div>
+                              </div> : <span className="text-muted-foreground">—</span>}
                             </TableCell>
                           </TableRow>
                         );
@@ -1798,6 +1809,7 @@ function normalizeSalesRow(row: SalesRow): TransactionRow {
     updated_by: row.updated_by,
     deleted_at: row.deleted_at,
     deleted_by: row.deleted_by,
+    entry_source: row.entry_source === "visitor" ? "visitor" : "manual",
   };
 }
 
@@ -1817,6 +1829,7 @@ function normalizeExpenseRow(row: ExpenseRow): TransactionRow {
     updated_by: row.updated_by,
     deleted_at: row.deleted_at,
     deleted_by: row.deleted_by,
+    entry_source: null,
   };
 }
 

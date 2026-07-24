@@ -235,7 +235,9 @@ function ProfilePage() {
                     ? "Super Admin"
                     : role === "admin"
                       ? "Admin"
-                      : "-"}
+                      : role === "staff"
+                        ? "Staf"
+                        : "-"}
                 </Badge>
               </div>
 

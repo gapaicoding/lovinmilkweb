@@ -19,6 +19,8 @@ const BREADCRUMBS: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/penjualan": "Data Penjualan",
   "/pengeluaran": "Data Pengeluaran",
+  "/kunjungan": "Kunjungan Pengunjung",
+  "/pengunjung": "Master Pengunjung",
   "/kategori-penjualan": "Kategori Penjualan",
   "/kategori-pengeluaran": "Kategori Pengeluaran",
   "/pengguna": "Manajemen Pengguna",
@@ -47,7 +49,7 @@ export function TopNavbar() {
           <div className="hidden sm:flex flex-col items-start leading-tight pr-2">
             <span className="text-xs font-medium max-w-[140px] truncate">{profile?.full_name || user?.email}</span>
             <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-normal">
-              {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "-"}
+              {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : role === "staff" ? "Staf" : "-"}
             </Badge>
           </div>
         </DropdownMenuTrigger>
