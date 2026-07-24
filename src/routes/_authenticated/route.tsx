@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 
@@ -20,11 +20,28 @@ function AuthenticatedLayout() {
     session,
     profile,
     loading,
-    isAdmin,
+    role,
+    canViewOperationalData,
+    canAccessDashboard,
+    canAccessAnalytics,
+    canAccessMasterData,
+    canManageVisitors,
+    canManageUsers,
     signOut,
   } = useAuth();
 
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+
+  const routeAllowed =
+    pathname === "/profil" ||
+    (["/penjualan", "/pengeluaran", "/kunjungan"].includes(pathname) && canViewOperationalData) ||
+    (pathname === "/dashboard" && canAccessDashboard) ||
+    (pathname === "/analitik-produk" && canAccessAnalytics) ||
+    (pathname === "/pengunjung" && canManageVisitors) ||
+    (pathname === "/pengguna" && canManageUsers) ||
+    (["/produk", "/kategori-penjualan", "/kategori-pengeluaran", "/item-pengeluaran"].includes(pathname) &&
+      canAccessMasterData);
 
   useEffect(() => {
     if (!loading && !session) {
@@ -34,6 +51,12 @@ function AuthenticatedLayout() {
       });
     }
   }, [loading, session, navigate]);
+
+  useEffect(() => {
+    if (!loading && session && profile && role && !routeAllowed) {
+      void navigate({ to: role === "staff" ? "/kunjungan" : "/dashboard", replace: true });
+    }
+  }, [loading, session, profile, role, routeAllowed, navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -103,7 +126,7 @@ function AuthenticatedLayout() {
    * Hanya role admin dan super_admin yang boleh mengakses
    * kelompok route _authenticated.
    */
-  if (!isAdmin) {
+  if (!canViewOperationalData) {
     return (
       <AccessMessage
         title="Akses Ditolak"
@@ -111,6 +134,10 @@ function AuthenticatedLayout() {
         onSignOut={handleSignOut}
       />
     );
+  }
+
+  if (!routeAllowed) {
+    return <PageLoader />;
   }
 
   return (

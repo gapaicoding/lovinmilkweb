@@ -15,6 +15,8 @@ import {
   UserCircle,
   LogOut,
   Milk,
+  ContactRound,
+  UserRoundCheck,
 } from "lucide-react";
 
 import {
@@ -34,7 +36,9 @@ import { useAuth } from "@/hooks/useAuth";
 
 export function AppSidebar() {
   const {
-    isSuperAdmin,
+    canAccessDashboard,
+    canAccessMasterData,
+    canManageUsers,
     signOut,
   } = useAuth();
 
@@ -69,7 +73,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
+        {canAccessDashboard ? <SidebarGroup>
           <SidebarGroupLabel>
             Ringkasan
           </SidebarGroupLabel>
@@ -109,7 +113,7 @@ export function AppSidebar() {
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup> : null}
 
         <SidebarGroup>
           <SidebarGroupLabel>
@@ -135,6 +139,15 @@ export function AppSidebar() {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={active("/kunjungan")}>
+                  <Link to="/kunjungan">
+                    <UserRoundCheck />
+                    <span>Kunjungan Pengunjung</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={active(
@@ -153,7 +166,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
+        {canAccessMasterData ? <SidebarGroup>
           <SidebarGroupLabel>
             Master Data
           </SidebarGroupLabel>
@@ -224,7 +237,16 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {isSuperAdmin ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={active("/pengunjung")}>
+                  <Link to="/pengunjung">
+                    <ContactRound />
+                    <span>Pengunjung</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {canManageUsers ? (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -243,7 +265,7 @@ export function AppSidebar() {
               ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
-        </SidebarGroup>
+        </SidebarGroup> : null}
 
         <SidebarGroup>
           <SidebarGroupLabel>
