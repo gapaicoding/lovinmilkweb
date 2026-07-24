@@ -14,7 +14,6 @@ import {
   Users,
   UserCircle,
   LogOut,
-  Milk,
   ContactRound,
   UserRoundCheck,
 } from "lucide-react";
@@ -54,13 +53,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/25">
-            <Milk className="h-5 w-5 text-primary-foreground" />
-          </div>
+      <SidebarHeader className="border-b p-2 group-data-[collapsible=icon]:items-center">
+        <div className="flex min-w-0 items-center gap-2.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+          <img
+            src="/branding/lovin-milk-logo.jpg"
+            alt="Logo Lovin Milk"
+            className="aspect-square h-10 w-10 min-h-10 min-w-10 shrink-0 rounded-xl border border-primary/15 object-cover shadow-sm transition-[width,height,border-radius] duration-200 group-data-[collapsible=icon]:h-9 group-data-[collapsible=icon]:w-9 group-data-[collapsible=icon]:min-h-9 group-data-[collapsible=icon]:min-w-9 group-data-[collapsible=icon]:rounded-lg"
+          />
 
-          <div className="flex flex-col leading-tight">
+          <div className="flex min-w-0 flex-col leading-tight transition-opacity duration-200 group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-semibold">
               Lovin Milk
             </span>

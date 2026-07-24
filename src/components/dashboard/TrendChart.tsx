@@ -161,7 +161,7 @@ export function TrendChart({
         ) : null}
       </div>
 
-      <div className="p-5">
+      <div className="bg-white p-4 dark:bg-card sm:p-5">
         {loading ? (
           <TrendChartSkeleton height={height} />
         ) : normalizedData.length === 0 ? (
@@ -182,8 +182,13 @@ export function TrendChart({
             />
 
             <div
-              className="w-full"
-              style={{ height }}
+              className="h-[280px] w-full sm:h-[320px] lg:h-[350px]"
+              style={{
+                height:
+                  height === 360
+                    ? undefined
+                    : height,
+              }}
             >
               <ResponsiveContainer
                 width="100%"
@@ -193,9 +198,9 @@ export function TrendChart({
                   data={normalizedData}
                   margin={{
                     top: 12,
-                    right: 12,
+                    right: 16,
                     bottom: 8,
-                    left: 4,
+                    left: 8,
                   }}
                 >
                   <defs>
@@ -221,16 +226,17 @@ export function TrendChart({
                   </defs>
 
                   <CartesianGrid
-                    strokeDasharray="4 4"
+                    strokeDasharray="3 5"
                     vertical={false}
-                    stroke="hsl(var(--border))"
+                    stroke="hsl(var(--border) / 0.7)"
                   />
 
                   <XAxis
                     dataKey="label"
                     tickLine={false}
                     axisLine={false}
-                    minTickGap={24}
+                    minTickGap={32}
+                    tickMargin={10}
                     tick={{
                       fill:
                         "hsl(var(--muted-foreground))",
@@ -241,9 +247,10 @@ export function TrendChart({
                   <YAxis
                     tickLine={false}
                     axisLine={false}
-                    width={74}
+                    width={88}
+                    tickMargin={8}
                     tickFormatter={(value) =>
-                      formatCompactRupiah(
+                      formatSignedCompactRupiah(
                         Number(value),
                       )
                     }
@@ -311,9 +318,8 @@ export function TrendChart({
                       type="monotone"
                       dataKey="expenses"
                       name={expensesLabel}
-                      stroke="hsl(var(--destructive))"
-                      strokeWidth={2.25}
-                      strokeDasharray="6 4"
+                        stroke="#f17872"
+                        strokeWidth={2.5}
                       dot={false}
                       activeDot={{
                         r: 5,
@@ -330,7 +336,7 @@ export function TrendChart({
                       type="monotone"
                       dataKey="profit"
                       name={profitLabel}
-                      stroke="hsl(var(--chart-2, 142 76% 36%))"
+                        stroke="#149b87"
                       strokeWidth={2.5}
                       dot={false}
                       activeDot={{
@@ -731,4 +737,17 @@ function normalizeNumber(
   return Number.isFinite(normalized)
     ? normalized
     : 0;
+}
+
+function formatSignedCompactRupiah(
+  value: number,
+): string {
+  const normalized = normalizeNumber(value);
+  const formatted = formatCompactRupiah(
+    Math.abs(normalized),
+  );
+
+  return normalized < 0
+    ? `-${formatted}`
+    : formatted;
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -52,9 +53,26 @@ export function ProductSalesTrendChart({
   loading = false,
   height = 380,
 }: ProductSalesTrendChartProps) {
+  const normalizedData = useMemo(
+    () =>
+      data.map((item) => ({
+        ...item,
+        quantity: normalizeNumber(
+          item.quantity,
+        ),
+        revenue: normalizeNumber(
+          item.revenue,
+        ),
+        transactionCount: normalizeNumber(
+          item.transactionCount,
+        ),
+      })),
+    [data],
+  );
+
   const summary = useMemo(
     () =>
-      data.reduce(
+      normalizedData.reduce(
         (result, item) => ({
           quantity:
             result.quantity +
@@ -74,7 +92,7 @@ export function ProductSalesTrendChart({
           transactionCount: 0,
         },
       ),
-    [data],
+    [normalizedData],
   );
 
   return (
@@ -96,7 +114,7 @@ export function ProductSalesTrendChart({
           </div>
         </div>
 
-        {!loading && data.length > 0 ? (
+        {!loading && normalizedData.length > 0 ? (
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="rounded-full bg-blue-500/10 px-2.5 py-1 font-medium text-blue-700 dark:text-blue-400">
               Quantity
@@ -108,12 +126,12 @@ export function ProductSalesTrendChart({
         ) : null}
       </div>
 
-      <div className="p-5">
+      <div className="bg-white p-4 dark:bg-card sm:p-5">
         {loading ? (
           <ProductTrendSkeleton
             height={height}
           />
-        ) : data.length === 0 ? (
+        ) : normalizedData.length === 0 ? (
           <ProductTrendEmptyState
             height={height}
           />
@@ -145,33 +163,60 @@ export function ProductSalesTrendChart({
             </div>
 
             <div
-              className="w-full"
-              style={{ height }}
+              className="h-[280px] w-full sm:h-[320px] lg:h-[350px]"
+              style={{
+                height:
+                  height === 380
+                    ? undefined
+                    : height,
+              }}
             >
               <ResponsiveContainer
                 width="100%"
                 height="100%"
               >
                 <ComposedChart
-                  data={data}
+                  data={normalizedData}
                   margin={{
                     top: 12,
-                    right: 8,
+                    right: 12,
                     bottom: 8,
-                    left: 4,
+                    left: 8,
                   }}
                 >
+                  <defs>
+                    <linearGradient
+                      id="product-revenue-gradient"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.12}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  </defs>
+
                   <CartesianGrid
-                    strokeDasharray="4 4"
+                    strokeDasharray="3 5"
                     vertical={false}
-                    stroke="hsl(var(--border))"
+                    stroke="hsl(var(--border) / 0.7)"
                   />
 
                   <XAxis
                     dataKey="label"
                     tickLine={false}
                     axisLine={false}
-                    minTickGap={20}
+                    minTickGap={32}
+                    tickMargin={10}
                     tick={{
                       fill:
                         "hsl(var(--muted-foreground))",
@@ -183,12 +228,12 @@ export function ProductSalesTrendChart({
                     yAxisId="quantity"
                     tickLine={false}
                     axisLine={false}
-                    width={52}
-                    allowDecimals
+                    width={48}
+                    allowDecimals={false}
+                    tickMargin={8}
                     tickFormatter={(value) =>
                       formatNumber(
                         Number(value),
-                        1,
                       )
                     }
                     tick={{
@@ -203,7 +248,8 @@ export function ProductSalesTrendChart({
                     orientation="right"
                     tickLine={false}
                     axisLine={false}
-                    width={74}
+                    width={84}
+                    tickMargin={8}
                     tickFormatter={(value) =>
                       formatCompactRupiah(
                         Number(value),
@@ -235,9 +281,20 @@ export function ProductSalesTrendChart({
                     yAxisId="quantity"
                     dataKey="quantity"
                     name="Quantity"
-                    fill="hsl(var(--chart-2, 199 89% 48%))"
-                    radius={[5, 5, 0, 0]}
-                    maxBarSize={36}
+                    fill="#74cde8"
+                    radius={[7, 7, 0, 0]}
+                    maxBarSize={32}
+                  />
+
+                  <Area
+                    yAxisId="revenue"
+                    type="monotone"
+                    dataKey="revenue"
+                    fill="url(#product-revenue-gradient)"
+                    stroke="none"
+                    connectNulls
+                    legendType="none"
+                    tooltipType="none"
                   />
 
                   <Line
@@ -285,14 +342,15 @@ function ProductTrendTooltip({
   }
 
   return (
-    <div className="min-w-[190px] rounded-lg border bg-background p-3 shadow-lg">
+    <div className="min-w-[200px] rounded-xl border border-border/80 bg-popover p-3 text-popover-foreground shadow-lg">
       <p className="text-sm font-semibold">
         {formatDate(item.date)}
       </p>
 
       <div className="mt-2 space-y-1.5 text-xs">
         <div className="flex items-center justify-between gap-5">
-          <span className="text-muted-foreground">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#74cde8]" />
             Quantity
           </span>
           <span className="font-medium">
@@ -304,7 +362,8 @@ function ProductTrendTooltip({
         </div>
 
         <div className="flex items-center justify-between gap-5">
-          <span className="text-muted-foreground">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary" />
             Omzet
           </span>
           <span className="font-medium">
