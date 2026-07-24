@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import {
+  keepPreviousData,
+  useQuery,
+} from "@tanstack/react-query";
 import {
   differenceInCalendarDays,
   eachDayOfInterval,
@@ -30,7 +33,10 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   DateRangeFilter,
   computeRange,
+  isDateRangeValid,
+  parseDateInput,
   type DateRange,
+  type RangePreset,
 } from "@/components/DateRangeFilter";
 
 import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
@@ -78,6 +84,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute(
   "/_authenticated/dashboard",
 )({
+  validateSearch: validateDashboardSearch,
   component: DashboardPage,
 });
 
@@ -178,10 +185,124 @@ interface QueryError {
   hint?: string;
 }
 
+interface DashboardSearch {
+  period?: RangePreset;
+  from?: string;
+  to?: string;
+}
+
+const DASHBOARD_PERIODS: readonly RangePreset[] = [
+  "today",
+  "yesterday",
+  "last_7_days",
+  "last_30_days",
+  "this_week",
+  "last_week",
+  "this_month",
+  "last_month",
+  "last_3_months",
+  "this_year",
+  "last_year",
+  "custom",
+];
+
+function validateDashboardSearch(
+  search: Record<string, unknown>,
+): DashboardSearch {
+  const period = DASHBOARD_PERIODS.includes(
+    search.period as RangePreset,
+  )
+    ? (search.period as RangePreset)
+    : undefined;
+
+  if (!period) {
+    return {};
+  }
+
+  if (period !== "custom") {
+    return { period };
+  }
+
+  if (
+    typeof search.from !== "string" ||
+    typeof search.to !== "string"
+  ) {
+    return {};
+  }
+
+  const from = parseDateInput(search.from);
+  const to = parseDateInput(search.to);
+
+  if (
+    !from ||
+    !to ||
+    !isDateRangeValid({
+      preset: "custom",
+      from,
+      to,
+    })
+  ) {
+    return {};
+  }
+
+  return {
+    period,
+    from: search.from,
+    to: search.to,
+  };
+}
+
 function DashboardPage() {
-  const [range, setRange] = useState<DateRange>(() =>
-    computeRange("this_month"),
-  );
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const period = search.period ?? "this_month";
+
+  const range = useMemo<DateRange>(() => {
+    if (period === "custom") {
+      const from = parseDateInput(
+        search.from ?? "",
+      );
+      const to = parseDateInput(
+        search.to ?? "",
+      );
+
+      if (from && to) {
+        return computeRange(
+          "custom",
+          from,
+          to,
+        );
+      }
+    }
+
+    return computeRange(period);
+  }, [period, search.from, search.to]);
+
+  const handleRangeChange = (
+    nextRange: DateRange,
+  ) => {
+    const nextSearch: DashboardSearch =
+      nextRange.preset === "custom"
+        ? {
+            period: "custom",
+            from: toDateInput(nextRange.from),
+            to: toDateInput(nextRange.to),
+          }
+        : {
+            period: nextRange.preset,
+          };
+
+    void navigate({
+      search: nextSearch,
+      replace: true,
+    });
+  };
+
+  const queryPeriodKey = [
+    period,
+    search.from ?? null,
+    search.to ?? null,
+  ] as const;
 
   const selectedRange = useMemo<PeriodRange>(
     () => ({
@@ -226,22 +347,26 @@ function DashboardPage() {
   const salesQuery = useQuery({
     queryKey: [
       "dashboard-sales",
+      ...queryPeriodKey,
       combinedRange.from,
       combinedRange.to,
     ],
     enabled: isRangeValid,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
     queryFn: () => fetchSales(combinedRange),
   });
 
   const expensesQuery = useQuery({
     queryKey: [
       "dashboard-expenses",
+      ...queryPeriodKey,
       combinedRange.from,
       combinedRange.to,
     ],
     enabled: isRangeValid,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
     queryFn: () => fetchExpenses(combinedRange),
   });
 
@@ -753,7 +878,7 @@ function DashboardPage() {
         <CardContent className="space-y-3 p-4">
           <DateRangeFilter
             value={range}
-            onChange={setRange}
+            onChange={handleRangeChange}
           />
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
