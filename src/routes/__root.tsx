@@ -150,8 +150,17 @@ export const Route =
         },
         {
           rel: "icon",
-          href: "/favicon.ico",
-          type: "image/x-icon",
+          href: "/branding/lovin-milk-logo.jpg?v=2",
+          type: "image/jpeg",
+        },
+        {
+          rel: "shortcut icon",
+          href: "/branding/lovin-milk-logo.jpg?v=2",
+          type: "image/jpeg",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/branding/lovin-milk-logo.jpg?v=2",
         },
         {
           rel: "preconnect",

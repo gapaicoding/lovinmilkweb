@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Loader2, Milk } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -96,9 +96,11 @@ function AuthPage() {
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 via-background to-secondary/30">
       <Card className="w-full max-w-md shadow-xl rounded-2xl border-primary/20">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20">
-            <Milk className="h-7 w-7 text-primary-foreground" />
-          </div>
+          <img
+            src="/branding/lovin-milk-logo.jpg"
+            alt="Logo Lovin Milk"
+            className="mx-auto aspect-square h-14 w-14 shrink-0 rounded-full object-cover"
+          />
           <CardTitle className="text-2xl">Lovin Milk Dashboard</CardTitle>
           <CardDescription>
             {mode === "login" ? "Masuk untuk mengelola penjualan & keuangan" : "Daftarkan akun baru"}
