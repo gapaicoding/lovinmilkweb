@@ -13,17 +13,21 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAnalitikProdukRouteImport } from './routes/_authenticated/analitik-produk'
+import { Route as AuthenticatedAssetPeralatanRouteImport } from './routes/_authenticated/asset-peralatan'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedDataPembelianRouteImport } from './routes/_authenticated/data-pembelian'
 import { Route as AuthenticatedItemPengeluaranRouteImport } from './routes/_authenticated/item-pengeluaran'
 import { Route as AuthenticatedKategoriPengeluaranRouteImport } from './routes/_authenticated/kategori-pengeluaran'
 import { Route as AuthenticatedKategoriPenjualanRouteImport } from './routes/_authenticated/kategori-penjualan'
 import { Route as AuthenticatedKunjunganRouteImport } from './routes/_authenticated/kunjungan'
+import { Route as AuthenticatedLaporanKeuanganRouteImport } from './routes/_authenticated/laporan-keuangan'
 import { Route as AuthenticatedPengeluaranRouteImport } from './routes/_authenticated/pengeluaran'
 import { Route as AuthenticatedPenggunaRouteImport } from './routes/_authenticated/pengguna'
 import { Route as AuthenticatedPengunjungRouteImport } from './routes/_authenticated/pengunjung'
 import { Route as AuthenticatedPenjualanRouteImport } from './routes/_authenticated/penjualan'
 import { Route as AuthenticatedProdukRouteImport } from './routes/_authenticated/produk'
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
+import { Route as AuthenticatedSupplierRouteImport } from './routes/_authenticated/supplier'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,11 +49,23 @@ const AuthenticatedAnalitikProdukRoute =
     path: '/analitik-produk',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssetPeralatanRoute =
+  AuthenticatedAssetPeralatanRouteImport.update({
+    id: '/asset-peralatan',
+    path: '/asset-peralatan',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDataPembelianRoute =
+  AuthenticatedDataPembelianRouteImport.update({
+    id: '/data-pembelian',
+    path: '/data-pembelian',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedItemPengeluaranRoute =
   AuthenticatedItemPengeluaranRouteImport.update({
     id: '/item-pengeluaran',
@@ -73,6 +89,12 @@ const AuthenticatedKunjunganRoute = AuthenticatedKunjunganRouteImport.update({
   path: '/kunjungan',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLaporanKeuanganRoute =
+  AuthenticatedLaporanKeuanganRouteImport.update({
+    id: '/laporan-keuangan',
+    path: '/laporan-keuangan',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPengeluaranRoute =
   AuthenticatedPengeluaranRouteImport.update({
     id: '/pengeluaran',
@@ -104,38 +126,51 @@ const AuthenticatedProfilRoute = AuthenticatedProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSupplierRoute = AuthenticatedSupplierRouteImport.update({
+  id: '/supplier',
+  path: '/supplier',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
+  '/asset-peralatan': typeof AuthenticatedAssetPeralatanRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/data-pembelian': typeof AuthenticatedDataPembelianRoute
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
+  '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/pengguna': typeof AuthenticatedPenggunaRoute
   '/pengunjung': typeof AuthenticatedPengunjungRoute
   '/penjualan': typeof AuthenticatedPenjualanRoute
   '/produk': typeof AuthenticatedProdukRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/supplier': typeof AuthenticatedSupplierRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
+  '/asset-peralatan': typeof AuthenticatedAssetPeralatanRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/data-pembelian': typeof AuthenticatedDataPembelianRoute
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
+  '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/pengguna': typeof AuthenticatedPenggunaRoute
   '/pengunjung': typeof AuthenticatedPengunjungRoute
   '/penjualan': typeof AuthenticatedPenjualanRoute
   '/produk': typeof AuthenticatedProdukRoute
   '/profil': typeof AuthenticatedProfilRoute
+  '/supplier': typeof AuthenticatedSupplierRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -143,17 +178,21 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/analitik-produk': typeof AuthenticatedAnalitikProdukRoute
+  '/_authenticated/asset-peralatan': typeof AuthenticatedAssetPeralatanRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/data-pembelian': typeof AuthenticatedDataPembelianRoute
   '/_authenticated/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/_authenticated/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/_authenticated/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
   '/_authenticated/kunjungan': typeof AuthenticatedKunjunganRoute
+  '/_authenticated/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/_authenticated/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/_authenticated/pengguna': typeof AuthenticatedPenggunaRoute
   '/_authenticated/pengunjung': typeof AuthenticatedPengunjungRoute
   '/_authenticated/penjualan': typeof AuthenticatedPenjualanRoute
   '/_authenticated/produk': typeof AuthenticatedProdukRoute
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
+  '/_authenticated/supplier': typeof AuthenticatedSupplierRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,50 +200,62 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/analitik-produk'
+    | '/asset-peralatan'
     | '/dashboard'
+    | '/data-pembelian'
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
     | '/kunjungan'
+    | '/laporan-keuangan'
     | '/pengeluaran'
     | '/pengguna'
     | '/pengunjung'
     | '/penjualan'
     | '/produk'
     | '/profil'
+    | '/supplier'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/analitik-produk'
+    | '/asset-peralatan'
     | '/dashboard'
+    | '/data-pembelian'
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
     | '/kunjungan'
+    | '/laporan-keuangan'
     | '/pengeluaran'
     | '/pengguna'
     | '/pengunjung'
     | '/penjualan'
     | '/produk'
     | '/profil'
+    | '/supplier'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/analitik-produk'
+    | '/_authenticated/asset-peralatan'
     | '/_authenticated/dashboard'
+    | '/_authenticated/data-pembelian'
     | '/_authenticated/item-pengeluaran'
     | '/_authenticated/kategori-pengeluaran'
     | '/_authenticated/kategori-penjualan'
     | '/_authenticated/kunjungan'
+    | '/_authenticated/laporan-keuangan'
     | '/_authenticated/pengeluaran'
     | '/_authenticated/pengguna'
     | '/_authenticated/pengunjung'
     | '/_authenticated/penjualan'
     | '/_authenticated/produk'
     | '/_authenticated/profil'
+    | '/_authenticated/supplier'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,11 +294,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalitikProdukRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/asset-peralatan': {
+      id: '/_authenticated/asset-peralatan'
+      path: '/asset-peralatan'
+      fullPath: '/asset-peralatan'
+      preLoaderRoute: typeof AuthenticatedAssetPeralatanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/data-pembelian': {
+      id: '/_authenticated/data-pembelian'
+      path: '/data-pembelian'
+      fullPath: '/data-pembelian'
+      preLoaderRoute: typeof AuthenticatedDataPembelianRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/item-pengeluaran': {
@@ -276,6 +341,13 @@ declare module '@tanstack/react-router' {
       path: '/kunjungan'
       fullPath: '/kunjungan'
       preLoaderRoute: typeof AuthenticatedKunjunganRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/laporan-keuangan': {
+      id: '/_authenticated/laporan-keuangan'
+      path: '/laporan-keuangan'
+      fullPath: '/laporan-keuangan'
+      preLoaderRoute: typeof AuthenticatedLaporanKeuanganRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/pengeluaran': {
@@ -320,37 +392,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/supplier': {
+      id: '/_authenticated/supplier'
+      path: '/supplier'
+      fullPath: '/supplier'
+      preLoaderRoute: typeof AuthenticatedSupplierRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalitikProdukRoute: typeof AuthenticatedAnalitikProdukRoute
+  AuthenticatedAssetPeralatanRoute: typeof AuthenticatedAssetPeralatanRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDataPembelianRoute: typeof AuthenticatedDataPembelianRoute
   AuthenticatedItemPengeluaranRoute: typeof AuthenticatedItemPengeluaranRoute
   AuthenticatedKategoriPengeluaranRoute: typeof AuthenticatedKategoriPengeluaranRoute
   AuthenticatedKategoriPenjualanRoute: typeof AuthenticatedKategoriPenjualanRoute
   AuthenticatedKunjunganRoute: typeof AuthenticatedKunjunganRoute
+  AuthenticatedLaporanKeuanganRoute: typeof AuthenticatedLaporanKeuanganRoute
   AuthenticatedPengeluaranRoute: typeof AuthenticatedPengeluaranRoute
   AuthenticatedPenggunaRoute: typeof AuthenticatedPenggunaRoute
   AuthenticatedPengunjungRoute: typeof AuthenticatedPengunjungRoute
   AuthenticatedPenjualanRoute: typeof AuthenticatedPenjualanRoute
   AuthenticatedProdukRoute: typeof AuthenticatedProdukRoute
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
+  AuthenticatedSupplierRoute: typeof AuthenticatedSupplierRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalitikProdukRoute: AuthenticatedAnalitikProdukRoute,
+  AuthenticatedAssetPeralatanRoute: AuthenticatedAssetPeralatanRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDataPembelianRoute: AuthenticatedDataPembelianRoute,
   AuthenticatedItemPengeluaranRoute: AuthenticatedItemPengeluaranRoute,
   AuthenticatedKategoriPengeluaranRoute: AuthenticatedKategoriPengeluaranRoute,
   AuthenticatedKategoriPenjualanRoute: AuthenticatedKategoriPenjualanRoute,
   AuthenticatedKunjunganRoute: AuthenticatedKunjunganRoute,
+  AuthenticatedLaporanKeuanganRoute: AuthenticatedLaporanKeuanganRoute,
   AuthenticatedPengeluaranRoute: AuthenticatedPengeluaranRoute,
   AuthenticatedPenggunaRoute: AuthenticatedPenggunaRoute,
   AuthenticatedPengunjungRoute: AuthenticatedPengunjungRoute,
   AuthenticatedPenjualanRoute: AuthenticatedPenjualanRoute,
   AuthenticatedProdukRoute: AuthenticatedProdukRoute,
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
+  AuthenticatedSupplierRoute: AuthenticatedSupplierRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -1,0 +1,279 @@
+\set ON_ERROR_STOP on
+
+\if :{?batch_key}
+\else
+  \set batch_key 'LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2'
+\endif
+
+\echo 'Starting private staging import for approved batch' :batch_key
+
+begin;
+
+-- Supabase CLI linked logins are short-lived proxy roles with permission to
+-- assume the database owner. A normal credential without that membership
+-- fails here before any staging row is touched.
+set role postgres;
+set local timezone = 'Asia/Jakarta';
+set local lock_timeout = '15s';
+set local statement_timeout = '0';
+set local application_name = 'lovin-milk-june-2026-staging-import';
+
+select pg_advisory_xact_lock(
+  hashtextextended('lovin-milk:june-import:' || :'batch_key', 0)
+);
+
+do $preflight$
+declare
+  v_relation text;
+  v_required constant text[] := array[
+    'public.data_import_batches',
+    'public.data_import_reconciliation_results',
+    'staging.asset_categories_import',
+    'staging.assets_import',
+    'staging.customer_traffic_daily_import',
+    'staging.daily_sales_summaries_import',
+    'staging.data_coverage_import',
+    'staging.finance_summary_import',
+    'staging.historical_product_aliases_import',
+    'staging.historical_product_daily_quantities_import',
+    'staging.historical_products_import',
+    'staging.purchases_import',
+    'staging.supplier_items_import',
+    'staging.suppliers_import'
+  ];
+begin
+  foreach v_relation in array v_required loop
+    if to_regclass(v_relation) is null then
+      raise exception
+        'Staging import aborted: required relation % is missing.',
+        v_relation;
+    end if;
+  end loop;
+end;
+$preflight$;
+
+create temporary table _june_staging_context
+on commit drop
+as
+select
+  id as import_batch_id,
+  batch_key
+from public.data_import_batches
+where batch_key = :'batch_key'
+  and facts_period_start = date '2026-06-01'
+  and facts_period_end = date '2026-06-30'
+  and assets_full = true;
+
+do $batch_preflight$
+begin
+  if (select count(*) from _june_staging_context) <> 1 then
+    raise exception
+      'Staging import aborted: the approved prepared batch is missing or has the wrong scope.';
+  end if;
+end;
+$batch_preflight$;
+
+-- Preserve a baseline so a malformed direct psql invocation cannot introduce
+-- or modify rows belonging to another batch.
+create temporary table _june_other_batch_counts (
+  relation_name text primary key,
+  row_count bigint not null
+) on commit drop;
+
+do $baseline$
+declare
+  v_relation text;
+  v_count bigint;
+  v_batch_key text := (select batch_key from _june_staging_context);
+  v_relations constant text[] := array[
+    'staging.asset_categories_import',
+    'staging.assets_import',
+    'staging.customer_traffic_daily_import',
+    'staging.daily_sales_summaries_import',
+    'staging.data_coverage_import',
+    'staging.finance_summary_import',
+    'staging.historical_product_aliases_import',
+    'staging.historical_product_daily_quantities_import',
+    'staging.historical_products_import',
+    'staging.purchases_import',
+    'staging.supplier_items_import',
+    'staging.suppliers_import'
+  ];
+begin
+  foreach v_relation in array v_relations loop
+    execute format(
+      'select count(*) from %s where import_batch_key is distinct from $1',
+      v_relation
+    )
+    into v_count
+    using v_batch_key;
+
+    insert into _june_other_batch_counts (relation_name, row_count)
+    values (v_relation, v_count);
+  end loop;
+end;
+$baseline$;
+
+-- Batch-only cleanup. TRUNCATE is intentionally not used.
+delete from staging.asset_categories_import
+where import_batch_key = :'batch_key';
+delete from staging.assets_import
+where import_batch_key = :'batch_key';
+delete from staging.customer_traffic_daily_import
+where import_batch_key = :'batch_key';
+delete from staging.daily_sales_summaries_import
+where import_batch_key = :'batch_key';
+delete from staging.data_coverage_import
+where import_batch_key = :'batch_key';
+delete from staging.finance_summary_import
+where import_batch_key = :'batch_key';
+delete from staging.historical_product_aliases_import
+where import_batch_key = :'batch_key';
+delete from staging.historical_product_daily_quantities_import
+where import_batch_key = :'batch_key';
+delete from staging.historical_products_import
+where import_batch_key = :'batch_key';
+delete from staging.purchases_import
+where import_batch_key = :'batch_key';
+delete from staging.supplier_items_import
+where import_batch_key = :'batch_key';
+delete from staging.suppliers_import
+where import_batch_key = :'batch_key';
+
+-- Master/category first, followed by products, relationships, purchases,
+-- operational facts, coverage, the full asset register, and finance control.
+\copy staging.asset_categories_import (category_name, default_useful_life_months, description, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/asset_categories_full.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.historical_products_import (historical_product_key, canonical_name, category_name, mapping_status, current_product_match_strategy, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/historical_products_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.historical_product_aliases_import (alias_key, historical_product_key, alias_name, normalized_alias, spelling_normalized_alias, mapping_status, similarity_to_latest_menu, occurrence_count, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/historical_product_aliases_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.historical_product_daily_quantities_import (source_key, sale_date, historical_product_key, canonical_product_name, category_name, quantity, is_free_menu, raw_variants, category_raw_variants, source_file, source_references, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/historical_product_daily_quantities_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.suppliers_import (supplier_key, supplier_name, normalized_name, phone, address, link, contact_person, source_type, source_references, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/suppliers_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.supplier_items_import (supplier_item_key, supplier_key, catalog_no, item_name_raw, item_name_normalized, brand_raw, size_raw, price_raw, reference_price, price_parse_status, financial_class_final, classification_policy, source_file, source_sheet, source_row, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/supplier_items_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.purchases_import (line_source_key, invoice_source_key, purchase_date, supplier_key, supplier_name_raw, receipt_reference, item_name_raw, item_name_normalized, quantity, unit, unit_price, total_amount, calculated_total, amount_difference, source_category, financial_class_final, classification_policy, asset_tracking, source_file, source_sheet, source_row, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/purchases_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.daily_sales_summaries_import (date, date_raw, day_name_raw, source_file, source_sheet, source_row, bill_count, membership_count, coupon_count, cashier, adult_visitors, child_visitors, qris_dretail, qris_dynamic_bca, qris_static_bca, debit_edc_bca, qris_static_bri, cash, total_sales, dine_in, takeaway, reservation, opening_cash, deposited_cash, deposit_method, closing_cash, payment_sum, total_sales_difference, visitor_total, data_entry_status, total_sales_arayya, total_sales_lovin, source_key, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/daily_sales_summaries_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.customer_traffic_daily_import (traffic_date, adult_visitors, child_visitors, total_visitors, bill_count, source_key, source_file, source_sheet, source_row, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/customer_traffic_daily_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.data_coverage_import (domain, period_start, period_end, availability_status, row_count, notes, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/data_coverage_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.assets_import (asset_source_key, asset_code, asset_name,asset_name_normalized, asset_category, acquisition_date, acquisition_cost, original_source_cost, capitalization_threshold, capitalization_status, useful_life_months, residual_value, depreciation_method, monthly_depreciation, depreciation_start_date, asset_status, brand, size, supplier_name_raw, source_file, source_sheet, source_row, adjustment_note, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/assets_full.csv' with (format csv, header true, encoding 'UTF8')
+
+\copy staging.finance_summary_import (period_start, period_end, revenue, hpp, gross_profit, operating_expense, ebitda, depreciation, ebit_operating_profit, tax_amount, tax_status, net_income_provisional, net_income_status, dividend_amount, dividend_status, retained_earnings_provisional, data_origin, import_batch_key) from 'E:/lovin_milk_fase_1_8_juni_2026/approved_csv/finance_summary_june_2026.csv' with (format csv, header true, encoding 'UTF8')
+
+do $copy_validation$
+declare
+  v_check record;
+  v_actual bigint;
+  v_other_before bigint;
+  v_other_after bigint;
+  v_batch_key text := (select batch_key from _june_staging_context);
+begin
+  for v_check in
+    select *
+    from (
+      values
+        ('staging.asset_categories_import', 3::bigint),
+        ('staging.assets_import', 21::bigint),
+        ('staging.customer_traffic_daily_import', 30::bigint),
+        ('staging.daily_sales_summaries_import', 30::bigint),
+        ('staging.data_coverage_import', 7::bigint),
+        ('staging.finance_summary_import', 1::bigint),
+        ('staging.historical_product_aliases_import', 68::bigint),
+        ('staging.historical_product_daily_quantities_import', 656::bigint),
+        ('staging.historical_products_import', 61::bigint),
+        ('staging.purchases_import', 344::bigint),
+        ('staging.supplier_items_import', 20::bigint),
+        ('staging.suppliers_import', 9::bigint)
+    ) as expected(relation_name, expected_count)
+  loop
+    execute format(
+      'select count(*) from %s where import_batch_key = $1',
+      v_check.relation_name
+    )
+    into v_actual
+    using v_batch_key;
+
+    if v_actual <> v_check.expected_count then
+      raise exception
+        'Staging import aborted: % has % target rows; expected %.',
+        v_check.relation_name,
+        v_actual,
+        v_check.expected_count;
+    end if;
+
+    select row_count
+    into v_other_before
+    from _june_other_batch_counts
+    where relation_name = v_check.relation_name;
+
+    execute format(
+      'select count(*) from %s where import_batch_key is distinct from $1',
+      v_check.relation_name
+    )
+    into v_other_after
+    using v_batch_key;
+
+    if v_other_after <> v_other_before then
+      raise exception
+        'Staging import aborted: % changed rows outside the target batch.',
+        v_check.relation_name;
+    end if;
+  end loop;
+end;
+$copy_validation$;
+
+commit;
+
+\echo 'Staging COPY committed. Run sql/reconcile_june_2026_staging.sql next.'
+
+select *
+from (
+  select 'asset_categories' as dataset, count(*)::bigint as row_count
+  from staging.asset_categories_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'assets', count(*) from staging.assets_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'customer_traffic_daily', count(*)
+  from staging.customer_traffic_daily_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'daily_sales_summaries', count(*)
+  from staging.daily_sales_summaries_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'data_coverage', count(*) from staging.data_coverage_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'finance_summary', count(*) from staging.finance_summary_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'historical_product_aliases', count(*)
+  from staging.historical_product_aliases_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'historical_product_daily_quantities', count(*)
+  from staging.historical_product_daily_quantities_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'historical_products', count(*)
+  from staging.historical_products_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'purchases', count(*) from staging.purchases_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'supplier_items', count(*) from staging.supplier_items_import
+  where import_batch_key = :'batch_key'
+  union all
+  select 'suppliers', count(*) from staging.suppliers_import
+  where import_batch_key = :'batch_key'
+) as imported
+order by dataset;

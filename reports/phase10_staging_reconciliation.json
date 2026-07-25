@@ -1,0 +1,635 @@
+{
+    "phase": "staging",
+    "passed": true,
+    "metrics": [
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": false
+            },
+            "metric_key": "adult_visitors_total",
+            "actual_value": "421",
+            "expected_value": "421"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "relationship"
+            },
+            "metric_key": "aliases_without_parent_product",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "asset_categories_count",
+            "actual_value": "3",
+            "expected_value": "3"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "asset_coverage_wrong_period",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "asset_register_total",
+            "actual_value": "870145.00",
+            "expected_value": "870145.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "assets_count",
+            "actual_value": "21",
+            "expected_value": "21"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "assets_not_tracking_only_expensed",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "assets_with_invalid_useful_life",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "assets_with_nonzero_depreciation",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "relationship"
+            },
+            "metric_key": "assets_without_category",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": false
+            },
+            "metric_key": "bill_count_total",
+            "actual_value": "342.0",
+            "expected_value": "342"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": false
+            },
+            "metric_key": "child_visitors_total",
+            "actual_value": "406",
+            "expected_value": "406"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "customer_traffic_daily_count",
+            "actual_value": "30",
+            "expected_value": "30"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "daily_sales_outside_june",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "daily_sales_summaries_count",
+            "actual_value": "30",
+            "expected_value": "30"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "daily_traffic_arithmetic_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "data_coverage_count",
+            "actual_value": "7",
+            "expected_value": "7"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "depreciation_june_2026",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_alias_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_asset_codes",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_asset_source_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_daily_sales_source_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_historical_product_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_purchase_line_source_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_quantity_source_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_supplier_item_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_supplier_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "uniqueness"
+            },
+            "metric_key": "duplicate_traffic_source_keys",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "ebit_operating_profit",
+            "actual_value": "18475702.00",
+            "expected_value": "18475702.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "ebitda",
+            "actual_value": "18475702.00",
+            "expected_value": "18475702.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "finance_summary_count",
+            "actual_value": "1",
+            "expected_value": "1"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "finance_summary_dividend_policy_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "finance_summary_formula_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "control_total"
+            },
+            "metric_key": "finance_summary_matches_staging_calculation",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "finance_summary_tax_policy_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "finance_summary_wrong_period",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "forbidden_estimated_or_synthetic_origins",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "gross_profit",
+            "actual_value": "19522462.00",
+            "expected_value": "19522462.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "historical_product_aliases_count",
+            "actual_value": "68",
+            "expected_value": "68"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "historical_product_daily_quantities_count",
+            "actual_value": "656",
+            "expected_value": "656"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "historical_products_count",
+            "actual_value": "61",
+            "expected_value": "61"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "hpp_total",
+            "actual_value": "10488538.00",
+            "expected_value": "10488538.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "inconsistent_invoice_headers",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "invalid_purchase_financial_classes",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "june_coverage_wrong_period",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "negative_product_quantities",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "negative_purchase_amounts",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "negative_purchase_unit_prices",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "nonpositive_purchase_quantities",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "operating_expense_total",
+            "actual_value": "1046760.00",
+            "expected_value": "1046760.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "product_quantities_outside_june",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": false
+            },
+            "metric_key": "product_quantity_total",
+            "actual_value": "1358.0",
+            "expected_value": "1358"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "purchase_amount_formula_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "purchase_invoices_count",
+            "actual_value": "343",
+            "expected_value": "343"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "documented_nullable_relationship",
+                "reason": "No proven supplier mapping in approved source"
+            },
+            "metric_key": "purchase_invoices_without_supplier_key",
+            "actual_value": "322",
+            "expected_value": "322"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "purchase_items_count",
+            "actual_value": "344",
+            "expected_value": "344"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "documented_nullable_relationship",
+                "reason": "No proven supplier mapping in approved source"
+            },
+            "metric_key": "purchase_lines_without_supplier_key",
+            "actual_value": "323",
+            "expected_value": "323"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "purchase_total",
+            "actual_value": "11535298.00",
+            "expected_value": "11535298.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "purchases_outside_june",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "relationship"
+            },
+            "metric_key": "purchases_with_unknown_supplier_key",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "relationship"
+            },
+            "metric_key": "quantities_without_parent_product",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": true
+            },
+            "metric_key": "revenue_total",
+            "actual_value": "30011000.0",
+            "expected_value": "30011000.00"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "supplier_items_count",
+            "actual_value": "20",
+            "expected_value": "20"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "relationship"
+            },
+            "metric_key": "supplier_items_without_supplier",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "count"
+            },
+            "metric_key": "suppliers_count",
+            "actual_value": "9",
+            "expected_value": "9"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "quality"
+            },
+            "metric_key": "traffic_arithmetic_mismatches",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "date_scope"
+            },
+            "metric_key": "traffic_outside_june",
+            "actual_value": "0",
+            "expected_value": "0"
+        },
+        {
+            "passed": true,
+            "details": {
+                "kind": "total",
+                "currency": false
+            },
+            "metric_key": "visitor_total",
+            "actual_value": "827",
+            "expected_value": "827"
+        }
+    ],
+    "batch_key": "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+}

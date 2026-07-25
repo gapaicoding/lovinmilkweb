@@ -1,0 +1,28 @@
+Supabase CLI version: 2.109.1
+Project ref: baukcqccetzzwzgpbnoj
+Command: npx supabase db push --linked --dry-run
+Date: 2026-07-25 (Asia/Jakarta)
+Exit code: 0
+
+DRY RUN: migrations were not pushed to the database.
+
+Known pending migrations, in application order:
+
+1. 20260724144000_harden_profile_authorization.sql
+   SHA-256: 601B43B4AF25681FA5477F816AC5F532B7A3D35B8A8B7180E45A23A2E9DC4705
+2. 20260725000000_june_2026_finance_assets_foundation.sql
+   SHA-256: 544FC67E685D5AF268447AB9DA64F3DFC2704814AB578DA8E43E1CA5F23D80DA
+3. 20260725001000_june_2026_import_staging.sql
+   SHA-256: 9A171BD52A7F8F9776FB19FBB915B5596148BF14795F601D75E8AC0A9F52F5DF
+
+Supabase CLI result:
+
+Would push these migrations:
+ • 20260724144000_harden_profile_authorization.sql
+ • 20260725000000_june_2026_finance_assets_foundation.sql
+ • 20260725001000_june_2026_import_staging.sql
+
+Finished supabase db push.
+
+Gate result: PASSED. No unknown pending migration was present.
+

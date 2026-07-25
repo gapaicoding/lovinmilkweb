@@ -41,7 +41,7 @@ function AuthPage() {
 
   useEffect(() => {
     if (!loading && session && role) {
-      navigate({ to: role === "staff" ? "/kunjungan" : "/dashboard", replace: true });
+      navigate({ to: "/dashboard", replace: true });
     }
   }, [loading, session, role, navigate]);
 
@@ -56,15 +56,33 @@ function AuthPage() {
 
   const onLogin = async (values: LoginValues) => {
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
-    setSubmitting(false);
+
     if (error) {
+      setSubmitting(false);
       toast.error("Gagal masuk", { description: error.message });
       return;
     }
+
+    const { data: accountStatus, error: accountStatusError } = await supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (accountStatusError || !accountStatus?.is_active) {
+      await supabase.auth.signOut();
+      setSubmitting(false);
+      toast.info("Akun belum aktif", {
+        description: "Hubungi Super Admin untuk menyetujui dan mengaktifkan akun Anda.",
+      });
+      return;
+    }
+
+    setSubmitting(false);
     toast.success("Berhasil masuk");
     // AuthProvider memuat role dan effect di atas mengarahkan ke halaman yang tepat.
   };
@@ -86,7 +104,8 @@ function AuthPage() {
       return;
     }
     toast.success("Akun berhasil dibuat", {
-      description: "Silakan masuk menggunakan email dan kata sandi Anda.",
+      description:
+        "Akun berstatus Staff nonaktif. Konfirmasi email bila diminta dan tunggu aktivasi Super Admin sebelum masuk.",
     });
     setMode("login");
     loginForm.setValue("email", values.email);
@@ -103,7 +122,9 @@ function AuthPage() {
           />
           <CardTitle className="text-2xl">Lovin Milk Dashboard</CardTitle>
           <CardDescription>
-            {mode === "login" ? "Masuk untuk mengelola penjualan & keuangan" : "Daftarkan akun baru"}
+            {mode === "login"
+              ? "Masuk untuk mengelola penjualan & keuangan"
+              : "Daftarkan akun baru"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,31 +132,52 @@ function AuthPage() {
             <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="nama@lovinmilk.com" autoComplete="email"
-                  {...loginForm.register("email")} />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nama@lovinmilk.com"
+                  autoComplete="email"
+                  {...loginForm.register("email")}
+                />
                 {loginForm.formState.errors.email && (
-                  <p className="text-xs text-destructive">{loginForm.formState.errors.email.message}</p>
+                  <p className="text-xs text-destructive">
+                    {loginForm.formState.errors.email.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Kata Sandi</Label>
                 <div className="relative">
-                  <Input id="password" type={showPassword ? "text" : "password"} autoComplete="current-password"
-                    {...loginForm.register("password")} />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)}
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    {...loginForm.register("password")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label="Tampilkan kata sandi">
+                    aria-label="Tampilkan kata sandi"
+                  >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {loginForm.formState.errors.password && (
-                  <p className="text-xs text-destructive">{loginForm.formState.errors.password.message}</p>
+                  <p className="text-xs text-destructive">
+                    {loginForm.formState.errors.password.message}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox id="remember" defaultChecked
-                  onCheckedChange={(v) => loginForm.setValue("remember", Boolean(v))} />
-                <Label htmlFor="remember" className="text-sm font-normal">Ingat saya</Label>
+                <Checkbox
+                  id="remember"
+                  defaultChecked
+                  onCheckedChange={(v) => loginForm.setValue("remember", Boolean(v))}
+                />
+                <Label htmlFor="remember" className="text-sm font-normal">
+                  Ingat saya
+                </Label>
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -143,8 +185,11 @@ function AuthPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Belum punya akun?{" "}
-                <button type="button" onClick={() => setMode("signup")}
-                  className="font-medium text-primary-foreground underline underline-offset-2">
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className="font-medium text-primary-foreground underline underline-offset-2"
+                >
                   Daftar
                 </button>
               </p>
@@ -155,21 +200,37 @@ function AuthPage() {
                 <Label htmlFor="full_name">Nama Lengkap</Label>
                 <Input id="full_name" {...signupForm.register("full_name")} />
                 {signupForm.formState.errors.full_name && (
-                  <p className="text-xs text-destructive">{signupForm.formState.errors.full_name.message}</p>
+                  <p className="text-xs text-destructive">
+                    {signupForm.formState.errors.full_name.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="s_email">Email</Label>
-                <Input id="s_email" type="email" autoComplete="email" {...signupForm.register("email")} />
+                <Input
+                  id="s_email"
+                  type="email"
+                  autoComplete="email"
+                  {...signupForm.register("email")}
+                />
                 {signupForm.formState.errors.email && (
-                  <p className="text-xs text-destructive">{signupForm.formState.errors.email.message}</p>
+                  <p className="text-xs text-destructive">
+                    {signupForm.formState.errors.email.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="s_password">Kata Sandi</Label>
-                <Input id="s_password" type="password" autoComplete="new-password" {...signupForm.register("password")} />
+                <Input
+                  id="s_password"
+                  type="password"
+                  autoComplete="new-password"
+                  {...signupForm.register("password")}
+                />
                 {signupForm.formState.errors.password && (
-                  <p className="text-xs text-destructive">{signupForm.formState.errors.password.message}</p>
+                  <p className="text-xs text-destructive">
+                    {signupForm.formState.errors.password.message}
+                  </p>
                 )}
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
@@ -178,13 +239,16 @@ function AuthPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Sudah punya akun?{" "}
-                <button type="button" onClick={() => setMode("login")}
-                  className="font-medium text-primary-foreground underline underline-offset-2">
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="font-medium text-primary-foreground underline underline-offset-2"
+                >
                   Masuk
                 </button>
               </p>
               <p className="text-center text-xs text-muted-foreground">
-                Akun pertama akan otomatis menjadi Super Admin.
+                Akun baru dibuat sebagai Staff nonaktif dan harus disetujui Super Admin.
               </p>
             </form>
           )}

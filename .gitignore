@@ -23,6 +23,12 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Supabase CLI state and private migration inputs/outputs
+supabase/.temp/
+backup_output/
+approved_csv/
+*.xlsx
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
