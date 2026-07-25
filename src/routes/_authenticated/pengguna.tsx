@@ -1,10 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,17 +10,10 @@ import { useAuth, type AppRole } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
 import { formatDateTime } from "@/lib/format";
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -51,11 +40,7 @@ export const Route = createFileRoute("/_authenticated/pengguna")({
 type UserProfile = Tables<"profiles">;
 
 function UserManagementPage() {
-  const {
-    isSuperAdmin,
-    loading: authLoading,
-    user,
-  } = useAuth();
+  const { isSuperAdmin, loading: authLoading, user } = useAuth();
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -95,24 +80,18 @@ function UserManagementPage() {
       const normalizedSearch = search.trim();
 
       if (normalizedSearch) {
-        query = query.ilike(
-          "full_name",
-          `%${normalizedSearch}%`,
-        );
+        query = query.ilike("full_name", `%${normalizedSearch}%`);
       }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error(
-          "[UserManagement] Gagal mengambil daftar pengguna:",
-          {
-            message: error.message,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
-          },
-        );
+        console.error("[UserManagement] Gagal mengambil daftar pengguna:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
 
         throw error;
       }
@@ -121,40 +100,16 @@ function UserManagementPage() {
     },
   });
 
-  const activeSuperAdminCount = useMemo(() => {
-    return (usersQuery.data ?? []).filter(
-      (profile) =>
-        profile.role === "super_admin" &&
-        profile.is_active,
-    ).length;
-  }, [usersQuery.data]);
-
   const toggleActiveMutation = useMutation({
     mutationFn: async (selectedProfile: UserProfile) => {
       if (selectedProfile.id === user?.id) {
-        throw new Error(
-          "Anda tidak dapat menonaktifkan akun sendiri.",
-        );
+        throw new Error("Anda tidak dapat menonaktifkan akun sendiri.");
       }
 
-      const willDeactivate = selectedProfile.is_active;
-
-      if (
-        willDeactivate &&
-        selectedProfile.role === "super_admin" &&
-        activeSuperAdminCount <= 1
-      ) {
-        throw new Error(
-          "Super Admin aktif terakhir tidak dapat dinonaktifkan.",
-        );
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          is_active: !selectedProfile.is_active,
-        })
-        .eq("id", selectedProfile.id);
+      const { error } = await supabase.rpc("admin_update_profile_authorization", {
+        p_profile_id: selectedProfile.id,
+        p_is_active: !selectedProfile.is_active,
+      });
 
       if (error) {
         throw error;
@@ -166,14 +121,13 @@ function UserManagementPage() {
 
       await queryClient.invalidateQueries({
         queryKey: ["profiles"],
+        refetchType: "active",
       });
     },
 
     onError: (error: unknown) => {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Terjadi kesalahan yang tidak diketahui.";
+        error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui.";
 
       toast.error("Gagal memperbarui status pengguna.", {
         description: message,
@@ -190,33 +144,17 @@ function UserManagementPage() {
       newRole: AppRole;
     }) => {
       if (selectedProfile.id === user?.id) {
-        throw new Error(
-          "Anda tidak dapat mengubah peran akun sendiri.",
-        );
+        throw new Error("Anda tidak dapat mengubah peran akun sendiri.");
       }
 
       if (selectedProfile.role === newRole) {
         return;
       }
 
-      const isDemotingLastActiveSuperAdmin =
-        selectedProfile.role === "super_admin" &&
-        selectedProfile.is_active &&
-        newRole === "admin" &&
-        activeSuperAdminCount <= 1;
-
-      if (isDemotingLastActiveSuperAdmin) {
-        throw new Error(
-          "Minimal harus tersedia satu Super Admin aktif.",
-        );
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          role: newRole,
-        })
-        .eq("id", selectedProfile.id);
+      const { error } = await supabase.rpc("admin_update_profile_authorization", {
+        p_profile_id: selectedProfile.id,
+        p_role: newRole,
+      });
 
       if (error) {
         throw error;
@@ -228,14 +166,13 @@ function UserManagementPage() {
 
       await queryClient.invalidateQueries({
         queryKey: ["profiles"],
+        refetchType: "active",
       });
     },
 
     onError: (error: unknown) => {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Terjadi kesalahan yang tidak diketahui.";
+        error instanceof Error ? error.message : "Terjadi kesalahan yang tidak diketahui.";
 
       toast.error("Gagal mengubah peran pengguna.", {
         description: message,
@@ -264,11 +201,10 @@ function UserManagementPage() {
         <AlertTitle>Pembuatan akun baru</AlertTitle>
 
         <AlertDescription>
-          Pengguna baru mendaftar melalui halaman autentikasi.
-          Setelah akun dan profil dibuat, Super Admin dapat mengubah
-          peran serta status pengguna melalui halaman ini. Pembuatan
-          akun secara langsung oleh Super Admin membutuhkan backend
-          aman atau Supabase Edge Function yang menggunakan secret key.
+          Pengguna baru mendaftar melalui halaman autentikasi. Setelah akun dan profil dibuat, Super
+          Admin dapat mengubah peran serta status pengguna melalui halaman ini. Pembuatan akun
+          secara langsung oleh Super Admin membutuhkan backend aman atau Supabase Edge Function yang
+          menggunakan secret key.
         </AlertDescription>
       </Alert>
 
@@ -298,9 +234,7 @@ function UserManagementPage() {
                     <TableHead>Peran</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Dibuat</TableHead>
-                    <TableHead className="text-right">
-                      Aktif
-                    </TableHead>
+                    <TableHead className="text-right">Aktif</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -309,30 +243,23 @@ function UserManagementPage() {
                     <UsersTableSkeleton />
                   ) : usersQuery.data?.length ? (
                     usersQuery.data.map((profile) => {
-                      const isCurrentUser =
-                        profile.id === user?.id;
+                      const isCurrentUser = profile.id === user?.id;
 
                       const isUpdatingRole =
                         changeRoleMutation.isPending &&
-                        changeRoleMutation.variables
-                          ?.selectedProfile.id === profile.id;
+                        changeRoleMutation.variables?.selectedProfile.id === profile.id;
 
                       const isUpdatingStatus =
                         toggleActiveMutation.isPending &&
-                        toggleActiveMutation.variables?.id ===
-                          profile.id;
+                        toggleActiveMutation.variables?.id === profile.id;
 
                       return (
                         <TableRow key={profile.id}>
                           <TableCell>
-                            <div className="font-medium">
-                              {profile.full_name || "-"}
-                            </div>
+                            <div className="font-medium">{profile.full_name || "-"}</div>
 
                             {isCurrentUser && (
-                              <div className="text-xs text-muted-foreground">
-                                Anda
-                              </div>
+                              <div className="text-xs text-muted-foreground">Anda</div>
                             )}
                           </TableCell>
 
@@ -340,10 +267,7 @@ function UserManagementPage() {
                             <div className="flex items-center gap-2">
                               <Select
                                 value={profile.role}
-                                disabled={
-                                  isCurrentUser ||
-                                  changeRoleMutation.isPending
-                                }
+                                disabled={isCurrentUser || changeRoleMutation.isPending}
                                 onValueChange={(value) => {
                                   changeRoleMutation.mutate({
                                     selectedProfile: profile,
@@ -356,17 +280,11 @@ function UserManagementPage() {
                                 </SelectTrigger>
 
                                 <SelectContent>
-                                  <SelectItem value="staff">
-                                    Staf
-                                  </SelectItem>
+                                  <SelectItem value="staff">Staf</SelectItem>
 
-                                  <SelectItem value="admin">
-                                    Admin
-                                  </SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
 
-                                  <SelectItem value="super_admin">
-                                    Super Admin
-                                  </SelectItem>
+                                  <SelectItem value="super_admin">Super Admin</SelectItem>
                                 </SelectContent>
                               </Select>
 
@@ -382,9 +300,7 @@ function UserManagementPage() {
                                 Aktif
                               </Badge>
                             ) : (
-                              <Badge variant="secondary">
-                                Nonaktif
-                              </Badge>
+                              <Badge variant="secondary">Nonaktif</Badge>
                             )}
                           </TableCell>
 
@@ -400,14 +316,9 @@ function UserManagementPage() {
 
                               <Switch
                                 checked={profile.is_active}
-                                disabled={
-                                  isCurrentUser ||
-                                  toggleActiveMutation.isPending
-                                }
+                                disabled={isCurrentUser || toggleActiveMutation.isPending}
                                 onCheckedChange={() => {
-                                  toggleActiveMutation.mutate(
-                                    profile,
-                                  );
+                                  toggleActiveMutation.mutate(profile);
                                 }}
                                 aria-label={`Ubah status ${profile.full_name}`}
                               />
@@ -418,10 +329,7 @@ function UserManagementPage() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-28 text-center text-muted-foreground"
-                      >
+                      <TableCell colSpan={5} className="h-28 text-center text-muted-foreground">
                         Tidak ada pengguna yang ditemukan.
                       </TableCell>
                     </TableRow>
@@ -442,9 +350,7 @@ function PageLoader() {
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
 
-        <p className="text-sm text-muted-foreground">
-          Memeriksa izin pengguna...
-        </p>
+        <p className="text-sm text-muted-foreground">Memeriksa izin pengguna...</p>
       </div>
     </div>
   );
@@ -460,13 +366,10 @@ function UnauthorizedMessage() {
           <ShieldAlert className="h-6 w-6 text-destructive" />
         </div>
 
-        <h1 className="text-lg font-semibold">
-          Akses Ditolak
-        </h1>
+        <h1 className="text-lg font-semibold">Akses Ditolak</h1>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Halaman manajemen pengguna hanya dapat diakses oleh
-          Super Admin.
+          Halaman manajemen pengguna hanya dapat diakses oleh Super Admin.
         </p>
 
         <Button
@@ -499,11 +402,7 @@ function UsersTableSkeleton() {
   );
 }
 
-function UsersError({
-  onRetry,
-}: {
-  onRetry: () => void;
-}) {
+function UsersError({ onRetry }: { onRetry: () => void }) {
   return (
     <Alert variant="destructive">
       <ShieldAlert className="h-4 w-4" />
@@ -511,17 +410,9 @@ function UsersError({
       <AlertTitle>Daftar pengguna gagal dimuat</AlertTitle>
 
       <AlertDescription>
-        <p>
-          Periksa policy RLS tabel profiles dan pastikan akun Anda
-          memiliki role Super Admin.
-        </p>
+        <p>Periksa policy RLS tabel profiles dan pastikan akun Anda memiliki role Super Admin.</p>
 
-        <Button
-          className="mt-3"
-          size="sm"
-          variant="outline"
-          onClick={onRetry}
-        >
+        <Button className="mt-3" size="sm" variant="outline" onClick={onRetry}>
           Coba Lagi
         </Button>
       </AlertDescription>

@@ -1,0 +1,75 @@
+# Phase 10 - Staging Reconciliation
+
+- Batch: `LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2`
+- Status: **PASSED**
+
+| Metric | Expected | Actual | Passed |
+|---|---:|---:|:---:|
+| adult_visitors_total | 421 | 421 | yes |
+| aliases_without_parent_product | 0 | 0 | yes |
+| asset_categories_count | 3 | 3 | yes |
+| asset_coverage_wrong_period | 0 | 0 | yes |
+| asset_register_total | 870145.00 | 870145.00 | yes |
+| assets_count | 21 | 21 | yes |
+| assets_not_tracking_only_expensed | 0 | 0 | yes |
+| assets_with_invalid_useful_life | 0 | 0 | yes |
+| assets_with_nonzero_depreciation | 0 | 0 | yes |
+| assets_without_category | 0 | 0 | yes |
+| bill_count_total | 342 | 342.0 | yes |
+| child_visitors_total | 406 | 406 | yes |
+| customer_traffic_daily_count | 30 | 30 | yes |
+| daily_sales_outside_june | 0 | 0 | yes |
+| daily_sales_summaries_count | 30 | 30 | yes |
+| daily_traffic_arithmetic_mismatches | 0 | 0 | yes |
+| data_coverage_count | 7 | 7 | yes |
+| depreciation_june_2026 | 0 | 0 | yes |
+| duplicate_alias_keys | 0 | 0 | yes |
+| duplicate_asset_codes | 0 | 0 | yes |
+| duplicate_asset_source_keys | 0 | 0 | yes |
+| duplicate_daily_sales_source_keys | 0 | 0 | yes |
+| duplicate_historical_product_keys | 0 | 0 | yes |
+| duplicate_purchase_line_source_keys | 0 | 0 | yes |
+| duplicate_quantity_source_keys | 0 | 0 | yes |
+| duplicate_supplier_item_keys | 0 | 0 | yes |
+| duplicate_supplier_keys | 0 | 0 | yes |
+| duplicate_traffic_source_keys | 0 | 0 | yes |
+| ebit_operating_profit | 18475702.00 | 18475702.00 | yes |
+| ebitda | 18475702.00 | 18475702.00 | yes |
+| finance_summary_count | 1 | 1 | yes |
+| finance_summary_dividend_policy_mismatches | 0 | 0 | yes |
+| finance_summary_formula_mismatches | 0 | 0 | yes |
+| finance_summary_matches_staging_calculation | 0 | 0 | yes |
+| finance_summary_tax_policy_mismatches | 0 | 0 | yes |
+| finance_summary_wrong_period | 0 | 0 | yes |
+| forbidden_estimated_or_synthetic_origins | 0 | 0 | yes |
+| gross_profit | 19522462.00 | 19522462.00 | yes |
+| historical_product_aliases_count | 68 | 68 | yes |
+| historical_product_daily_quantities_count | 656 | 656 | yes |
+| historical_products_count | 61 | 61 | yes |
+| hpp_total | 10488538.00 | 10488538.00 | yes |
+| inconsistent_invoice_headers | 0 | 0 | yes |
+| invalid_purchase_financial_classes | 0 | 0 | yes |
+| june_coverage_wrong_period | 0 | 0 | yes |
+| negative_product_quantities | 0 | 0 | yes |
+| negative_purchase_amounts | 0 | 0 | yes |
+| negative_purchase_unit_prices | 0 | 0 | yes |
+| nonpositive_purchase_quantities | 0 | 0 | yes |
+| operating_expense_total | 1046760.00 | 1046760.00 | yes |
+| product_quantities_outside_june | 0 | 0 | yes |
+| product_quantity_total | 1358 | 1358.0 | yes |
+| purchase_amount_formula_mismatches | 0 | 0 | yes |
+| purchase_invoices_count | 343 | 343 | yes |
+| purchase_invoices_without_supplier_key | 322 | 322 | yes |
+| purchase_items_count | 344 | 344 | yes |
+| purchase_lines_without_supplier_key | 323 | 323 | yes |
+| purchase_total | 11535298.00 | 11535298.00 | yes |
+| purchases_outside_june | 0 | 0 | yes |
+| purchases_with_unknown_supplier_key | 0 | 0 | yes |
+| quantities_without_parent_product | 0 | 0 | yes |
+| revenue_total | 30011000.00 | 30011000.0 | yes |
+| supplier_items_count | 20 | 20 | yes |
+| supplier_items_without_supplier | 0 | 0 | yes |
+| suppliers_count | 9 | 9 | yes |
+| traffic_arithmetic_mismatches | 0 | 0 | yes |
+| traffic_outside_june | 0 | 0 | yes |
+| visitor_total | 827 | 827 | yes |

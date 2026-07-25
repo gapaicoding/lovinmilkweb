@@ -1,0 +1,28 @@
+Supabase CLI version: 2.109.1
+Project ref: baukcqccetzzwzgpbnoj
+Date: 2026-07-25 (Asia/Jakarta)
+
+Reason for retry:
+The first apply installed 20260724144000_harden_profile_authorization.sql,
+then the foundation transaction rolled back on PostgreSQL type resolution:
+name[] could not be compared with text[]. No staging migration was attempted.
+
+Correction:
+Cast pg_attribute.attname to text in eight catalog-array assertions.
+
+Corrected foundation SHA-256:
+84F08FACFDAD5098116F3629E097104E02576DB1D23CB504808FBFABA4FE9922
+
+Command:
+npx supabase db push --linked --dry-run
+
+Exit code: 0
+
+Would push these migrations:
+ • 20260725000000_june_2026_finance_assets_foundation.sql
+ • 20260725001000_june_2026_import_staging.sql
+
+Finished supabase db push.
+
+Gate result: PASSED. Only the two expected remaining migrations are pending.
+

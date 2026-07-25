@@ -1,2072 +1,524 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
-import {
-  keepPreviousData,
-  useQuery,
-} from "@tanstack/react-query";
-import {
-  differenceInCalendarDays,
-  eachDayOfInterval,
-  eachMonthOfInterval,
-  format,
-  parseISO,
-  subDays,
-} from "date-fns";
-import { id as idLocale } from "date-fns/locale";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
-  ArrowDownRight,
-  ArrowUpRight,
-  ListChecks,
-  PiggyBank,
+  BadgeDollarSign,
+  Banknote,
+  Calculator,
+  CircleDollarSign,
+  Loader2,
+  PackageCheck,
   ReceiptText,
   RefreshCcw,
-  TrendingDown,
+  ShoppingBag,
   TrendingUp,
-  Wallet,
+  UsersRound,
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
-
-import { PageHeader } from "@/components/PageHeader";
-import {
-  DateRangeFilter,
-  computeRange,
-  isDateRangeValid,
-  parseDateInput,
-  type DateRange,
-  type RangePreset,
-} from "@/components/DateRangeFilter";
-
 import { DashboardKpiCard } from "@/components/dashboard/DashboardKpiCard";
-import {
-  CategoryRanking,
-  type CategoryRankingItem,
-} from "@/components/dashboard/CategoryRanking";
-import {
-  TrendChart,
-  type TrendChartItem,
-} from "@/components/dashboard/TrendChart";
-import {
-  BusinessInsights,
-  type BusinessInsightsData,
-} from "@/components/dashboard/BusinessInsights";
-import {
-  PeriodSummary,
-  type PeriodSummaryData,
-} from "@/components/dashboard/PeriodSummary";
-
-import { ProductAnalyticsPreview } from "@/components/dashboard/ProductAnalyticsPreview";
-
-import {
-  formatDate,
-  formatNumber,
-  formatRupiah,
-  toDateInput,
-} from "@/lib/format";
-
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
+import { EmptyState } from "@/components/EmptyState";
+import { PageHeader } from "@/components/PageHeader";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-
-export const Route = createFileRoute(
-  "/_authenticated/dashboard",
-)({
-  validateSearch: validateDashboardSearch,
-  component: DashboardPage,
-});
-
-const DAILY_RANGE_LIMIT = 62;
-const RECENT_TRANSACTION_LIMIT = 5;
-
-type SaleRow = Pick<
-  Tables<"sales">,
-  | "id"
-  | "transaction_date"
-  | "amount"
-  | "notes"
-  | "created_at"
-  | "sales_category_id"
-  | "product_id"
-  | "quantity"
-  | "unit_price"
->;
-
-type ExpenseRow = Pick<
-  Tables<"expenses">,
-  | "id"
-  | "transaction_date"
-  | "amount"
-  | "notes"
-  | "created_at"
-  | "expense_category_id"
-  | "expense_item_id"
-  | "quantity"
-  | "unit_price"
->;
-
-type ProductRow = Pick<
-  Tables<"products">,
-  | "id"
-  | "name"
-  | "sku"
-  | "unit"
-  | "sales_category_id"
-  | "selling_price"
-  | "is_active"
-  | "deleted_at"
->;
-
-type ExpenseItemRow = Pick<
-  Tables<"expense_items">,
-  "id" | "name" | "sku" | "unit"
->;
-
-type SalesCategoryRow = Pick<
-  Tables<"sales_categories">,
-  "id" | "name"
->;
-
-type ExpenseCategoryRow = Pick<
-  Tables<"expense_categories">,
-  "id" | "name"
->;
-
-interface PeriodRange {
-  from: string;
-  to: string;
-}
-
-interface FinancialSummary {
-  sales: number;
-  expenses: number;
-  profit: number;
-  salesCount: number;
-  expenseCount: number;
-  transactionCount: number;
-}
-
-interface HighestSalesDay {
-  date: string;
-  amount: number;
-  transactionCount: number;
-}
-
-interface RecentTransactionItem {
-  id: string;
-  type: "sales" | "expenses";
-  date: string;
-  createdAt: string;
-  categoryName: string;
-  itemName: string;
-  itemCode: string | null;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  amount: number;
-  notes: string | null;
-}
-
-interface QueryError {
-  message?: string;
-  details?: string;
-  hint?: string;
-}
+  JUNE_FINANCE_BATCH_KEY,
+  JUNE_FINANCE_MONTH,
+  fetchFinancialStatement,
+  formatFinanceMonth,
+  getFinanceErrorMessage,
+  isActualJuneStatement,
+  monthInputToStart,
+  parseMonthStart,
+} from "@/lib/juneFinance";
+import { formatRupiah } from "@/lib/format";
 
 interface DashboardSearch {
-  period?: RangePreset;
-  from?: string;
-  to?: string;
+  month?: string;
 }
 
-const DASHBOARD_PERIODS: readonly RangePreset[] = [
-  "today",
-  "yesterday",
-  "last_7_days",
-  "last_30_days",
-  "this_week",
-  "last_week",
-  "this_month",
-  "last_month",
-  "last_3_months",
-  "this_year",
-  "last_year",
-  "custom",
-];
-
-const DASHBOARD_PERIOD_STORAGE_KEY =
-  "lovin-milk:dashboard-period";
-
-function validateDashboardSearch(
-  search: Record<string, unknown>,
-): DashboardSearch {
-  const period = DASHBOARD_PERIODS.includes(
-    search.period as RangePreset,
-  )
-    ? (search.period as RangePreset)
-    : undefined;
-
-  if (!period) {
-    return {};
-  }
-
-  if (period !== "custom") {
-    return { period };
-  }
-
-  if (
-    typeof search.from !== "string" ||
-    typeof search.to !== "string"
-  ) {
-    return {};
-  }
-
-  const from = parseDateInput(search.from);
-  const to = parseDateInput(search.to);
-
-  if (
-    !from ||
-    !to ||
-    !isDateRangeValid({
-      preset: "custom",
-      from,
-      to,
-    })
-  ) {
-    return {};
-  }
-
-  return {
-    period,
-    from: search.from,
-    to: search.to,
-  };
-}
+export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
+    month: parseMonthStart(search.month),
+  }),
+  component: DashboardPage,
+});
 
 function DashboardPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const period = search.period ?? "this_month";
+  const { isStaff } = useAuth();
+  const month = search.month ?? JUNE_FINANCE_MONTH;
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (search.period) {
-      try {
-        window.sessionStorage.setItem(
-          DASHBOARD_PERIOD_STORAGE_KEY,
-          JSON.stringify(search),
-        );
-      } catch {
-        // URL tetap menjadi source of truth bila storage browser tidak tersedia.
-      }
-      return;
-    }
-
-    let restoredSearch: DashboardSearch = {
-      period: "this_month",
-    };
-
-    try {
-      const storedValue = window.sessionStorage.getItem(
-        DASHBOARD_PERIOD_STORAGE_KEY,
-      );
-
-      if (storedValue) {
-        const parsedValue = JSON.parse(
-          storedValue,
-        ) as Record<string, unknown>;
-        const validatedValue =
-          validateDashboardSearch(parsedValue);
-
-        if (validatedValue.period) {
-          restoredSearch = validatedValue;
-        }
-      }
-    } catch {
-      window.sessionStorage.removeItem(
-        DASHBOARD_PERIOD_STORAGE_KEY,
-      );
-    }
-
-    void navigate({
-      search: restoredSearch,
-      replace: true,
-    });
-  }, [navigate, search]);
-
-  const range = useMemo<DateRange>(() => {
-    if (period === "custom") {
-      const from = parseDateInput(
-        search.from ?? "",
-      );
-      const to = parseDateInput(
-        search.to ?? "",
-      );
-
-      if (from && to) {
-        return computeRange(
-          "custom",
-          from,
-          to,
-        );
-      }
-    }
-
-    return computeRange(period);
-  }, [period, search.from, search.to]);
-
-  const handleRangeChange = (
-    nextRange: DateRange,
-  ) => {
-    const nextSearch: DashboardSearch =
-      nextRange.preset === "custom"
-        ? {
-            period: "custom",
-            from: toDateInput(nextRange.from),
-            to: toDateInput(nextRange.to),
-          }
-        : {
-            period: nextRange.preset,
-          };
-
-    if (typeof window !== "undefined") {
-      try {
-        window.sessionStorage.setItem(
-          DASHBOARD_PERIOD_STORAGE_KEY,
-          JSON.stringify(nextSearch),
-        );
-      } catch {
-        // URL tetap menjadi source of truth bila storage browser tidak tersedia.
-      }
-    }
-
-    void navigate({
-      search: nextSearch,
-      replace: true,
-    });
-  };
-
-  const queryPeriodKey = [
-    period,
-    search.from ?? null,
-    search.to ?? null,
-  ] as const;
-
-  const selectedRange = useMemo<PeriodRange>(
-    () => ({
-      from: toDateInput(range.from),
-      to: toDateInput(range.to),
-    }),
-    [range.from, range.to],
-  );
-
-  const isRangeValid =
-    selectedRange.from <= selectedRange.to;
-
-  const previousRange = useMemo(
-    () => calculatePreviousRange(selectedRange),
-    [selectedRange],
-  );
-
-  const combinedRange = useMemo<PeriodRange>(
-    () => ({
-      from: previousRange.from,
-      to: selectedRange.to,
-    }),
-    [previousRange.from, selectedRange.to],
-  );
-
-  const selectedRangeLabel = useMemo(
-    () =>
-      `${formatDate(
-        selectedRange.from,
-      )} – ${formatDate(selectedRange.to)}`,
-    [selectedRange],
-  );
-
-  const previousRangeLabel = useMemo(
-    () =>
-      `${formatDate(
-        previousRange.from,
-      )} – ${formatDate(previousRange.to)}`,
-    [previousRange],
-  );
-
-  const salesQuery = useQuery({
-    queryKey: [
-      "dashboard-sales",
-      ...queryPeriodKey,
-      combinedRange.from,
-      combinedRange.to,
-    ],
-    enabled: isRangeValid,
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
-    queryFn: () => fetchSales(combinedRange),
-  });
-
-  const expensesQuery = useQuery({
-    queryKey: [
-      "dashboard-expenses",
-      ...queryPeriodKey,
-      combinedRange.from,
-      combinedRange.to,
-    ],
-    enabled: isRangeValid,
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
-    queryFn: () => fetchExpenses(combinedRange),
-  });
-
-  const salesCategoriesQuery = useQuery({
-    queryKey: ["all-sales-categories"],
-    staleTime: 5 * 60_000,
-    queryFn: fetchSalesCategories,
-  });
-
-  const expenseCategoriesQuery = useQuery({
-    queryKey: ["all-expense-categories"],
-    staleTime: 5 * 60_000,
-    queryFn: fetchExpenseCategories,
-  });
-
-  const productsQuery = useQuery({
-    queryKey: ["products", "dashboard"],
-    staleTime: 5 * 60_000,
-    queryFn: fetchProducts,
-  });
-
-
-  const expenseItemsQuery = useQuery({
-    queryKey: ["expense_items", "dashboard"],
-    staleTime: 5 * 60_000,
-    queryFn: fetchExpenseItems,
-  });
-
-  const selectedSales = useMemo(
-    () =>
-      filterRowsByRange(
-        salesQuery.data ?? [],
-        selectedRange,
-      ),
-    [salesQuery.data, selectedRange],
-  );
-
-  const previousSales = useMemo(
-    () =>
-      filterRowsByRange(
-        salesQuery.data ?? [],
-        previousRange,
-      ),
-    [salesQuery.data, previousRange],
-  );
-
-  const selectedExpenses = useMemo(
-    () =>
-      filterRowsByRange(
-        expensesQuery.data ?? [],
-        selectedRange,
-      ),
-    [expensesQuery.data, selectedRange],
-  );
-
-  const previousExpenses = useMemo(
-    () =>
-      filterRowsByRange(
-        expensesQuery.data ?? [],
-        previousRange,
-      ),
-    [expensesQuery.data, previousRange],
-  );
-
-  const salesCategoryMap = useMemo(
-    () =>
-      new Map(
-        (salesCategoriesQuery.data ?? []).map(
-          (category) => [
-            category.id,
-            category.name,
-          ],
-        ),
-      ),
-    [salesCategoriesQuery.data],
-  );
-
-  const expenseCategoryMap = useMemo(
-    () =>
-      new Map(
-        (
-          expenseCategoriesQuery.data ?? []
-        ).map((category) => [
-          category.id,
-          category.name,
-        ]),
-      ),
-    [expenseCategoriesQuery.data],
-  );
-
-  const productMap = useMemo(
-    () =>
-      new Map(
-        (productsQuery.data ?? []).map(
-          (product) => [product.id, product],
-        ),
-      ),
-    [productsQuery.data],
-  );
-
-  const expenseItemMap = useMemo(
-    () =>
-      new Map(
-        (expenseItemsQuery.data ?? []).map(
-          (item) => [item.id, item],
-        ),
-      ),
-    [expenseItemsQuery.data],
-  );
-
-  const selectedSummary = useMemo(
-    () =>
-      summarizePeriod(
-        selectedSales,
-        selectedExpenses,
-      ),
-    [selectedSales, selectedExpenses],
-  );
-
-  const previousSummary = useMemo(
-    () =>
-      summarizePeriod(
-        previousSales,
-        previousExpenses,
-      ),
-    [previousSales, previousExpenses],
-  );
-
-  const salesGrowth = useMemo(
-    () =>
-      calculateGrowth(
-        selectedSummary.sales,
-        previousSummary.sales,
-      ),
-    [
-      selectedSummary.sales,
-      previousSummary.sales,
-    ],
-  );
-
-  const expensesGrowth = useMemo(
-    () =>
-      calculateGrowth(
-        selectedSummary.expenses,
-        previousSummary.expenses,
-      ),
-    [
-      selectedSummary.expenses,
-      previousSummary.expenses,
-    ],
-  );
-
-  const profitGrowth = useMemo(
-    () =>
-      calculateGrowth(
-        selectedSummary.profit,
-        previousSummary.profit,
-      ),
-    [
-      selectedSummary.profit,
-      previousSummary.profit,
-    ],
-  );
-
-  const transactionGrowth = useMemo(
-    () =>
-      calculateGrowth(
-        selectedSummary.transactionCount,
-        previousSummary.transactionCount,
-      ),
-    [
-      selectedSummary.transactionCount,
-      previousSummary.transactionCount,
-    ],
-  );
-
-  const profitMargin = useMemo(
-    () =>
-      selectedSummary.sales > 0
-        ? (selectedSummary.profit /
-            selectedSummary.sales) *
-          100
-        : 0,
-    [
-      selectedSummary.sales,
-      selectedSummary.profit,
-    ],
-  );
-
-  const trendData = useMemo(
-    () =>
-      buildTrendData({
-        range,
-        sales: selectedSales,
-        expenses: selectedExpenses,
-      }),
-    [range, selectedSales, selectedExpenses],
-  );
-
-  const salesRanking = useMemo(
-    () =>
-      buildCategoryRanking({
-        rows: selectedSales,
-        categoryMap: salesCategoryMap,
-        getCategoryId: (row) =>
-          row.sales_category_id,
-      }),
-    [selectedSales, salesCategoryMap],
-  );
-
-  const expensesRanking = useMemo(
-    () =>
-      buildCategoryRanking({
-        rows: selectedExpenses,
-        categoryMap: expenseCategoryMap,
-        getCategoryId: (row) =>
-          row.expense_category_id,
-      }),
-    [selectedExpenses, expenseCategoryMap],
-  );
-
-  const highestSalesDay = useMemo(
-    () => findHighestSalesDay(selectedSales),
-    [selectedSales],
-  );
-
-  const totalDays = useMemo(
-    () =>
-      Math.max(
-        differenceInCalendarDays(
-          range.to,
-          range.from,
-        ) + 1,
-        1,
-      ),
-    [range.from, range.to],
-  );
-
-  const activeDays = useMemo(
-    () =>
-      countActiveDays(
-        selectedSales,
-        selectedExpenses,
-      ),
-    [selectedSales, selectedExpenses],
-  );
-
-  const averageDailySales =
-    activeDays > 0
-      ? selectedSummary.sales / activeDays
-      : 0;
-
-  const averageDailyExpenses =
-    activeDays > 0
-      ? selectedSummary.expenses / activeDays
-      : 0;
-
-  const averageTransactionValue =
-    selectedSummary.transactionCount > 0
-      ? (selectedSummary.sales +
-          selectedSummary.expenses) /
-        selectedSummary.transactionCount
-      : 0;
-
-  const businessInsightsData =
-    useMemo<BusinessInsightsData>(
-      () => ({
-        totalSales: selectedSummary.sales,
-        previousSales:
-          previousSummary.sales,
-        salesGrowth,
-
-        totalExpenses:
-          selectedSummary.expenses,
-        previousExpenses:
-          previousSummary.expenses,
-        expensesGrowth,
-
-        totalProfit: selectedSummary.profit,
-        previousProfit:
-          previousSummary.profit,
-        profitGrowth,
-        profitMargin,
-
-        topSalesCategory:
-          salesRanking[0]
-            ? {
-                name: salesRanking[0].name,
-                amount:
-                  salesRanking[0].amount,
-                percentage:
-                  salesRanking[0]
-                    .percentage,
-                transactionCount:
-                  salesRanking[0]
-                    .transactionCount,
-              }
-            : null,
-
-        topExpenseCategory:
-          expensesRanking[0]
-            ? {
-                name:
-                  expensesRanking[0].name,
-                amount:
-                  expensesRanking[0].amount,
-                percentage:
-                  expensesRanking[0]
-                    .percentage,
-                transactionCount:
-                  expensesRanking[0]
-                    .transactionCount,
-              }
-            : null,
-
-        highestSalesDay:
-          highestSalesDay
-            ? {
-                date:
-                  highestSalesDay.date,
-                amount:
-                  highestSalesDay.amount,
-                transactionCount:
-                  highestSalesDay
-                    .transactionCount,
-              }
-            : null,
-
-        averageDailySales,
-        activeDays,
-      }),
-      [
-        selectedSummary,
-        previousSummary,
-        salesGrowth,
-        expensesGrowth,
-        profitGrowth,
-        profitMargin,
-        salesRanking,
-        expensesRanking,
-        highestSalesDay,
-        averageDailySales,
-        activeDays,
-      ],
-    );
-
-  const periodSummaryData =
-    useMemo<PeriodSummaryData>(
-      () => ({
-        profitMargin,
-        averageDailySales,
-        averageDailyExpenses,
-        averageTransactionValue,
-        activeDays,
-        totalDays,
-        highestSalesDay:
-          highestSalesDay
-            ? {
-                date:
-                  highestSalesDay.date,
-                amount:
-                  highestSalesDay.amount,
-              }
-            : null,
-      }),
-      [
-        profitMargin,
-        averageDailySales,
-        averageDailyExpenses,
-        averageTransactionValue,
-        activeDays,
-        totalDays,
-        highestSalesDay,
-      ],
-    );
-
-  const recentSales = useMemo(
-    () =>
-      buildRecentSales(
-        selectedSales,
-        salesCategoryMap,
-        productMap,
-      ),
-    [
-      selectedSales,
-      salesCategoryMap,
-      productMap,
-    ],
-  );
-
-  const recentExpenses = useMemo(
-    () =>
-      buildRecentExpenses(
-        selectedExpenses,
-        expenseCategoryMap,
-        expenseItemMap,
-      ),
-    [
-      selectedExpenses,
-      expenseCategoryMap,
-      expenseItemMap,
-    ],
-  );
-
-
-  const productAnalyticsPreview = useMemo(() => {
-    const activeProductIds = new Set(
-      (productsQuery.data ?? [])
-        .filter(
-          (product) =>
-            product.is_active &&
-            product.deleted_at === null,
-        )
-        .map((product) => product.id),
-    );
-
-    const soldActiveProductIds =
-      new Set<string>();
-
-    const totalQuantity =
-      selectedSales.reduce(
-        (total, sale) => {
-          if (
-            activeProductIds.has(
-              sale.product_id,
-            )
-          ) {
-            soldActiveProductIds.add(
-              sale.product_id,
-            );
-          }
-
-          return (
-            total +
-            Number(sale.quantity)
-          );
+    if (!search.month) {
+      void navigate({
+        search: {
+          month: JUNE_FINANCE_MONTH,
         },
-        0,
-      );
+        replace: true,
+      });
+    }
+  }, [navigate, search.month]);
 
-    return {
-      totalQuantity,
-      productsSold:
-        new Set(
-          selectedSales.map(
-            (sale) => sale.product_id,
-          ),
-        ).size,
-      productsWithoutSales:
-        Math.max(
-          activeProductIds.size -
-            soldActiveProductIds.size,
-          0,
-        ),
-    };
-  }, [
-    productsQuery.data,
-    selectedSales,
-  ]);
+  const statementQuery = useQuery({
+    queryKey: [
+      "actual-finance",
+      "statement",
+      {
+        month,
+        batchKey: JUNE_FINANCE_BATCH_KEY,
+      },
+    ],
+    queryFn: () => fetchFinancialStatement(month),
+    staleTime: 60_000,
+    enabled: !isStaff,
+  });
 
-  const mainLoading =
-    salesQuery.isLoading ||
-    expensesQuery.isLoading;
+  const operationalQuery = useQuery({
+    queryKey: ["operational-dashboard", { month }],
+    queryFn: () => fetchOperationalDashboard(month),
+    staleTime: 60_000,
+    enabled: isStaff,
+  });
 
-  const categoryLoading =
-    mainLoading ||
-    salesCategoriesQuery.isLoading ||
-    expenseCategoriesQuery.isLoading;
+  const statement = statementQuery.data ?? null;
+  const isActualJune = isActualJuneStatement(statement);
+  const activeQuery = isStaff ? operationalQuery : statementQuery;
 
-  const recentLoading =
-    categoryLoading ||
-    productsQuery.isLoading ||
-    expenseItemsQuery.isLoading;
+  const handleMonthChange = (value: string) => {
+    const nextMonth = monthInputToStart(value);
 
-  const productAnalyticsPreviewLoading =
-    salesQuery.isLoading ||
-    productsQuery.isLoading;
+    if (!nextMonth) {
+      return;
+    }
 
-  const queryError =
-    salesQuery.error ??
-    expensesQuery.error ??
-    salesCategoriesQuery.error ??
-    expenseCategoriesQuery.error ??
-    productsQuery.error ??
-    expenseItemsQuery.error;
-
-  const usesMonthlyTrend =
-    totalDays > DAILY_RANGE_LIMIT;
-
-  const retryDashboard = () => {
-    void Promise.all([
-      salesQuery.refetch(),
-      expensesQuery.refetch(),
-      salesCategoriesQuery.refetch(),
-      expenseCategoriesQuery.refetch(),
-      productsQuery.refetch(),
-      expenseItemsQuery.refetch(),
-    ]);
+    void navigate({
+      search: {
+        month: nextMonth,
+      },
+      replace: true,
+    });
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Ringkasan penjualan, pengeluaran, profit, kategori, dan aktivitas operasional Lovin Milk."
+        description={
+          isStaff
+            ? "Ringkasan operasional agregat sesuai hak akses staff."
+            : "Ringkasan laporan aktual yang dihitung langsung dari sumber keuangan terverifikasi."
+        }
+        actions={
+          isStaff && operationalQuery.data?.sourceDays ? (
+            <Badge className="w-fit">
+              <PackageCheck aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
+              Data Operasional Aktual
+            </Badge>
+          ) : isActualJune ? (
+            <Badge className="w-fit">
+              <PackageCheck aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
+              Data Aktual Juni 2026
+            </Badge>
+          ) : statement ? (
+            <Badge variant="outline" className="w-fit">
+              Rekonsiliasi diperlukan
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="w-fit">
+              {activeQuery.isPending ? "Memuat status data" : "Data aktual tidak tersedia"}
+            </Badge>
+          )
+        }
       />
 
-      <Card className="rounded-xl">
-        <CardContent className="space-y-3 p-4">
-          <DateRangeFilter
-            value={range}
-            onChange={handleRangeChange}
-          />
-
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="secondary">
-              Periode analisis
-            </Badge>
-
-            <span>{selectedRangeLabel}</span>
-
-            <span aria-hidden="true">•</span>
-
-            <span>
-              Dibandingkan dengan{" "}
-              {previousRangeLabel}
-            </span>
-
-            <span aria-hidden="true">•</span>
-
-            <span>
-              Grafik keuangan dikelompokkan{" "}
-              {usesMonthlyTrend
-                ? "per bulan"
-                : "per hari"}
-            </span>
+      <Card>
+        <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="w-full sm:max-w-xs">
+            <label htmlFor="dashboard-finance-month" className="mb-1.5 block text-sm font-medium">
+              Bulan laporan
+            </label>
+            <input
+              id="dashboard-finance-month"
+              type="month"
+              value={month.slice(0, 7)}
+              onChange={(event) => handleMonthChange(event.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
           </div>
+
+          <p
+            className="flex min-h-5 items-center gap-2 text-xs text-muted-foreground"
+            aria-live="polite"
+          >
+            {activeQuery.isFetching && !activeQuery.isPending ? (
+              <>
+                <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" />
+                Memperbarui data tanpa mengubah filter…
+              </>
+            ) : (
+              `Periode ${formatFinanceMonth(month)}`
+            )}
+          </p>
         </CardContent>
       </Card>
 
-      {!isRangeValid ? (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-
-          <AlertTitle>
-            Rentang tanggal tidak valid
-          </AlertTitle>
-
-          <AlertDescription>
-            Tanggal mulai tidak boleh melewati
-            tanggal akhir.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {queryError ? (
-        <DashboardError
-          error={queryError}
-          onRetry={retryDashboard}
+      {activeQuery.isError ? (
+        <FinanceError
+          error={activeQuery.error}
+          onRetry={() => {
+            void activeQuery.refetch();
+          }}
         />
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardKpiCard
-          title="Total Penjualan"
-          value={formatRupiah(
-            selectedSummary.sales,
-          )}
-          helper={`${selectedSummary.salesCount} pencatatan berbasis produk`}
-          icon={TrendingUp}
-          loading={mainLoading}
-          growth={salesGrowth}
-          iconBackground="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      {isStaff && operationalQuery.isPending ? (
+        <OperationalKpis loading />
+      ) : isStaff && operationalQuery.data?.sourceDays ? (
+        <>
+          <OperationalKpis totals={operationalQuery.data} />
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Akses staff: agregat operasional</AlertTitle>
+            <AlertDescription>
+              Dashboard ini hanya menampilkan omzet harian agregat, jumlah transaksi, kunjungan, dan
+              kuantitas menu. Detail HPP, beban, laba, supplier, pembelian, serta aset tetap
+              dibatasi untuk admin oleh RLS.
+            </AlertDescription>
+          </Alert>
+        </>
+      ) : isStaff && !operationalQuery.isError ? (
+        <EmptyState
+          icon={ReceiptText}
+          title={`Belum ada data operasional ${formatFinanceMonth(month)}`}
+          description="Periode kosong tidak diisi dengan data lama, estimasi, atau dummy."
         />
+      ) : statementQuery.isPending ? (
+        <FinanceKpis loading />
+      ) : statement ? (
+        <>
+          {statement.batchStatus !== "reconciled" ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Kontrol batch perlu direkonsiliasi ulang</AlertTitle>
+              <AlertDescription>
+                Data pembelian telah berubah setelah rekonsiliasi terakhir. Angka di bawah
+                mencerminkan data saat ini, tetapi tidak diberi label sebagai batch terverifikasi.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          <FinanceKpis statement={statement} />
+          <Card>
+            <CardContent className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
+              <StatusItem
+                title="Pajak"
+                value={statement.taxRecorded ? formatRupiah(statement.taxAmount) : "Belum tersedia"}
+                description={
+                  statement.taxRecorded
+                    ? "Pajak yang sudah dicatat pada laporan aktual."
+                    : "Tidak ada nilai pajak fiktif yang ditambahkan."
+                }
+              />
+              <StatusItem
+                title={statement.taxRecorded ? "Laba bersih setelah pajak" : "Laba setelah operasi"}
+                value={
+                  statement.taxRecorded
+                    ? statement.netIncomeFinal === null
+                      ? "Belum dapat difinalkan"
+                      : formatRupiah(statement.netIncomeFinal)
+                    : formatRupiah(statement.netIncomeProvisionalBeforeTax)
+                }
+                description={
+                  statement.taxRecorded
+                    ? "Nilai final setelah pajak yang sudah dicatat."
+                    : "Provisional sebelum pajak, bukan laba bersih final."
+                }
+              />
+              <StatusItem
+                title="Dividen"
+                value={
+                  statement.dividendRecorded
+                    ? formatRupiah(statement.dividendAmount)
+                    : "Belum tersedia"
+                }
+                description={
+                  statement.dividendRecorded
+                    ? "Distribusi pemilik yang sudah dicatat."
+                    : "Belum ada distribusi pemilik pada data aktual."
+                }
+              />
+              <StatusItem
+                title="Laba ditahan"
+                value={
+                  statement.retainedEarningsFinal === null
+                    ? "Belum dapat difinalkan"
+                    : formatRupiah(statement.retainedEarningsFinal)
+                }
+                description={
+                  statement.retainedEarningsFinal === null
+                    ? "Menunggu pajak dan dividen yang valid."
+                    : "Sudah memperhitungkan pajak dan dividen tercatat."
+                }
+              />
+            </CardContent>
+          </Card>
 
-        <DashboardKpiCard
-          title="Total Pengeluaran"
-          value={formatRupiah(
-            selectedSummary.expenses,
-          )}
-          helper={`${selectedSummary.expenseCount} pencatatan berbasis item`}
-          icon={Wallet}
-          loading={mainLoading}
-          growth={expensesGrowth}
-          iconBackground="bg-destructive/10 text-destructive"
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Sumber data laporan</AlertTitle>
+            <AlertDescription>
+              Kartu aktual hanya membaca v_financial_statement_monthly untuk batch Juni 2026. Data
+              penjualan dan pengeluaran lama tidak dijumlahkan ke laporan ini.
+            </AlertDescription>
+          </Alert>
+        </>
+      ) : !statementQuery.isError ? (
+        <EmptyState
+          icon={ReceiptText}
+          title={`Belum ada data aktual ${formatFinanceMonth(month)}`}
+          description="Periode kosong tidak diisi dengan data lama, estimasi, atau dummy. Pilih Juni 2026 untuk melihat laporan aktual yang tersedia."
         />
-
-        <DashboardKpiCard
-          title="Estimasi Profit"
-          value={formatRupiah(
-            selectedSummary.profit,
-          )}
-          helper={
-            selectedSummary.profit >= 0
-              ? `Margin profit ${profitMargin.toLocaleString(
-                  "id-ID",
-                  {
-                    maximumFractionDigits: 1,
-                  },
-                )}%`
-              : "Pengeluaran melebihi penjualan"
-          }
-          icon={
-            selectedSummary.profit >= 0
-              ? PiggyBank
-              : TrendingDown
-          }
-          loading={mainLoading}
-          growth={profitGrowth}
-          iconBackground={
-            selectedSummary.profit >= 0
-              ? "bg-primary/10 text-primary"
-              : "bg-destructive/10 text-destructive"
-          }
-          valueClassName={
-            selectedSummary.profit < 0
-              ? "text-destructive"
-              : ""
-          }
-        />
-
-        <DashboardKpiCard
-          title="Jumlah Pencatatan"
-          value={selectedSummary.transactionCount.toLocaleString(
-            "id-ID",
-          )}
-          helper={`${selectedSummary.salesCount} penjualan · ${selectedSummary.expenseCount} pengeluaran`}
-          icon={ListChecks}
-          loading={mainLoading}
-          growth={transactionGrowth}
-          iconBackground="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-        />
-      </section>
-
-      <TrendChart
-        title="Tren Penjualan, Pengeluaran, dan Profit"
-        description={`Pergerakan nilai keuangan pada periode ${selectedRangeLabel}.`}
-        data={trendData}
-        loading={mainLoading}
-        height={380}
-      />
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        <CategoryRanking
-          title="Ranking Kategori Penjualan"
-          description="Kategori dengan kontribusi omzet terbesar pada periode terpilih."
-          items={salesRanking}
-          totalAmount={selectedSummary.sales}
-          loading={categoryLoading}
-          emptyTitle="Belum ada kategori penjualan"
-          emptyDescription="Ranking akan muncul setelah terdapat pencatatan penjualan pada periode ini."
-          valueLabel="penjualan"
-          maxItems={6}
-        />
-
-        <CategoryRanking
-          title="Ranking Kategori Pengeluaran"
-          description="Kategori dengan kontribusi biaya terbesar pada periode terpilih."
-          items={expensesRanking}
-          totalAmount={
-            selectedSummary.expenses
-          }
-          loading={categoryLoading}
-          emptyTitle="Belum ada kategori pengeluaran"
-          emptyDescription="Ranking akan muncul setelah terdapat pencatatan pengeluaran pada periode ini."
-          valueLabel="pengeluaran"
-          maxItems={6}
-        />
-      </section>
-
-      <ProductAnalyticsPreview
-        totalQuantity={
-          productAnalyticsPreview.totalQuantity
-        }
-        productsSold={
-          productAnalyticsPreview.productsSold
-        }
-        productsWithoutSales={
-          productAnalyticsPreview.productsWithoutSales
-        }
-        periodLabel={selectedRangeLabel}
-        loading={
-          productAnalyticsPreviewLoading
-        }
-      />
-
-      <BusinessInsights
-        data={businessInsightsData}
-        loading={categoryLoading}
-        maxItems={6}
-      />
-
-      <PeriodSummary
-        data={periodSummaryData}
-        loading={mainLoading}
-      />
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <RecentTransactionCard
-          title="Penjualan Terbaru"
-          description="Lima penjualan berbasis produk terbaru dalam periode terpilih."
-          type="sales"
-          data={recentSales}
-          loading={recentLoading}
-        />
-
-        <RecentTransactionCard
-          title="Pengeluaran Terbaru"
-          description="Lima pengeluaran berbasis item terbaru dalam periode terpilih."
-          type="expenses"
-          data={recentExpenses}
-          loading={recentLoading}
-        />
-      </section>
+      ) : null}
     </div>
   );
 }
 
-async function fetchSales(
-  range: PeriodRange,
-): Promise<SaleRow[]> {
-  const { data, error } = await supabase
-    .from("sales")
-    .select(
-      "id, transaction_date, amount, notes, created_at, sales_category_id, product_id, quantity, unit_price",
-    )
-    .is("deleted_at", null)
-    .gte("transaction_date", range.from)
-    .lte("transaction_date", range.to)
-    .order("transaction_date", {
-      ascending: true,
-    })
-    .order("created_at", {
-      ascending: true,
-    });
+interface OperationalDashboardTotals {
+  revenue: number;
+  billCount: number;
+  visitors: number;
+  productQuantity: number;
+  sourceDays: number;
+}
+
+interface OperationalDashboardRpcRow {
+  revenue: number | string | null;
+  bill_count: number | string | null;
+  visitors: number | string | null;
+  product_quantity: number | string | null;
+  source_days: number | string | null;
+}
+
+interface OperationalDashboardRpcClient {
+  rpc(
+    functionName: "get_operational_dashboard_month",
+    args: {
+      p_month_start: string;
+      p_batch_key: string;
+    },
+  ): PromiseLike<{
+    data: OperationalDashboardRpcRow[] | null;
+    error: {
+      code?: string;
+      message?: string;
+    } | null;
+  }>;
+}
+
+async function fetchOperationalDashboard(month: string): Promise<OperationalDashboardTotals> {
+  const operationalClient = supabase as unknown as OperationalDashboardRpcClient;
+  const { data, error } = await operationalClient.rpc("get_operational_dashboard_month", {
+    p_month_start: month,
+    p_batch_key: JUNE_FINANCE_BATCH_KEY,
+  });
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map((row) => ({
-    ...row,
-    amount: Number(row.amount),
-    quantity: Number(row.quantity),
-    unit_price: Number(row.unit_price),
-  }));
-}
-
-async function fetchExpenses(
-  range: PeriodRange,
-): Promise<ExpenseRow[]> {
-  const { data, error } = await supabase
-    .from("expenses")
-    .select(
-      "id, transaction_date, amount, notes, created_at, expense_category_id, expense_item_id, quantity, unit_price",
-    )
-    .is("deleted_at", null)
-    .gte("transaction_date", range.from)
-    .lte("transaction_date", range.to)
-    .order("transaction_date", {
-      ascending: true,
-    })
-    .order("created_at", {
-      ascending: true,
-    });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map((row) => ({
-    ...row,
-    amount: Number(row.amount),
-    quantity: Number(row.quantity),
-    unit_price: Number(row.unit_price),
-  }));
-}
-
-async function fetchSalesCategories(): Promise<
-  SalesCategoryRow[]
-> {
-  const { data, error } = await supabase
-    .from("sales_categories")
-    .select("id, name")
-    .order("name", {
-      ascending: true,
-    });
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
-}
-
-async function fetchExpenseCategories(): Promise<
-  ExpenseCategoryRow[]
-> {
-  const { data, error } = await supabase
-    .from("expense_categories")
-    .select("id, name")
-    .order("name", {
-      ascending: true,
-    });
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
-}
-
-async function fetchProducts(): Promise<ProductRow[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select(
-      "id, name, sku, unit, sales_category_id, selling_price, is_active, deleted_at",
-    )
-    .order("name", {
-      ascending: true,
-    });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map((product) => ({
-    ...product,
-    selling_price: Number(
-      product.selling_price,
-    ),
-  }));
-}
-
-async function fetchExpenseItems(): Promise<
-  ExpenseItemRow[]
-> {
-  const { data, error } = await supabase
-    .from("expense_items")
-    .select("id, name, sku, unit")
-    .order("name", {
-      ascending: true,
-    });
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
-}
-
-function calculatePreviousRange(
-  range: PeriodRange,
-): PeriodRange {
-  const currentFrom = parseISO(range.from);
-  const currentTo = parseISO(range.to);
-
-  const duration =
-    differenceInCalendarDays(
-      currentTo,
-      currentFrom,
-    ) + 1;
-
-  const previousTo = subDays(currentFrom, 1);
-  const previousFrom = subDays(
-    previousTo,
-    duration - 1,
-  );
+  const row = data?.[0];
 
   return {
-    from: toDateInput(previousFrom),
-    to: toDateInput(previousTo),
+    revenue: Number(row?.revenue ?? 0),
+    billCount: Number(row?.bill_count ?? 0),
+    visitors: Number(row?.visitors ?? 0),
+    productQuantity: Number(row?.product_quantity ?? 0),
+    sourceDays: Number(row?.source_days ?? 0),
   };
 }
 
-function filterRowsByRange<
-  T extends {
-    transaction_date: string;
-  },
->(
-  rows: T[],
-  range: PeriodRange,
-): T[] {
-  return rows.filter(
-    (row) =>
-      row.transaction_date >= range.from &&
-      row.transaction_date <= range.to,
-  );
-}
-
-function summarizePeriod(
-  sales: SaleRow[],
-  expenses: ExpenseRow[],
-): FinancialSummary {
-  const totalSales = sales.reduce(
-    (total, row) => total + row.amount,
-    0,
-  );
-
-  const totalExpenses = expenses.reduce(
-    (total, row) => total + row.amount,
-    0,
-  );
-
-  return {
-    sales: totalSales,
-    expenses: totalExpenses,
-    profit: totalSales - totalExpenses,
-    salesCount: sales.length,
-    expenseCount: expenses.length,
-    transactionCount:
-      sales.length + expenses.length,
-  };
-}
-
-function calculateGrowth(
-  currentValue: number,
-  previousValue: number,
-): number {
-  if (previousValue === 0) {
-    return currentValue > 0 ? 100 : 0;
-  }
-
-  return (
-    ((currentValue - previousValue) /
-      Math.abs(previousValue)) *
-    100
-  );
-}
-
-function buildTrendData({
-  range,
-  sales,
-  expenses,
+function OperationalKpis({
+  totals,
+  loading = false,
 }: {
-  range: DateRange;
-  sales: SaleRow[];
-  expenses: ExpenseRow[];
-}): TrendChartItem[] {
-  const days = eachDayOfInterval({
-    start: range.from,
-    end: range.to,
-  });
-
-  if (days.length > DAILY_RANGE_LIMIT) {
-    return buildMonthlyTrendData({
-      range,
-      sales,
-      expenses,
-    });
-  }
-
-  return buildDailyTrendData({
-    range,
-    sales,
-    expenses,
-  });
-}
-
-function buildDailyTrendData({
-  range,
-  sales,
-  expenses,
-}: {
-  range: DateRange;
-  sales: SaleRow[];
-  expenses: ExpenseRow[];
-}): TrendChartItem[] {
-  const salesTotals = new Map<
-    string,
+  totals?: OperationalDashboardTotals;
+  loading?: boolean;
+}) {
+  const kpis = [
     {
-      amount: number;
-      count: number;
-    }
-  >();
-
-  const expenseTotals = new Map<
-    string,
+      title: "Omzet Agregat",
+      value: formatRupiah(totals?.revenue ?? 0),
+      icon: CircleDollarSign,
+      helper: "Total penjualan harian",
+      iconBackground: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    },
     {
-      amount: number;
-      count: number;
-    }
-  >();
-
-  for (const row of sales) {
-    const current = salesTotals.get(
-      row.transaction_date,
-    ) ?? {
-      amount: 0,
-      count: 0,
-    };
-
-    salesTotals.set(row.transaction_date, {
-      amount: current.amount + row.amount,
-      count: current.count + 1,
-    });
-  }
-
-  for (const row of expenses) {
-    const current = expenseTotals.get(
-      row.transaction_date,
-    ) ?? {
-      amount: 0,
-      count: 0,
-    };
-
-    expenseTotals.set(row.transaction_date, {
-      amount: current.amount + row.amount,
-      count: current.count + 1,
-    });
-  }
-
-  const days = eachDayOfInterval({
-    start: range.from,
-    end: range.to,
-  });
-
-  return days.map((day) => {
-    const key = toDateInput(day);
-
-    const salesValue = salesTotals.get(
-      key,
-    ) ?? {
-      amount: 0,
-      count: 0,
-    };
-
-    const expenseValue =
-      expenseTotals.get(key) ?? {
-        amount: 0,
-        count: 0,
-      };
-
-    return {
-      key,
-      label: format(
-        day,
-        days.length > 14
-          ? "dd/MM"
-          : "dd MMM",
-        {
-          locale: idLocale,
-        },
+      title: "Jumlah Transaksi",
+      value: new Intl.NumberFormat("id-ID").format(totals?.billCount ?? 0),
+      icon: ShoppingBag,
+      helper: "Total bill pada periode",
+      iconBackground: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    },
+    {
+      title: "Total Pengunjung",
+      value: new Intl.NumberFormat("id-ID").format(totals?.visitors ?? 0),
+      icon: UsersRound,
+      helper: "Dewasa dan anak",
+      iconBackground: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    },
+    {
+      title: "Kuantitas Menu",
+      value: new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(
+        totals?.productQuantity ?? 0,
       ),
-      date: key,
-      sales: salesValue.amount,
-      expenses: expenseValue.amount,
-      profit:
-        salesValue.amount -
-        expenseValue.amount,
-      transactionCount:
-        salesValue.count +
-        expenseValue.count,
-    };
-  });
-}
-
-function buildMonthlyTrendData({
-  range,
-  sales,
-  expenses,
-}: {
-  range: DateRange;
-  sales: SaleRow[];
-  expenses: ExpenseRow[];
-}): TrendChartItem[] {
-  const salesTotals = new Map<
-    string,
-    {
-      amount: number;
-      count: number;
-    }
-  >();
-
-  const expenseTotals = new Map<
-    string,
-    {
-      amount: number;
-      count: number;
-    }
-  >();
-
-  for (const row of sales) {
-    const key = row.transaction_date.slice(
-      0,
-      7,
-    );
-
-    const current = salesTotals.get(key) ?? {
-      amount: 0,
-      count: 0,
-    };
-
-    salesTotals.set(key, {
-      amount: current.amount + row.amount,
-      count: current.count + 1,
-    });
-  }
-
-  for (const row of expenses) {
-    const key = row.transaction_date.slice(
-      0,
-      7,
-    );
-
-    const current =
-      expenseTotals.get(key) ?? {
-        amount: 0,
-        count: 0,
-      };
-
-    expenseTotals.set(key, {
-      amount: current.amount + row.amount,
-      count: current.count + 1,
-    });
-  }
-
-  return eachMonthOfInterval({
-    start: range.from,
-    end: range.to,
-  }).map((month) => {
-    const key = format(month, "yyyy-MM");
-
-    const salesValue = salesTotals.get(
-      key,
-    ) ?? {
-      amount: 0,
-      count: 0,
-    };
-
-    const expenseValue =
-      expenseTotals.get(key) ?? {
-        amount: 0,
-        count: 0,
-      };
-
-    return {
-      key,
-      label: format(month, "MMM yy", {
-        locale: idLocale,
-      }),
-      date: `${key}-01`,
-      sales: salesValue.amount,
-      expenses: expenseValue.amount,
-      profit:
-        salesValue.amount -
-        expenseValue.amount,
-      transactionCount:
-        salesValue.count +
-        expenseValue.count,
-    };
-  });
-}
-
-function buildCategoryRanking<
-  T extends {
-    amount: number;
-  },
->({
-  rows,
-  categoryMap,
-  getCategoryId,
-}: {
-  rows: T[];
-  categoryMap: Map<string, string>;
-  getCategoryId: (
-    row: T,
-  ) => string | null;
-}): (CategoryRankingItem & {
-  percentage: number;
-})[] {
-  const totals = new Map<
-    string,
-    {
-      amount: number;
-      transactionCount: number;
-    }
-  >();
-
-  for (const row of rows) {
-    const categoryId =
-      getCategoryId(row) ??
-      "__uncategorized__";
-
-    const current = totals.get(categoryId) ?? {
-      amount: 0,
-      transactionCount: 0,
-    };
-
-    totals.set(categoryId, {
-      amount:
-        current.amount +
-        Number(row.amount),
-      transactionCount:
-        current.transactionCount + 1,
-    });
-  }
-
-  const grandTotal = Array.from(
-    totals.values(),
-  ).reduce(
-    (total, item) => total + item.amount,
-    0,
-  );
-
-  return Array.from(totals.entries())
-    .map(([id, item]) => ({
-      id,
-      name:
-        id === "__uncategorized__"
-          ? "Tanpa kategori"
-          : categoryMap.get(id) ??
-            "Kategori tidak tersedia",
-      amount: item.amount,
-      percentage:
-        grandTotal > 0
-          ? (item.amount / grandTotal) *
-            100
-          : 0,
-      transactionCount:
-        item.transactionCount,
-    }))
-    .sort(
-      (first, second) =>
-        second.amount - first.amount,
-    );
-}
-
-function findHighestSalesDay(
-  sales: SaleRow[],
-): HighestSalesDay | null {
-  if (sales.length === 0) {
-    return null;
-  }
-
-  const totals = new Map<
-    string,
-    {
-      amount: number;
-      transactionCount: number;
-    }
-  >();
-
-  for (const row of sales) {
-    const current = totals.get(
-      row.transaction_date,
-    ) ?? {
-      amount: 0,
-      transactionCount: 0,
-    };
-
-    totals.set(row.transaction_date, {
-      amount: current.amount + row.amount,
-      transactionCount:
-        current.transactionCount + 1,
-    });
-  }
-
-  let result: HighestSalesDay | null =
-    null;
-
-  for (const [date, item] of totals) {
-    if (
-      result === null ||
-      item.amount > result.amount
-    ) {
-      result = {
-        date,
-        amount: item.amount,
-        transactionCount:
-          item.transactionCount,
-      };
-    }
-  }
-
-  return result;
-}
-
-function countActiveDays(
-  sales: SaleRow[],
-  expenses: ExpenseRow[],
-): number {
-  const dates = new Set<string>();
-
-  for (const row of sales) {
-    dates.add(row.transaction_date);
-  }
-
-  for (const row of expenses) {
-    dates.add(row.transaction_date);
-  }
-
-  return dates.size;
-}
-
-function buildRecentSales(
-  sales: SaleRow[],
-  categoryMap: Map<string, string>,
-  productMap: Map<string, ProductRow>,
-): RecentTransactionItem[] {
-  return sales
-    .map((row) => {
-      const product = productMap.get(
-        row.product_id,
-      );
-
-      return {
-        id: row.id,
-        type: "sales" as const,
-        date: row.transaction_date,
-        createdAt: row.created_at,
-        categoryName:
-          categoryMap.get(
-            row.sales_category_id,
-          ) ?? "Kategori tidak tersedia",
-        itemName:
-          product?.name ??
-          "Produk tidak tersedia",
-        itemCode: product?.sku ?? null,
-        quantity: row.quantity,
-        unit: product?.unit ?? "unit",
-        unitPrice: row.unit_price,
-        amount: row.amount,
-        notes: row.notes,
-      };
-    })
-    .sort(sortRecentTransactions)
-    .slice(0, RECENT_TRANSACTION_LIMIT);
-}
-
-function buildRecentExpenses(
-  expenses: ExpenseRow[],
-  categoryMap: Map<string, string>,
-  expenseItemMap: Map<string, ExpenseItemRow>,
-): RecentTransactionItem[] {
-  return expenses
-    .map((row) => {
-      const item = expenseItemMap.get(
-        row.expense_item_id,
-      );
-
-      return {
-        id: row.id,
-        type: "expenses" as const,
-        date: row.transaction_date,
-        createdAt: row.created_at,
-        categoryName:
-          categoryMap.get(
-            row.expense_category_id,
-          ) ?? "Kategori tidak tersedia",
-        itemName:
-          item?.name ??
-          "Item pengeluaran tidak tersedia",
-        itemCode: item?.sku ?? null,
-        quantity: row.quantity,
-        unit: item?.unit ?? "unit",
-        unitPrice: row.unit_price,
-        amount: row.amount,
-        notes: row.notes,
-      };
-    })
-    .sort(sortRecentTransactions)
-    .slice(0, RECENT_TRANSACTION_LIMIT);
-}
-
-function sortRecentTransactions(
-  first: RecentTransactionItem,
-  second: RecentTransactionItem,
-): number {
-  const firstTimestamp =
-    new Date(
-      `${first.date}T00:00:00`,
-    ).getTime();
-
-  const secondTimestamp =
-    new Date(
-      `${second.date}T00:00:00`,
-    ).getTime();
-
-  if (firstTimestamp !== secondTimestamp) {
-    return secondTimestamp - firstTimestamp;
-  }
+      icon: ReceiptText,
+      helper: "Total unit produk historis",
+      iconBackground: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    },
+  ];
 
   return (
-    new Date(second.createdAt).getTime() -
-    new Date(first.createdAt).getTime()
+    <section
+      aria-label="Indikator operasional utama"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      {kpis.map((kpi) => (
+        <DashboardKpiCard
+          key={kpi.title}
+          title={kpi.title}
+          value={kpi.value}
+          icon={kpi.icon}
+          helper={kpi.helper}
+          loading={loading}
+          iconBackground={kpi.iconBackground}
+        />
+      ))}
+    </section>
   );
 }
 
-function RecentTransactionCard({
+function FinanceKpis({
+  statement,
+  loading = false,
+}: {
+  statement?: {
+    revenue: number;
+    hpp: number;
+    grossProfit: number;
+    operatingExpense: number;
+    ebitda: number;
+    depreciation: number;
+    ebitOperatingProfit: number;
+  };
+  loading?: boolean;
+}) {
+  const kpis = [
+    {
+      title: "Omzet",
+      value: statement?.revenue ?? 0,
+      icon: CircleDollarSign,
+      helper: "Pendapatan aktual",
+      iconBackground: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    },
+    {
+      title: "HPP",
+      value: statement?.hpp ?? 0,
+      icon: ReceiptText,
+      helper: "Harga pokok penjualan",
+      iconBackground: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    },
+    {
+      title: "Laba Kotor",
+      value: statement?.grossProfit ?? 0,
+      icon: TrendingUp,
+      helper: "Omzet dikurangi HPP",
+      iconBackground: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+    },
+    {
+      title: "Beban Operasional",
+      value: statement?.operatingExpense ?? 0,
+      icon: Banknote,
+      helper: "OpEx terklasifikasi",
+      iconBackground: "bg-orange-500/10 text-orange-700 dark:text-orange-300",
+    },
+    {
+      title: "EBITDA",
+      value: statement?.ebitda ?? 0,
+      icon: BadgeDollarSign,
+      helper: "Sebelum bunga, pajak, depresiasi",
+      iconBackground: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    },
+    {
+      title: "Penyusutan",
+      value: statement?.depreciation ?? 0,
+      icon: Calculator,
+      helper: "Entri depresiasi posted",
+      iconBackground: "bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    },
+    {
+      title: "EBIT / Laba Operasional",
+      value: statement?.ebitOperatingProfit ?? 0,
+      icon: TrendingUp,
+      helper: "EBITDA dikurangi penyusutan",
+      iconBackground: "bg-primary/10 text-primary",
+    },
+  ];
+
+  return (
+    <section
+      aria-label="Indikator keuangan utama"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      {kpis.map((kpi) => (
+        <DashboardKpiCard
+          key={kpi.title}
+          title={kpi.title}
+          value={formatRupiah(kpi.value)}
+          icon={kpi.icon}
+          helper={kpi.helper}
+          loading={loading}
+          iconBackground={kpi.iconBackground}
+        />
+      ))}
+    </section>
+  );
+}
+
+function StatusItem({
   title,
+  value,
   description,
-  type,
-  data,
-  loading,
 }: {
   title: string;
+  value: string;
   description: string;
-  type: "sales" | "expenses";
-  data: RecentTransactionItem[];
-  loading: boolean;
 }) {
-  const isSales = type === "sales";
-
   return (
-    <Card className="rounded-xl">
-      <CardHeader className="pb-2">
-        <div className="flex items-start gap-3">
-          <div
-            className={[
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-              isSales
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "bg-destructive/10 text-destructive",
-            ].join(" ")}
-          >
-            {isSales ? (
-              <ArrowUpRight className="h-5 w-5" />
-            ) : (
-              <ArrowDownRight className="h-5 w-5" />
-            )}
-          </div>
-
-          <div>
-            <CardTitle className="text-base">
-              {title}
-            </CardTitle>
-
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {description}
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent>
-        {loading ? (
-          <RecentTransactionSkeleton />
-        ) : data.length === 0 ? (
-          <RecentTransactionEmptyState
-            type={type}
-          />
-        ) : (
-          <ul className="divide-y">
-            {data.map((transaction) => (
-              <li
-                key={transaction.id}
-                className="flex items-center justify-between gap-4 py-3 first:pt-1 last:pb-1"
-              >
-                <div className="min-w-0">
-                  <p
-                    className="truncate text-sm font-medium"
-                    title={transaction.itemName}
-                  >
-                    {transaction.itemName}
-                  </p>
-
-                  <p
-                    className="mt-0.5 truncate text-xs text-muted-foreground"
-                    title={[
-                      transaction.categoryName,
-                      transaction.itemCode,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  >
-                    {transaction.categoryName}
-
-                    {transaction.itemCode
-                      ? ` · ${transaction.itemCode}`
-                      : ""}
-                  </p>
-
-                  <p
-                    className="mt-0.5 truncate text-xs text-muted-foreground"
-                    title={
-                      transaction.notes ??
-                      undefined
-                    }
-                  >
-                    {formatDate(
-                      transaction.date,
-                    )}
-                    {" · "}
-                    {formatNumber(
-                      transaction.quantity,
-                      2,
-                    )}{" "}
-                    {transaction.unit}
-                    {" × "}
-                    {formatRupiah(
-                      transaction.unitPrice,
-                    )}
-
-                    {transaction.notes
-                      ? ` · ${transaction.notes}`
-                      : ""}
-                  </p>
-                </div>
-
-                <p
-                  className={[
-                    "shrink-0 text-sm font-semibold",
-                    isSales
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-destructive",
-                  ].join(" ")}
-                >
-                  {formatRupiah(
-                    transaction.amount,
-                  )}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RecentTransactionEmptyState({
-  type,
-}: {
-  type: "sales" | "expenses";
-}) {
-  const isSales = type === "sales";
-
-  return (
-    <div className="flex min-h-52 flex-col items-center justify-center rounded-xl border border-dashed px-6 py-8 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
-        {isSales ? (
-          <TrendingUp className="h-5 w-5 text-muted-foreground" />
-        ) : (
-          <ReceiptText className="h-5 w-5 text-muted-foreground" />
-        )}
-      </div>
-
-      <h3 className="mt-3 text-sm font-semibold">
-        Belum ada{" "}
-        {isSales
-          ? "penjualan"
-          : "pengeluaran"}
-      </h3>
-
-      <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
-        Pencatatan{" "}
-        {isSales
-          ? "penjualan"
-          : "pengeluaran"}{" "}
-        terbaru pada periode terpilih akan
-        muncul di sini.
-      </p>
+    <div className="min-w-0">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="mt-1 text-base font-semibold">{value}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
     </div>
   );
 }
 
-function RecentTransactionSkeleton() {
-  return (
-    <div className="space-y-4">
-      {Array.from({
-        length: RECENT_TRANSACTION_LIMIT,
-      }).map((_, index) => (
-        <div
-          key={index}
-          className="flex items-center justify-between gap-4"
-        >
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-3 w-48" />
-          </div>
-
-          <Skeleton className="h-4 w-24" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DashboardError({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => void;
-}) {
+function FinanceError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
     <Alert variant="destructive">
       <AlertCircle className="h-4 w-4" />
-
-      <AlertTitle>
-        Dashboard gagal dimuat
-      </AlertTitle>
-
+      <AlertTitle>Laporan aktual gagal dimuat</AlertTitle>
       <AlertDescription>
-        <p>{getErrorMessage(error)}</p>
-
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          onClick={onRetry}
-        >
-          <RefreshCcw className="mr-2 h-4 w-4" />
-          Coba Lagi
+        <p>{getFinanceErrorMessage(error)}</p>
+        <Button type="button" size="sm" variant="outline" className="mt-3" onClick={onRetry}>
+          <RefreshCcw aria-hidden="true" className="mr-2 h-4 w-4" />
+          Coba lagi
         </Button>
       </AlertDescription>
     </Alert>
   );
-}
-
-function getErrorMessage(
-  error: unknown,
-): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null
-  ) {
-    const queryError = error as QueryError;
-
-    if (queryError.message) {
-      return queryError.message;
-    }
-
-    if (queryError.details) {
-      return queryError.details;
-    }
-
-    if (queryError.hint) {
-      return queryError.hint;
-    }
-  }
-
-  return "Terjadi kesalahan saat mengambil data dashboard dari Supabase.";
 }

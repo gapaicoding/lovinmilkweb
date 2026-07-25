@@ -1,0 +1,80 @@
+# Phase 12 - Production Reconciliation
+
+- Batch: `LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2`
+- Snapshot: `LM-PRE-JUNE-FOUNDATION-20260725-130419425`
+- Status: **PASSED**
+
+| Metric | Expected | Actual | Passed |
+|---|---:|---:|:---:|
+| adult_visitors_total | 421 | 421 | yes |
+| asset_categories_count | 3 | 3 | yes |
+| asset_register_total | 870145.00 | 870145.00 | yes |
+| asset_view_accumulated_depreciation | 0 | 0.00 | yes |
+| asset_view_acquisition_total | 870145.00 | 870145.00 | yes |
+| asset_view_book_value | 870145.00 | 870145.00 | yes |
+| asset_view_count | 21 | 21 | yes |
+| assets_count | 21 | 21 | yes |
+| assets_not_tracking_only_expensed | 0 | 0 | yes |
+| assets_with_nonzero_monthly_depreciation | 0 | 0 | yes |
+| bill_count_total | 342 | 342 | yes |
+| child_visitors_total | 406 | 406 | yes |
+| cross_batch_purchase_suppliers | 0 | 0 | yes |
+| customer_traffic_daily_count | 30 | 30 | yes |
+| daily_sales_outside_june | 0 | 0 | yes |
+| daily_sales_summaries_count | 30 | 30 | yes |
+| data_coverage_count | 7 | 7 | yes |
+| depreciation_june_2026 | 0 | 0 | yes |
+| duplicate_alias_keys | 0 | 0 | yes |
+| duplicate_asset_codes | 0 | 0 | yes |
+| duplicate_asset_source_keys | 0 | 0 | yes |
+| duplicate_daily_sales_source_keys | 0 | 0 | yes |
+| duplicate_historical_product_keys | 0 | 0 | yes |
+| duplicate_invoice_source_keys | 0 | 0 | yes |
+| duplicate_purchase_line_source_keys | 0 | 0 | yes |
+| duplicate_quantity_source_keys | 0 | 0 | yes |
+| duplicate_traffic_source_keys | 0 | 0 | yes |
+| ebit_operating_profit | 18475702.00 | 18475702.00 | yes |
+| ebitda | 18475702.00 | 18475702.00 | yes |
+| finance_control_row_count | 1 | 1 | yes |
+| financial_view_exact_and_matches_control | 0 | 0 | yes |
+| financial_view_row_count | 1 | 1 | yes |
+| forbidden_estimated_origins | 0 | 0 | yes |
+| gross_profit | 19522462.00 | 19522462.00 | yes |
+| historical_product_aliases_count | 68 | 68 | yes |
+| historical_product_daily_quantities_count | 656 | 656 | yes |
+| historical_products_count | 61 | 61 | yes |
+| hpp_total | 10488538.00 | 10488538.00 | yes |
+| invalid_purchase_financial_classes | 0 | 0 | yes |
+| old_snapshot_available | LM-PRE-JUNE-FOUNDATION-20260725-130419425 | LM-PRE-JUNE-FOUNDATION-20260725-130419425 | yes |
+| old_table_expense_categories_unchanged | count=9;checksum=d144663fc71d6d64cdeff3f225eca372 | count=9;checksum=d144663fc71d6d64cdeff3f225eca372 | yes |
+| old_table_expense_items_unchanged | count=4;checksum=c324086b3ee108d34efbda5fe6678ca0 | count=4;checksum=c324086b3ee108d34efbda5fe6678ca0 | yes |
+| old_table_expenses_unchanged | count=238;checksum=a23c1aba9edb50f8232cb99aad7887bd | count=238;checksum=a23c1aba9edb50f8232cb99aad7887bd | yes |
+| old_table_products_unchanged | count=57;checksum=9bba08baf59e3d007850689118576d3c | count=57;checksum=9bba08baf59e3d007850689118576d3c | yes |
+| old_table_profiles_unchanged | count=3;checksum=8af77b8550cf703d6ad135b0fe0d214a | count=3;checksum=8af77b8550cf703d6ad135b0fe0d214a | yes |
+| old_table_sales_categories_unchanged | count=10;checksum=67aab0245bcb1e07cfad94b38a89363e | count=10;checksum=67aab0245bcb1e07cfad94b38a89363e | yes |
+| old_table_sales_unchanged | count=304;checksum=361be1c69e7efc7cabc07aa41f44006a | count=304;checksum=361be1c69e7efc7cabc07aa41f44006a | yes |
+| old_table_visitor_visits_unchanged | count=203;checksum=22db3e6063849a8e40ca2c82a9e89e47 | count=203;checksum=22db3e6063849a8e40ca2c82a9e89e47 | yes |
+| old_table_visitors_unchanged | count=75;checksum=6780f38c712076fff7881941cc9f616b | count=75;checksum=6780f38c712076fff7881941cc9f616b | yes |
+| operating_expense_total | 1046760.00 | 1046760.00 | yes |
+| orphan_aliases | 0 | 0 | yes |
+| orphan_product_quantities | 0 | 0 | yes |
+| orphan_purchase_items | 0 | 0 | yes |
+| orphan_supplier_items | 0 | 0 | yes |
+| owner_distributions_created | 0 | 0 | yes |
+| product_quantities_outside_june | 0 | 0 | yes |
+| product_quantity_total | 1358 | 1358.000 | yes |
+| purchase_amount_formula_mismatches | 0 | 0 | yes |
+| purchase_invoices_count | 343 | 343 | yes |
+| purchase_invoices_outside_june | 0 | 0 | yes |
+| purchase_invoices_without_supplier | 322 | 322 | yes |
+| purchase_items_count | 344 | 344 | yes |
+| purchase_total | 11535298.00 | 11535298.00 | yes |
+| revenue_total | 30011000.00 | 30011000.00 | yes |
+| successful_import_attempts | >=2 | 2 | yes |
+| supplier_items_count | 20 | 20 | yes |
+| suppliers_count | 9 | 9 | yes |
+| tax_entries_created | 0 | 0 | yes |
+| tracking_assets_with_depreciation_entries | 0 | 0 | yes |
+| traffic_arithmetic_mismatches | 0 | 0 | yes |
+| traffic_outside_june | 0 | 0 | yes |
+| visitor_total | 827 | 827 | yes |

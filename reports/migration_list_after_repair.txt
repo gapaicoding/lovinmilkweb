@@ -1,0 +1,19 @@
+Supabase CLI 2.109.1
+Project ref: baukcqccetzzwzgpbnoj
+Checked: 2026-07-25 (Asia/Jakarta)
+
+Local             Remote            Time (UTC)
+20260722072548     20260722072548    2026-07-22 07:25:48
+20260722072609     20260722072609    2026-07-22 07:26:09
+20260724143000     20260724143000    2026-07-24 14:30:00
+20260724143100     20260724143100    2026-07-24 14:31:00
+20260724143200     20260724143200    2026-07-24 14:32:00
+
+Result: local and remote migration history are aligned for every migration
+that existed before this release. The following known release migrations were
+local-only/pending at the time of this check:
+
+20260724144000_harden_profile_authorization.sql
+20260725000000_june_2026_finance_assets_foundation.sql
+20260725001000_june_2026_import_staging.sql
+

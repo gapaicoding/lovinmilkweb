@@ -3,12 +3,10 @@ import { useEffect } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { canAccessAuthenticatedRoute } from "@/lib/permissions";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopNavbar } from "@/components/TopNavbar";
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -16,32 +14,12 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedLayout() {
-  const {
-    session,
-    profile,
-    loading,
-    role,
-    canViewOperationalData,
-    canAccessDashboard,
-    canAccessAnalytics,
-    canAccessMasterData,
-    canManageVisitors,
-    canManageUsers,
-    signOut,
-  } = useAuth();
+  const { session, profile, loading, role, canViewOperationalData, signOut } = useAuth();
 
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  const routeAllowed =
-    pathname === "/profil" ||
-    (["/penjualan", "/pengeluaran", "/kunjungan"].includes(pathname) && canViewOperationalData) ||
-    (pathname === "/dashboard" && canAccessDashboard) ||
-    (pathname === "/analitik-produk" && canAccessAnalytics) ||
-    (pathname === "/pengunjung" && canManageVisitors) ||
-    (pathname === "/pengguna" && canManageUsers) ||
-    (["/produk", "/kategori-penjualan", "/kategori-pengeluaran", "/item-pengeluaran"].includes(pathname) &&
-      canAccessMasterData);
+  const routeAllowed = canAccessAuthenticatedRoute(role, pathname);
 
   useEffect(() => {
     if (!loading && !session) {
@@ -53,10 +31,10 @@ function AuthenticatedLayout() {
   }, [loading, session, navigate]);
 
   useEffect(() => {
-    if (!loading && session && profile && role && !routeAllowed) {
-      void navigate({ to: role === "staff" ? "/kunjungan" : "/dashboard", replace: true });
+    if (!loading && session && profile && canViewOperationalData && !routeAllowed) {
+      void navigate({ to: "/dashboard", replace: true });
     }
-  }, [loading, session, profile, role, routeAllowed, navigate]);
+  }, [loading, session, profile, canViewOperationalData, routeAllowed, navigate]);
 
   const handleSignOut = async () => {
     try {
@@ -123,7 +101,7 @@ function AuthenticatedLayout() {
   }
 
   /*
-   * Hanya role admin dan super_admin yang boleh mengakses
+   * Hanya role aplikasi yang dikenal dan aktif yang boleh mengakses
    * kelompok route _authenticated.
    */
   if (!canViewOperationalData) {
@@ -161,9 +139,7 @@ function PageLoader() {
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="h-7 w-7 animate-spin text-primary" />
 
-        <p className="text-sm text-muted-foreground">
-          Memeriksa akses pengguna...
-        </p>
+        <p className="text-sm text-muted-foreground">Memeriksa akses pengguna...</p>
       </div>
     </div>
   );
@@ -175,11 +151,7 @@ interface AccessMessageProps {
   onSignOut: () => Promise<void>;
 }
 
-function AccessMessage({
-  title,
-  description,
-  onSignOut,
-}: AccessMessageProps) {
+function AccessMessage({ title, description, onSignOut }: AccessMessageProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
@@ -187,13 +159,9 @@ function AccessMessage({
           <ShieldAlert className="h-6 w-6 text-destructive" />
         </div>
 
-        <h1 className="text-lg font-semibold">
-          {title}
-        </h1>
+        <h1 className="text-lg font-semibold">{title}</h1>
 
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {description}
-        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
 
         <Button
           className="mt-5"

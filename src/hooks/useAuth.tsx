@@ -11,29 +11,17 @@ import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { getRolePermissions, type AppPermissions, type AppRole } from "@/lib/permissions";
 
-export type AppRole = "staff" | "admin" | "super_admin";
+export type { AppRole } from "@/lib/permissions";
 export type Profile = Tables<"profiles">;
 
-interface AuthContextValue {
+interface AuthContextValue extends AppPermissions {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
   role: AppRole | null;
   loading: boolean;
-  isSuperAdmin: boolean;
-  isAdmin: boolean;
-  isStaff: boolean;
-  canAccessDashboard: boolean;
-  canAccessAnalytics: boolean;
-  canViewOperationalData: boolean;
-  canManageSales: boolean;
-  canManageExpenses: boolean;
-  canManageVisitorVisits: boolean;
-  canAccessMasterData: boolean;
-  canManageVisitors: boolean;
-  canManageUsers: boolean;
-  canViewDeletedData: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -80,10 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!data) {
-      console.error(
-        "[Auth] Profil pengguna tidak ditemukan untuk user:",
-        userId,
-      );
+      console.error("[Auth] Profil pengguna tidak ditemukan untuk user:", userId);
 
       setProfile(null);
       return null;
@@ -99,10 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error: signOutError } = await supabase.auth.signOut();
 
       if (signOutError) {
-        console.error(
-          "[Auth] Gagal logout dari akun yang tidak aktif:",
-          signOutError,
-        );
+        console.error("[Auth] Gagal logout dari akun yang tidak aktif:", signOutError);
       }
 
       return null;
@@ -214,10 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuthData, loadProfile]);
 
   const role: AppRole | null = profile?.role ?? null;
-  const isSuperAdmin = role === "super_admin";
-  const isStaff = role === "staff";
-  const isAdmin = role === "admin" || isSuperAdmin;
-  const canViewOperationalData = isStaff || isAdmin;
+  const permissions = useMemo(() => getRolePermissions(role), [role]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -226,37 +205,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       role,
       loading,
-      isSuperAdmin,
-      isAdmin,
-      isStaff,
-      canAccessDashboard: isAdmin,
-      canAccessAnalytics: isAdmin,
-      canViewOperationalData,
-      canManageSales: isAdmin,
-      canManageExpenses: isAdmin,
-      canManageVisitorVisits: canViewOperationalData,
-      canAccessMasterData: isAdmin,
-      canManageVisitors: isAdmin,
-      canManageUsers: isSuperAdmin,
-      canViewDeletedData: isSuperAdmin,
+      ...permissions,
       signOut,
       refreshProfile,
     }),
-    [
-      session,
-      profile,
-      role,
-      loading,
-      signOut,
-      refreshProfile,
-    ],
+    [session, profile, role, loading, signOut, refreshProfile, permissions],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

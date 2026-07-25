@@ -1,0 +1,1394 @@
+{
+  "status": "PASSED_WITH_DOCUMENTED_WARNINGS",
+  "package_root": "E:\\lovin_milk_fase_1_8_juni_2026",
+  "batch_key": "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2",
+  "observed": {
+    "counts": {
+      "daily_sales_summaries": 30,
+      "historical_product_daily_quantities": 656,
+      "historical_products": 61,
+      "historical_product_aliases": 68,
+      "purchase_items": 344,
+      "purchase_invoices": 343,
+      "suppliers": 9,
+      "supplier_items": 20,
+      "customer_traffic_daily": 30,
+      "assets": 21,
+      "asset_categories": 3
+    },
+    "totals": {
+      "revenue": "30011000.0",
+      "bill_count": "342.0",
+      "adult_visitors": "421",
+      "child_visitors": "406",
+      "visitor_total": "827",
+      "product_quantity": "1358.0",
+      "purchase_total": "11535298.00",
+      "hpp": "10488538.00",
+      "operating_expense": "1046760.00",
+      "asset_register_total": "870145.00",
+      "depreciation_june_2026": "0.00",
+      "gross_profit": "19522462.00",
+      "ebitda": "18475702.00",
+      "ebit_operating_profit": "18475702.00"
+    },
+    "headers": {
+      "asset_categories_full.csv": [
+        "category_name",
+        "default_useful_life_months",
+        "description",
+        "import_batch_key"
+      ],
+      "assets_full.csv": [
+        "asset_source_key",
+        "asset_code",
+        "asset_name",
+        "asset_name_normalized",
+        "asset_category",
+        "acquisition_date",
+        "acquisition_cost",
+        "original_source_cost",
+        "capitalization_threshold",
+        "capitalization_status",
+        "useful_life_months",
+        "residual_value",
+        "depreciation_method",
+        "monthly_depreciation",
+        "depreciation_start_date",
+        "asset_status",
+        "brand",
+        "size",
+        "supplier_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "adjustment_note",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "customer_traffic_daily_june_2026.csv": [
+        "traffic_date",
+        "adult_visitors",
+        "child_visitors",
+        "total_visitors",
+        "bill_count",
+        "source_key",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "daily_sales_summaries_june_2026.csv": [
+        "date",
+        "date_raw",
+        "day_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "bill_count",
+        "membership_count",
+        "coupon_count",
+        "cashier",
+        "adult_visitors",
+        "child_visitors",
+        "qris_dretail",
+        "qris_dynamic_bca",
+        "qris_static_bca",
+        "debit_edc_bca",
+        "qris_static_bri",
+        "cash",
+        "total_sales",
+        "dine_in",
+        "takeaway",
+        "reservation",
+        "opening_cash",
+        "deposited_cash",
+        "deposit_method",
+        "closing_cash",
+        "payment_sum",
+        "total_sales_difference",
+        "visitor_total",
+        "data_entry_status",
+        "total_sales_arayya",
+        "total_sales_lovin",
+        "source_key",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "data_coverage_june_2026.csv": [
+        "domain",
+        "period_start",
+        "period_end",
+        "availability_status",
+        "row_count",
+        "notes",
+        "import_batch_key"
+      ],
+      "finance_summary_june_2026.csv": [
+        "period_start",
+        "period_end",
+        "revenue",
+        "hpp",
+        "gross_profit",
+        "operating_expense",
+        "ebitda",
+        "depreciation",
+        "ebit_operating_profit",
+        "tax_amount",
+        "tax_status",
+        "net_income_provisional",
+        "net_income_status",
+        "dividend_amount",
+        "dividend_status",
+        "retained_earnings_provisional",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "historical_product_aliases_june_2026.csv": [
+        "alias_key",
+        "historical_product_key",
+        "alias_name",
+        "normalized_alias",
+        "spelling_normalized_alias",
+        "mapping_status",
+        "similarity_to_latest_menu",
+        "occurrence_count",
+        "import_batch_key"
+      ],
+      "historical_product_daily_quantities_june_2026.csv": [
+        "source_key",
+        "sale_date",
+        "historical_product_key",
+        "canonical_product_name",
+        "category_name",
+        "quantity",
+        "is_free_menu",
+        "raw_variants",
+        "category_raw_variants",
+        "source_file",
+        "source_references",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "historical_products_june_2026.csv": [
+        "historical_product_key",
+        "canonical_name",
+        "category_name",
+        "mapping_status",
+        "current_product_match_strategy",
+        "import_batch_key"
+      ],
+      "purchases_june_2026.csv": [
+        "line_source_key",
+        "invoice_source_key",
+        "purchase_date",
+        "supplier_key",
+        "supplier_name_raw",
+        "receipt_reference",
+        "item_name_raw",
+        "item_name_normalized",
+        "quantity",
+        "unit",
+        "unit_price",
+        "total_amount",
+        "calculated_total",
+        "amount_difference",
+        "source_category",
+        "financial_class_final",
+        "classification_policy",
+        "asset_tracking",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "supplier_items_june_2026.csv": [
+        "supplier_item_key",
+        "supplier_key",
+        "catalog_no",
+        "item_name_raw",
+        "item_name_normalized",
+        "brand_raw",
+        "size_raw",
+        "price_raw",
+        "reference_price",
+        "price_parse_status",
+        "financial_class_final",
+        "classification_policy",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "import_batch_key"
+      ],
+      "suppliers_june_2026.csv": [
+        "supplier_key",
+        "supplier_name",
+        "normalized_name",
+        "phone",
+        "address",
+        "link",
+        "contact_person",
+        "source_type",
+        "source_references",
+        "import_batch_key"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "key": "approved_csv.file_set",
+      "passed": true,
+      "actual": [
+        "asset_categories_full.csv",
+        "assets_full.csv",
+        "customer_traffic_daily_june_2026.csv",
+        "daily_sales_summaries_june_2026.csv",
+        "data_coverage_june_2026.csv",
+        "finance_summary_june_2026.csv",
+        "historical_product_aliases_june_2026.csv",
+        "historical_product_daily_quantities_june_2026.csv",
+        "historical_products_june_2026.csv",
+        "purchases_june_2026.csv",
+        "supplier_items_june_2026.csv",
+        "suppliers_june_2026.csv"
+      ],
+      "expected": [
+        "asset_categories_full.csv",
+        "assets_full.csv",
+        "customer_traffic_daily_june_2026.csv",
+        "daily_sales_summaries_june_2026.csv",
+        "data_coverage_june_2026.csv",
+        "finance_summary_june_2026.csv",
+        "historical_product_aliases_june_2026.csv",
+        "historical_product_daily_quantities_june_2026.csv",
+        "historical_products_june_2026.csv",
+        "purchases_june_2026.csv",
+        "supplier_items_june_2026.csv",
+        "suppliers_june_2026.csv"
+      ]
+    },
+    {
+      "key": "asset_categories_full.csv.headers",
+      "passed": true,
+      "actual": [
+        "category_name",
+        "default_useful_life_months",
+        "description",
+        "import_batch_key"
+      ],
+      "expected": [
+        "category_name",
+        "default_useful_life_months",
+        "description",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "asset_categories_full.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "assets_full.csv.headers",
+      "passed": true,
+      "actual": [
+        "asset_source_key",
+        "asset_code",
+        "asset_name",
+        "asset_name_normalized",
+        "asset_category",
+        "acquisition_date",
+        "acquisition_cost",
+        "original_source_cost",
+        "capitalization_threshold",
+        "capitalization_status",
+        "useful_life_months",
+        "residual_value",
+        "depreciation_method",
+        "monthly_depreciation",
+        "depreciation_start_date",
+        "asset_status",
+        "brand",
+        "size",
+        "supplier_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "adjustment_note",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "asset_source_key",
+        "asset_code",
+        "asset_name",
+        "asset_name_normalized",
+        "asset_category",
+        "acquisition_date",
+        "acquisition_cost",
+        "original_source_cost",
+        "capitalization_threshold",
+        "capitalization_status",
+        "useful_life_months",
+        "residual_value",
+        "depreciation_method",
+        "monthly_depreciation",
+        "depreciation_start_date",
+        "asset_status",
+        "brand",
+        "size",
+        "supplier_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "adjustment_note",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "assets_full.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "customer_traffic_daily_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "traffic_date",
+        "adult_visitors",
+        "child_visitors",
+        "total_visitors",
+        "bill_count",
+        "source_key",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "traffic_date",
+        "adult_visitors",
+        "child_visitors",
+        "total_visitors",
+        "bill_count",
+        "source_key",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "customer_traffic_daily_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "daily_sales_summaries_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "date",
+        "date_raw",
+        "day_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "bill_count",
+        "membership_count",
+        "coupon_count",
+        "cashier",
+        "adult_visitors",
+        "child_visitors",
+        "qris_dretail",
+        "qris_dynamic_bca",
+        "qris_static_bca",
+        "debit_edc_bca",
+        "qris_static_bri",
+        "cash",
+        "total_sales",
+        "dine_in",
+        "takeaway",
+        "reservation",
+        "opening_cash",
+        "deposited_cash",
+        "deposit_method",
+        "closing_cash",
+        "payment_sum",
+        "total_sales_difference",
+        "visitor_total",
+        "data_entry_status",
+        "total_sales_arayya",
+        "total_sales_lovin",
+        "source_key",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "date",
+        "date_raw",
+        "day_name_raw",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "bill_count",
+        "membership_count",
+        "coupon_count",
+        "cashier",
+        "adult_visitors",
+        "child_visitors",
+        "qris_dretail",
+        "qris_dynamic_bca",
+        "qris_static_bca",
+        "debit_edc_bca",
+        "qris_static_bri",
+        "cash",
+        "total_sales",
+        "dine_in",
+        "takeaway",
+        "reservation",
+        "opening_cash",
+        "deposited_cash",
+        "deposit_method",
+        "closing_cash",
+        "payment_sum",
+        "total_sales_difference",
+        "visitor_total",
+        "data_entry_status",
+        "total_sales_arayya",
+        "total_sales_lovin",
+        "source_key",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "daily_sales_summaries_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "data_coverage_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "domain",
+        "period_start",
+        "period_end",
+        "availability_status",
+        "row_count",
+        "notes",
+        "import_batch_key"
+      ],
+      "expected": [
+        "domain",
+        "period_start",
+        "period_end",
+        "availability_status",
+        "row_count",
+        "notes",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "data_coverage_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "finance_summary_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "period_start",
+        "period_end",
+        "revenue",
+        "hpp",
+        "gross_profit",
+        "operating_expense",
+        "ebitda",
+        "depreciation",
+        "ebit_operating_profit",
+        "tax_amount",
+        "tax_status",
+        "net_income_provisional",
+        "net_income_status",
+        "dividend_amount",
+        "dividend_status",
+        "retained_earnings_provisional",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "period_start",
+        "period_end",
+        "revenue",
+        "hpp",
+        "gross_profit",
+        "operating_expense",
+        "ebitda",
+        "depreciation",
+        "ebit_operating_profit",
+        "tax_amount",
+        "tax_status",
+        "net_income_provisional",
+        "net_income_status",
+        "dividend_amount",
+        "dividend_status",
+        "retained_earnings_provisional",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "finance_summary_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "historical_product_aliases_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "alias_key",
+        "historical_product_key",
+        "alias_name",
+        "normalized_alias",
+        "spelling_normalized_alias",
+        "mapping_status",
+        "similarity_to_latest_menu",
+        "occurrence_count",
+        "import_batch_key"
+      ],
+      "expected": [
+        "alias_key",
+        "historical_product_key",
+        "alias_name",
+        "normalized_alias",
+        "spelling_normalized_alias",
+        "mapping_status",
+        "similarity_to_latest_menu",
+        "occurrence_count",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "historical_product_aliases_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "historical_product_daily_quantities_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "source_key",
+        "sale_date",
+        "historical_product_key",
+        "canonical_product_name",
+        "category_name",
+        "quantity",
+        "is_free_menu",
+        "raw_variants",
+        "category_raw_variants",
+        "source_file",
+        "source_references",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "source_key",
+        "sale_date",
+        "historical_product_key",
+        "canonical_product_name",
+        "category_name",
+        "quantity",
+        "is_free_menu",
+        "raw_variants",
+        "category_raw_variants",
+        "source_file",
+        "source_references",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "historical_product_daily_quantities_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "historical_products_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "historical_product_key",
+        "canonical_name",
+        "category_name",
+        "mapping_status",
+        "current_product_match_strategy",
+        "import_batch_key"
+      ],
+      "expected": [
+        "historical_product_key",
+        "canonical_name",
+        "category_name",
+        "mapping_status",
+        "current_product_match_strategy",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "historical_products_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "purchases_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "line_source_key",
+        "invoice_source_key",
+        "purchase_date",
+        "supplier_key",
+        "supplier_name_raw",
+        "receipt_reference",
+        "item_name_raw",
+        "item_name_normalized",
+        "quantity",
+        "unit",
+        "unit_price",
+        "total_amount",
+        "calculated_total",
+        "amount_difference",
+        "source_category",
+        "financial_class_final",
+        "classification_policy",
+        "asset_tracking",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ],
+      "expected": [
+        "line_source_key",
+        "invoice_source_key",
+        "purchase_date",
+        "supplier_key",
+        "supplier_name_raw",
+        "receipt_reference",
+        "item_name_raw",
+        "item_name_normalized",
+        "quantity",
+        "unit",
+        "unit_price",
+        "total_amount",
+        "calculated_total",
+        "amount_difference",
+        "source_category",
+        "financial_class_final",
+        "classification_policy",
+        "asset_tracking",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "data_origin",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "purchases_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "supplier_items_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "supplier_item_key",
+        "supplier_key",
+        "catalog_no",
+        "item_name_raw",
+        "item_name_normalized",
+        "brand_raw",
+        "size_raw",
+        "price_raw",
+        "reference_price",
+        "price_parse_status",
+        "financial_class_final",
+        "classification_policy",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "import_batch_key"
+      ],
+      "expected": [
+        "supplier_item_key",
+        "supplier_key",
+        "catalog_no",
+        "item_name_raw",
+        "item_name_normalized",
+        "brand_raw",
+        "size_raw",
+        "price_raw",
+        "reference_price",
+        "price_parse_status",
+        "financial_class_final",
+        "classification_policy",
+        "source_file",
+        "source_sheet",
+        "source_row",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "supplier_items_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "suppliers_june_2026.csv.headers",
+      "passed": true,
+      "actual": [
+        "supplier_key",
+        "supplier_name",
+        "normalized_name",
+        "phone",
+        "address",
+        "link",
+        "contact_person",
+        "source_type",
+        "source_references",
+        "import_batch_key"
+      ],
+      "expected": [
+        "supplier_key",
+        "supplier_name",
+        "normalized_name",
+        "phone",
+        "address",
+        "link",
+        "contact_person",
+        "source_type",
+        "source_references",
+        "import_batch_key"
+      ]
+    },
+    {
+      "key": "suppliers_june_2026.csv.batch",
+      "passed": true,
+      "actual": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ],
+      "expected": [
+        "LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2"
+      ]
+    },
+    {
+      "key": "count.daily_sales_summaries",
+      "passed": true,
+      "actual": 30,
+      "expected": 30
+    },
+    {
+      "key": "count.historical_product_daily_quantities",
+      "passed": true,
+      "actual": 656,
+      "expected": 656
+    },
+    {
+      "key": "count.historical_products",
+      "passed": true,
+      "actual": 61,
+      "expected": 61
+    },
+    {
+      "key": "count.historical_product_aliases",
+      "passed": true,
+      "actual": 68,
+      "expected": 68
+    },
+    {
+      "key": "count.purchase_items",
+      "passed": true,
+      "actual": 344,
+      "expected": 344
+    },
+    {
+      "key": "count.purchase_invoices",
+      "passed": true,
+      "actual": 343,
+      "expected": 343
+    },
+    {
+      "key": "count.suppliers",
+      "passed": true,
+      "actual": 9,
+      "expected": 9
+    },
+    {
+      "key": "count.supplier_items",
+      "passed": true,
+      "actual": 20,
+      "expected": 20
+    },
+    {
+      "key": "count.customer_traffic_daily",
+      "passed": true,
+      "actual": 30,
+      "expected": 30
+    },
+    {
+      "key": "count.assets",
+      "passed": true,
+      "actual": 21,
+      "expected": 21
+    },
+    {
+      "key": "count.asset_categories",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "key": "total.revenue",
+      "passed": true,
+      "actual": "30011000.0",
+      "expected": "30011000.0"
+    },
+    {
+      "key": "total.bill_count",
+      "passed": true,
+      "actual": "342.0",
+      "expected": "342.0"
+    },
+    {
+      "key": "total.adult_visitors",
+      "passed": true,
+      "actual": "421",
+      "expected": "421.0"
+    },
+    {
+      "key": "total.child_visitors",
+      "passed": true,
+      "actual": "406",
+      "expected": "406.0"
+    },
+    {
+      "key": "total.visitor_total",
+      "passed": true,
+      "actual": "827",
+      "expected": "827.0"
+    },
+    {
+      "key": "total.product_quantity",
+      "passed": true,
+      "actual": "1358.0",
+      "expected": "1358.0"
+    },
+    {
+      "key": "total.purchase_total",
+      "passed": true,
+      "actual": "11535298.00",
+      "expected": "11535298.00"
+    },
+    {
+      "key": "total.hpp",
+      "passed": true,
+      "actual": "10488538.00",
+      "expected": "10488538.00"
+    },
+    {
+      "key": "total.operating_expense",
+      "passed": true,
+      "actual": "1046760.00",
+      "expected": "1046760.00"
+    },
+    {
+      "key": "total.gross_profit",
+      "passed": true,
+      "actual": "19522462.00",
+      "expected": "19522462.00"
+    },
+    {
+      "key": "total.ebitda",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "total.depreciation_june_2026",
+      "passed": true,
+      "actual": "0.00",
+      "expected": "0"
+    },
+    {
+      "key": "total.ebit_operating_profit",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "total.asset_register_total",
+      "passed": true,
+      "actual": "870145.00",
+      "expected": "870145.00"
+    },
+    {
+      "key": "date.sales.date",
+      "passed": true,
+      "actual": [],
+      "expected": "all within June 2026"
+    },
+    {
+      "key": "date.quantity.sale_date",
+      "passed": true,
+      "actual": [],
+      "expected": "all within June 2026"
+    },
+    {
+      "key": "date.purchases.purchase_date",
+      "passed": true,
+      "actual": [],
+      "expected": "all within June 2026"
+    },
+    {
+      "key": "date.traffic.traffic_date",
+      "passed": true,
+      "actual": [],
+      "expected": "all within June 2026"
+    },
+    {
+      "key": "coverage.daily_revenue.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "coverage.historical_product_quantities.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "coverage.purchases_hpp_opex.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "coverage.customer_traffic.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "coverage.marketing.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "coverage.membership_identity.date",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": "within June 2026"
+    },
+    {
+      "key": "finance.single_row",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "key": "finance.period",
+      "passed": true,
+      "actual": [
+        "2026-06-01",
+        "2026-06-30"
+      ],
+      "expected": [
+        "2026-06-01",
+        "2026-06-30"
+      ]
+    },
+    {
+      "key": "required.sales.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.sales.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.products.historical_product_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.products.historical_product_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.aliases.alias_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.aliases.alias_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.quantities.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.quantities.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.purchases.line_source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.purchases.line_source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.suppliers.supplier_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.suppliers.supplier_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.supplier_items.supplier_item_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.supplier_items.supplier_item_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.traffic.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.traffic.source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.assets.asset_source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.assets.asset_source_key",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "required.assets.asset_code",
+      "passed": true,
+      "actual": [],
+      "expected": "no blank keys"
+    },
+    {
+      "key": "unique.assets.asset_code",
+      "passed": true,
+      "actual": [],
+      "expected": "no duplicates"
+    },
+    {
+      "key": "purchases.invoice_header_consistency",
+      "passed": true,
+      "actual": [],
+      "expected": "one consistent header per invoice_source_key"
+    },
+    {
+      "key": "relationship.aliases.product",
+      "passed": true,
+      "actual": [],
+      "expected": "no missing parents"
+    },
+    {
+      "key": "relationship.quantities.product",
+      "passed": true,
+      "actual": [],
+      "expected": "no missing parents"
+    },
+    {
+      "key": "relationship.purchases.supplier",
+      "passed": true,
+      "actual": [],
+      "expected": "no missing parents"
+    },
+    {
+      "key": "relationship.supplier_items.supplier",
+      "passed": true,
+      "actual": [],
+      "expected": "no missing parents"
+    },
+    {
+      "key": "relationship.assets.category",
+      "passed": true,
+      "actual": [],
+      "expected": "no missing parents"
+    },
+    {
+      "key": "traffic.row_formula",
+      "passed": true,
+      "actual": "evaluated",
+      "expected": true
+    },
+    {
+      "key": "purchases.class",
+      "passed": true,
+      "actual": [
+        "hpp",
+        "operating_expense"
+      ],
+      "expected": [
+        "hpp",
+        "operating_expense"
+      ]
+    },
+    {
+      "key": "purchases.nonnegative",
+      "passed": true,
+      "actual": "evaluated",
+      "expected": true
+    },
+    {
+      "key": "assets.tracking_only",
+      "passed": true,
+      "actual": [
+        "tracking_only_expensed"
+      ],
+      "expected": [
+        "tracking_only_expensed"
+      ]
+    },
+    {
+      "key": "assets.valid_status",
+      "passed": true,
+      "actual": [
+        "active"
+      ],
+      "expected": [
+        "active",
+        "inactive",
+        "disposed"
+      ]
+    },
+    {
+      "key": "assets.useful_life_positive",
+      "passed": true,
+      "actual": "evaluated",
+      "expected": true
+    },
+    {
+      "key": "origin.allowed",
+      "passed": true,
+      "actual": [
+        "actual"
+      ],
+      "expected": [
+        "actual",
+        "adjusted"
+      ]
+    },
+    {
+      "key": "no.synthetic_or_estimated",
+      "passed": true,
+      "actual": "scanned",
+      "expected": true
+    },
+    {
+      "key": "finance.tax_status",
+      "passed": true,
+      "actual": "not_supplied",
+      "expected": "not_supplied with blank amount"
+    },
+    {
+      "key": "finance.dividend_status",
+      "passed": true,
+      "actual": "not_supplied",
+      "expected": "not_supplied with blank amount"
+    },
+    {
+      "key": "finance.reconciliation.revenue",
+      "passed": true,
+      "actual": "30011000.00",
+      "expected": "30011000.0"
+    },
+    {
+      "key": "finance.reconciliation.hpp",
+      "passed": true,
+      "actual": "10488538.00",
+      "expected": "10488538.00"
+    },
+    {
+      "key": "finance.reconciliation.gross_profit",
+      "passed": true,
+      "actual": "19522462.00",
+      "expected": "19522462.00"
+    },
+    {
+      "key": "finance.reconciliation.operating_expense",
+      "passed": true,
+      "actual": "1046760.00",
+      "expected": "1046760.00"
+    },
+    {
+      "key": "finance.reconciliation.ebitda",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "finance.reconciliation.depreciation",
+      "passed": true,
+      "actual": "0.00",
+      "expected": "0.00"
+    },
+    {
+      "key": "finance.reconciliation.ebit_operating_profit",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "finance.reconciliation.net_income_provisional",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "finance.reconciliation.retained_earnings_provisional",
+      "passed": true,
+      "actual": "18475702.00",
+      "expected": "18475702.00"
+    },
+    {
+      "key": "finance.net_income_status",
+      "passed": true,
+      "actual": "provisional_before_tax",
+      "expected": "provisional_before_tax"
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "purchases.optional_supplier: supplier source is unavailable; supplier_id must remain NULL and no dummy supplier may be created (observed {'rows': 323, 'invoices': 322})",
+    "purchases.source_amount_difference: source total_amount intentionally differs from quantity × unit_price; preserve total_amount and amount_difference (observed {'rows': 5})",
+    "assets.documented_source_unit_adjustment: owner-delegated unit interpretation is documented in adjustment_note (observed {'rows': 4})",
+    "daily_sales.integer_lexemes: stage as numeric, assert integral values, then cast to integer (observed {'bill_count': 29, 'adult_visitors': 30, 'child_visitors': 29, 'visitor_total': 30})",
+    "traffic.bill_count_null_to_zero: traffic CSV records zero where daily sales source is blank; preserve approved value but treat lineage as documented limitation (observed ['2026-06-09'])"
+  ]
+}

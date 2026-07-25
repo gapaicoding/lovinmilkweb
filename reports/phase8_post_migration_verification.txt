@@ -1,0 +1,25 @@
+Project ref: baukcqccetzzwzgpbnoj
+Batch: LM-ACTUAL-JUNE-2026-FULL-ASSETS-V2
+Snapshot key: LM-PRE-JUNE-FOUNDATION-20260725-130419425
+Date: 2026-07-25 (Asia/Jakarta)
+Verifier: sql/verify_june_2026_foundation.sql
+Exit code: 0
+
+POST-MIGRATION VERIFICATION PASSED. Old tables unchanged.
+
+Verified:
+- 16 new public foundation tables exist.
+- Row-level security is enabled on all 16 tables.
+- anon has no SELECT/INSERT/UPDATE/DELETE privilege on those tables.
+- v_asset_book_values exists with security_invoker=true.
+- v_financial_statement_monthly exists with security_invoker=true.
+- The explicit completed backup snapshot exists for the target project.
+- Counts and canonical MD5 checksums of all nine legacy tables match snapshot.
+- Target batch exists exactly once with:
+  facts_period_start=2026-06-01
+  facts_period_end=2026-06-30
+  assets_full=true
+  status=prepared
+- No target-batch fact/master rows had been imported at this phase.
+- Local and remote migration history match through 20260725001000.
+
