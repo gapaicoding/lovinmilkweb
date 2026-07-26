@@ -75,6 +75,7 @@ import {
   toNullableText,
 } from "@/lib/actualData";
 import { formatDate, formatMonthYear, formatNumber, formatRupiah } from "@/lib/format";
+import { monthInputToStart, parseMonthStart } from "@/lib/juneFinance";
 
 type DeletedFilter = "active" | "deleted" | "all";
 
@@ -86,6 +87,16 @@ interface AssetSearch {
   status?: AssetStatus | "all";
   capitalization?: CapitalizationStatus | "all";
   deleted?: DeletedFilter;
+  depreciation?: string;
+}
+
+interface AssetPolicyRow {
+  id: string;
+  effective_from: string;
+  capitalization_threshold: number | string;
+  default_depreciation_method: "straight_line";
+  notes: string | null;
+  is_active: boolean;
 }
 
 interface AssetCategoryRow {
@@ -214,6 +225,7 @@ export const Route = createFileRoute("/_authenticated/asset-peralatan")({
     status: parseAssetStatusFilter(search.status),
     capitalization: parseCapitalizationFilter(search.capitalization),
     deleted: parseDeletedFilter(search.deleted),
+    depreciation: parseMonthStart(search.depreciation),
   }),
   component: AssetPage,
 });
@@ -231,6 +243,7 @@ function AssetPage() {
     status: search.status ?? "all",
     capitalization: search.capitalization ?? "all",
     deleted: search.deleted ?? "active",
+    depreciationMonth: search.depreciation ?? currentMonthStart(),
   };
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AssetRecord | null>(null);
@@ -249,6 +262,27 @@ function AssetPage() {
         .order("name");
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const policyQuery = useQuery({
+    queryKey: ["actual-assets", "accounting-policy", filters.depreciationMonth],
+    enabled: isAdmin,
+    staleTime: 60_000,
+    queryFn: async (): Promise<AssetPolicyRow | null> => {
+      const { data, error } = await actualClient
+        .from<AssetPolicyRow>("asset_accounting_policies")
+        .select(
+          "id,effective_from,capitalization_threshold,default_depreciation_method,notes,is_active",
+        )
+        .lte("effective_from", filters.depreciationMonth)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("effective_from", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -330,15 +364,15 @@ function AssetPage() {
     },
   });
 
-  const juneDepreciationQuery = useQuery({
-    queryKey: ["actual-assets", "depreciation", "2026-06-01", "posted"],
+  const periodDepreciationQuery = useQuery({
+    queryKey: ["actual-assets", "depreciation", filters.depreciationMonth, "posted"],
     enabled: isAdmin,
     staleTime: 60_000,
     queryFn: async (): Promise<number> => {
       const { data, error } = await actualClient
         .from<DepreciationEntryRow>("asset_depreciation_entries")
         .select("depreciation_amount")
-        .eq("period_month", "2026-06-01")
+        .eq("period_month", filters.depreciationMonth)
         .eq("status", "posted");
       if (error) throw error;
       return (data ?? []).reduce(
@@ -463,8 +497,25 @@ function AssetPage() {
       trackingOnly: rows.filter((asset) => asset.capitalization_status === "tracking_only_expensed")
         .length,
       capitalized: rows.filter((asset) => asset.capitalization_status === "capitalized").length,
+      periodDepreciation: periodDepreciationQuery.data ?? 0,
+      accumulatedDepreciation: rows.reduce(
+        (total, asset) =>
+          total +
+          (asset.asset_depreciation_entries ?? [])
+            .filter(
+              (entry) =>
+                entry.status === "posted" &&
+                entry.period_month <= filters.depreciationMonth,
+            )
+            .reduce(
+              (entryTotal, entry) =>
+                entryTotal + toFiniteNumber(entry.depreciation_amount),
+              0,
+            ),
+        0,
+      ),
     };
-  }, [assetsQuery.data]);
+  }, [assetsQuery.data, filters.depreciationMonth, periodDepreciationQuery.data]);
 
   const updateFilters = (patch: Partial<AssetSearch>) => {
     void navigate({
@@ -476,6 +527,8 @@ function AssetPage() {
         status: "status" in patch ? patch.status : search.status,
         capitalization: "capitalization" in patch ? patch.capitalization : search.capitalization,
         deleted: "deleted" in patch ? patch.deleted : search.deleted,
+        depreciation:
+          "depreciation" in patch ? patch.depreciation : search.depreciation,
       },
       replace: true,
     });
@@ -490,6 +543,11 @@ function AssetPage() {
       ...EMPTY_ASSET_FORM,
       categoryId: firstCategory?.id ?? "",
       usefulLifeMonths: firstCategory?.default_useful_life_months ?? 36,
+      capitalizationThreshold: toFiniteNumber(
+        policyQuery.data?.capitalization_threshold,
+        DEFAULT_CAPITALIZATION_THRESHOLD,
+      ),
+      acquisitionDate: todayJakarta(),
     });
     setFormOpen(true);
   };
@@ -582,9 +640,14 @@ function AssetPage() {
       <CapitalizationNotice
         fullRegister={fullRegisterQuery.data}
         loading={fullRegisterQuery.isPending}
-        juneDepreciation={juneDepreciationQuery.data}
-        depreciationLoading={juneDepreciationQuery.isPending}
-        depreciationError={juneDepreciationQuery.isError}
+        policy={policyQuery.data}
+        depreciationMonth={filters.depreciationMonth}
+        periodDepreciation={periodDepreciationQuery.data}
+        depreciationLoading={periodDepreciationQuery.isPending}
+        depreciationError={periodDepreciationQuery.isError}
+        onDepreciationMonthChange={(value) =>
+          updateFilters({ depreciation: monthInputToStart(value) })
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -592,6 +655,20 @@ function AssetPage() {
         <SummaryCard label="Nilai perolehan" value={formatRupiah(filteredSummary.cost)} />
         <SummaryCard label="Tracking-only" value={formatNumber(filteredSummary.trackingOnly)} />
         <SummaryCard label="Dikapitalisasi" value={formatNumber(filteredSummary.capitalized)} />
+        <SummaryCard
+          label={`Penyusutan ${formatMonthYear(filters.depreciationMonth)}`}
+          value={formatRupiah(filteredSummary.periodDepreciation)}
+        />
+        <SummaryCard
+          label="Akumulasi penyusutan"
+          value={formatRupiah(filteredSummary.accumulatedDepreciation)}
+        />
+        <SummaryCard
+          label="Nilai buku"
+          value={formatRupiah(
+            Math.max(filteredSummary.cost - filteredSummary.accumulatedDepreciation, 0),
+          )}
+        />
       </div>
 
       <AssetFilters
@@ -659,26 +736,55 @@ function AssetPage() {
 function CapitalizationNotice({
   fullRegister,
   loading,
-  juneDepreciation,
+  policy,
+  depreciationMonth,
+  periodDepreciation,
   depreciationLoading,
   depreciationError,
+  onDepreciationMonthChange,
 }: {
   fullRegister?: { active: number; trackingOnly: number; total: number };
   loading: boolean;
-  juneDepreciation?: number;
+  policy: AssetPolicyRow | null | undefined;
+  depreciationMonth: string;
+  periodDepreciation?: number;
   depreciationLoading: boolean;
   depreciationError: boolean;
+  onDepreciationMonthChange: (value: string) => void;
 }) {
   return (
     <Alert>
       <Calculator aria-hidden="true" className="h-4 w-4" />
-      <AlertTitle>Perlakuan aset aktual Juni 2026</AlertTitle>
+      <AlertTitle>Kebijakan aset aktif</AlertTitle>
       <AlertDescription>
         <p>
-          Ambang kapitalisasi default adalah {formatRupiah(DEFAULT_CAPITALIZATION_THRESHOLD)}. Item
+          Ambang kapitalisasi berlaku adalah{" "}
+          {formatRupiah(
+            toFiniteNumber(
+              policy?.capitalization_threshold,
+              DEFAULT_CAPITALIZATION_THRESHOLD,
+            ),
+          )}
+          {policy?.effective_from
+            ? ` sejak ${formatDate(policy.effective_from)}`
+            : ""}. Item
           di bawah ambang tetap tampil penuh sebagai tracking-only, tetapi biaya perolehannya sudah
           dibebankan sehingga tidak menghasilkan penyusutan.
         </p>
+        <div className="mt-3 max-w-xs">
+          <label
+            htmlFor="asset-depreciation-period"
+            className="mb-1 block text-xs font-medium"
+          >
+            Periode penyusutan
+          </label>
+          <Input
+            id="asset-depreciation-period"
+            type="month"
+            value={depreciationMonth.slice(0, 7)}
+            onChange={(event) => onDepreciationMonthChange(event.target.value)}
+          />
+        </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <NoticeMetric
             label="Register aktif lengkap"
@@ -695,13 +801,13 @@ function CapitalizationNotice({
             }
           />
           <NoticeMetric
-            label="Penyusutan Juni 2026"
+            label={`Penyusutan ${formatMonthYear(depreciationMonth)}`}
             value={
               depreciationLoading
                 ? "Memuat…"
                 : depreciationError
                   ? "Belum dapat dimuat"
-                  : formatRupiah(juneDepreciation ?? 0)
+                  : formatRupiah(periodDepreciation ?? 0)
             }
           />
         </div>
@@ -1695,4 +1801,17 @@ function parseCapitalizationFilter(value: unknown): CapitalizationStatus | "all"
 
 function parseDeletedFilter(value: unknown): DeletedFilter | undefined {
   return value === "active" || value === "deleted" || value === "all" ? value : undefined;
+}
+
+function currentMonthStart(): string {
+  return `${todayJakarta().slice(0, 7)}-01`;
+}
+
+function todayJakarta(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }

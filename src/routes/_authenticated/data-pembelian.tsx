@@ -91,13 +91,6 @@ interface SupplierOption {
   deleted_at: string | null;
 }
 
-interface BatchOption {
-  id: string;
-  batch_key: string;
-  description: string;
-  status: string;
-}
-
 interface PurchaseItemRow {
   id: string;
   line_source_key: string;
@@ -119,7 +112,7 @@ interface PurchaseItemRow {
 
 interface PurchaseDatabaseRow {
   id: string;
-  import_batch_id: string;
+  import_batch_id: string | null;
   invoice_source_key: string;
   purchase_date: string;
   supplier_id: string | null;
@@ -174,9 +167,8 @@ interface PurchaseFormValue {
 
 interface PurchaseWriteRpcClient {
   rpc(
-    functionName: "admin_write_purchase_invoice_atomic",
+    functionName: "save_operational_purchase_invoice",
     args: {
-      p_import_batch_id: string;
       p_purchase_date: string;
       p_items: Array<Record<string, unknown>>;
       p_invoice_id: string | null;
@@ -265,21 +257,6 @@ function PurchasePage() {
     },
   });
 
-  const batchesQuery = useQuery({
-    queryKey: ["actual-purchase-options", "batches"],
-    enabled: isAdmin && formOpen,
-    staleTime: 60_000,
-    queryFn: async (): Promise<BatchOption[]> => {
-      const { data, error } = await actualClient
-        .from<BatchOption>("data_import_batches")
-        .select("id,batch_key,description,status")
-        .in("status", ["imported", "reconciled", "staged"])
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   const purchasesQuery = useQuery({
     queryKey: [
       "actual-purchases",
@@ -348,12 +325,13 @@ function PurchasePage() {
       if (type === "save") {
         const validated = validatePurchaseForm(form);
 
-        if (editing && editing.import_batch_id !== validated.importBatchId) {
-          throw new Error("Paket data invoice yang sudah tersimpan tidak dapat dipindahkan.");
+        if (editing?.import_batch_id) {
+          throw new Error(
+            "Data historis terverifikasi harus diubah melalui alur Koreksi Data.",
+          );
         }
 
-        const { error } = await purchaseWriteRpcClient.rpc("admin_write_purchase_invoice_atomic", {
-          p_import_batch_id: validated.importBatchId,
+        const { error } = await purchaseWriteRpcClient.rpc("save_operational_purchase_invoice", {
           p_purchase_date: validated.purchaseDate,
           p_items: validated.items.map((item) => ({
             id: item.id ?? null,
@@ -452,7 +430,7 @@ function PurchasePage() {
     setForm({
       ...EMPTY_PURCHASE_FORM,
       items: [{ ...EMPTY_ITEM }],
-      importBatchId: batchesQuery.data?.[0]?.id ?? "",
+      importBatchId: "",
     });
     setFormOpen(true);
   };
@@ -460,7 +438,7 @@ function PurchasePage() {
   const openEdit = (invoice: PurchaseRecord) => {
     setEditing(invoice);
     setForm({
-      importBatchId: invoice.import_batch_id,
+      importBatchId: invoice.import_batch_id ?? "",
       purchaseDate: invoice.purchase_date,
       supplierId: invoice.supplier_id ?? "",
       supplierNameRaw: invoice.supplier_name_raw ?? "",
@@ -604,8 +582,6 @@ function PurchasePage() {
         editing={editing}
         form={form}
         suppliers={suppliersQuery.data ?? []}
-        batches={batchesQuery.data ?? []}
-        loadingBatches={batchesQuery.isPending}
         pending={mutation.isPending}
         onOpenChange={(open) => {
           if (!open && !mutation.isPending) closeForm();
@@ -895,8 +871,6 @@ function PurchaseFormDialog({
   editing,
   form,
   suppliers,
-  batches,
-  loadingBatches,
   pending,
   onOpenChange,
   onChange,
@@ -906,8 +880,6 @@ function PurchaseFormDialog({
   editing: PurchaseRecord | null;
   form: PurchaseFormValue;
   suppliers: SupplierOption[];
-  batches: BatchOption[];
-  loadingBatches: boolean;
   pending: boolean;
   onOpenChange: (open: boolean) => void;
   onChange: (form: PurchaseFormValue) => void;
@@ -949,35 +921,18 @@ function PurchaseFormDialog({
         </DialogHeader>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <FormField
-            id="purchase-batch"
-            label="Paket data"
-            hint={
-              editing ? "Paket data tidak dapat dipindahkan setelah invoice tersimpan." : undefined
-            }
-          >
-            <Select
-              disabled={editing !== null || loadingBatches}
-              value={form.importBatchId}
-              onValueChange={(value) => update("importBatchId", value)}
-            >
-              <SelectTrigger id="purchase-batch">
-                <SelectValue placeholder={loadingBatches ? "Memuat paket…" : "Pilih paket data"} />
-              </SelectTrigger>
-              <SelectContent>
-                {editing && editing.import_batch ? (
-                  <SelectItem value={editing.import_batch_id}>
-                    {editing.import_batch.batch_key}
-                  </SelectItem>
-                ) : null}
-                {batches.map((batch) => (
-                  <SelectItem key={batch.id} value={batch.id}>
-                    {batch.batch_key} · {batch.status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
+          <div className="rounded-md border bg-muted/30 p-3 text-sm">
+            <p className="font-medium">
+              {editing?.import_batch_id
+                ? "Data Historis Terverifikasi"
+                : "Transaksi Operasional"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {editing?.import_batch_id
+                ? "Gunakan alur Koreksi Data agar provenance dan audit tetap utuh."
+                : "Disimpan sebagai actual live tanpa mengubah status batch historis."}
+            </p>
+          </div>
           <FormField id="purchase-date" label="Tanggal pembelian">
             <Input
               id="purchase-date"
@@ -1193,7 +1148,11 @@ function PurchaseFormDialog({
           >
             Batal
           </Button>
-          <Button type="button" disabled={pending || loadingBatches} onClick={onSave}>
+          <Button
+            type="button"
+            disabled={pending || Boolean(editing?.import_batch_id)}
+            onClick={onSave}
+          >
             {pending ? <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" /> : null}
             Simpan Invoice
           </Button>
@@ -1235,7 +1194,7 @@ function PurchaseDetailDialog({
               />
               <Metric
                 label="Paket data"
-                value={invoice.import_batch?.batch_key || invoice.import_batch_id}
+                value={invoice.import_batch?.batch_key || "Operasional UI"}
               />
               <Metric label="Status" value={invoice.deleted_at ? "Terhapus" : invoice.status} />
               <Metric label="Total" value={formatRupiah(invoice.total)} />
@@ -1343,7 +1302,6 @@ function Pagination({
 }
 
 function validatePurchaseForm(form: PurchaseFormValue): PurchaseFormValue {
-  if (!form.importBatchId) throw new Error("Pilih paket data.");
   if (!parseIsoDate(form.purchaseDate)) throw new Error("Tanggal pembelian tidak valid.");
   if (!form.items.length) throw new Error("Invoice minimal memiliki satu item.");
 

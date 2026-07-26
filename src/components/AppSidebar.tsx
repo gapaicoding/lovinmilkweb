@@ -17,6 +17,7 @@ import {
   Building2,
   ShoppingCart,
   Wrench,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -80,6 +81,15 @@ export function AppSidebar() {
                     <Link to="/dashboard">
                       <LayoutDashboard />
                       <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={active("/kontrol-data")}>
+                    <Link to="/kontrol-data">
+                      <ShieldCheck />
+                      <span>Kontrol Data</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
