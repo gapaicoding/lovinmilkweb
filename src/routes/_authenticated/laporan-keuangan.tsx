@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { EmptyState } from "@/components/EmptyState";
+import { FinanceEntryManager } from "@/components/finance/FinanceEntryManager";
 import { PageHeader } from "@/components/PageHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -37,17 +38,16 @@ import {
   type FinanceBreakdownFilter,
   type FinancialStatement,
   type PurchaseBreakdownItem,
-  JUNE_FINANCE_BATCH_KEY,
-  JUNE_FINANCE_MONTH,
-  fetchFinancialStatement,
-  fetchPurchaseBreakdown,
   formatFinanceMonth,
-  getFinanceErrorMessage,
-  isActualJuneStatement,
   monthInputToStart,
   parseBreakdownFilter,
   parseMonthStart,
 } from "@/lib/juneFinance";
+import {
+  classifyFinanceError,
+  fetchDynamicFinancialStatement,
+  fetchDynamicPurchaseBreakdown,
+} from "@/lib/dynamicFinance";
 import { formatRupiah } from "@/lib/format";
 
 interface FinanceReportSearch {
@@ -66,7 +66,7 @@ export const Route = createFileRoute("/_authenticated/laporan-keuangan")({
 function FinanceReportPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const month = search.month ?? JUNE_FINANCE_MONTH;
+  const month = search.month ?? currentMonthStart();
   const breakdownFilter = search.breakdown ?? "all";
 
   useEffect(() => {
@@ -87,10 +87,10 @@ function FinanceReportPage() {
       "statement",
       {
         month,
-        batchKey: JUNE_FINANCE_BATCH_KEY,
+        source: "dynamic-actual",
       },
     ],
-    queryFn: () => fetchFinancialStatement(month),
+    queryFn: () => fetchDynamicFinancialStatement(month, monthEnd(month)),
     staleTime: 60_000,
   });
 
@@ -103,14 +103,14 @@ function FinanceReportPage() {
       {
         month,
         filter: breakdownFilter,
-        importBatchId: statement?.importBatchId ?? null,
+        source: "dynamic-actual",
       },
     ],
-    enabled: Boolean(statement?.importBatchId),
+    enabled: Boolean(statement),
     queryFn: () =>
-      fetchPurchaseBreakdown({
-        importBatchId: statement?.importBatchId ?? "",
-        monthStart: month,
+      fetchDynamicPurchaseBreakdown({
+        startDate: month,
+        endDate: monthEnd(month),
         filter: breakdownFilter,
       }),
     staleTime: 60_000,
@@ -156,16 +156,12 @@ function FinanceReportPage() {
     <div className="space-y-6">
       <PageHeader
         title="Laporan Keuangan"
-        description="Laporan laba rugi aktual berbasis batch, terpisah dari data operasional lama."
+        description="Laporan aktual dinamis dari historical import, transaksi operasional, dan koreksi valid."
         actions={
-          isActualJuneStatement(statement) ? (
+          statement ? (
             <Badge className="w-fit">
               <PackageCheck aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
-              Data Aktual Juni 2026
-            </Badge>
-          ) : statement ? (
-            <Badge variant="outline" className="w-fit">
-              Rekonsiliasi diperlukan
+              Laporan Aktual Dinamis
             </Badge>
           ) : (
             <Badge variant="outline" className="w-fit">
@@ -236,17 +232,6 @@ function FinanceReportPage() {
         <StatementSkeleton />
       ) : statement ? (
         <>
-          {statement.batchStatus !== "reconciled" ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Kontrol batch perlu direkonsiliasi ulang</AlertTitle>
-              <AlertDescription>
-                Mutasi manual telah mengubah data pembelian setelah rekonsiliasi terakhir. Laporan
-                tetap memakai data saat ini, tetapi status terverifikasi dinonaktifkan sampai
-                kontrol dijalankan ulang.
-              </AlertDescription>
-            </Alert>
-          ) : null}
           <StatementStatus statement={statement} />
           <FinancialStatementCard statement={statement} />
 
@@ -266,6 +251,7 @@ function FinanceReportPage() {
             data={breakdownQuery.data ?? null}
             loading={breakdownQuery.isPending && !breakdownQuery.isError}
           />
+          <FinanceEntryManager startDate={month} endDate={monthEnd(month)} />
         </>
       ) : !statementQuery.isError ? (
         <EmptyState
@@ -648,7 +634,7 @@ function ReportError({
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>
-        <p>{getFinanceErrorMessage(error)}</p>
+        <p>{classifyFinanceError(error)}</p>
         <Button type="button" size="sm" variant="outline" className="mt-3" onClick={onRetry}>
           <RefreshCcw aria-hidden="true" className="mr-2 h-4 w-4" />
           Coba lagi
@@ -656,4 +642,21 @@ function ReportError({
       </AlertDescription>
     </Alert>
   );
+}
+
+function currentMonthStart(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value ?? "2026";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  return `${year}-${month}-01`;
+}
+
+function monthEnd(monthStart: string): string {
+  const [yearText, monthText] = monthStart.split("-");
+  const date = new Date(Date.UTC(Number(yearText), Number(monthText), 0));
+  return date.toISOString().slice(0, 10);
 }

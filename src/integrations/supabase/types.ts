@@ -14,6 +14,73 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_accounting_policies: {
+        Row: {
+          capitalization_threshold: number
+          created_at: string
+          created_by: string | null
+          default_depreciation_method: string
+          deleted_at: string | null
+          deleted_by: string | null
+          effective_from: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          capitalization_threshold: number
+          created_at?: string
+          created_by?: string | null
+          default_depreciation_method?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          effective_from: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          capitalization_threshold?: number
+          created_at?: string
+          created_by?: string | null
+          default_depreciation_method?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          effective_from?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_accounting_policies_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_accounting_policies_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_accounting_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_categories: {
         Row: {
           created_at: string
@@ -144,6 +211,7 @@ export type Database = {
       }
       assets: {
         Row: {
+          accounting_policy_id: string | null
           acquisition_cost: number
           acquisition_date: string
           adjustment_note: string | null
@@ -156,6 +224,7 @@ export type Database = {
           brand: string | null
           capitalization_status: string
           capitalization_threshold: number
+          correction_reason: string | null
           created_at: string
           created_by: string | null
           data_origin: string
@@ -169,6 +238,8 @@ export type Database = {
           monthly_depreciation: number | null
           notes: string | null
           original_source_cost: string | null
+          record_source: string
+          reference_source_id: string | null
           residual_value: number
           size: string | null
           source_file: string | null
@@ -180,6 +251,7 @@ export type Database = {
           useful_life_months: number
         }
         Insert: {
+          accounting_policy_id?: string | null
           acquisition_cost: number
           acquisition_date: string
           adjustment_note?: string | null
@@ -192,6 +264,7 @@ export type Database = {
           brand?: string | null
           capitalization_status: string
           capitalization_threshold?: number
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
@@ -205,6 +278,8 @@ export type Database = {
           monthly_depreciation?: number | null
           notes?: string | null
           original_source_cost?: string | null
+          record_source?: string
+          reference_source_id?: string | null
           residual_value?: number
           size?: string | null
           source_file?: string | null
@@ -216,6 +291,7 @@ export type Database = {
           useful_life_months: number
         }
         Update: {
+          accounting_policy_id?: string | null
           acquisition_cost?: number
           acquisition_date?: string
           adjustment_note?: string | null
@@ -228,6 +304,7 @@ export type Database = {
           brand?: string | null
           capitalization_status?: string
           capitalization_threshold?: number
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
@@ -241,6 +318,8 @@ export type Database = {
           monthly_depreciation?: number | null
           notes?: string | null
           original_source_cost?: string | null
+          record_source?: string
+          reference_source_id?: string | null
           residual_value?: number
           size?: string | null
           source_file?: string | null
@@ -252,6 +331,13 @@ export type Database = {
           useful_life_months?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "assets_accounting_policy_id_fkey"
+            columns: ["accounting_policy_id"]
+            isOneToOne: false
+            referencedRelation: "asset_accounting_policies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assets_asset_category_id_fkey"
             columns: ["asset_category_id"]
@@ -281,8 +367,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "assets_reference_source_id_fkey"
+            columns: ["reference_source_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_reference_source_id_fkey"
+            columns: ["reference_source_id"]
+            isOneToOne: false
+            referencedRelation: "v_asset_book_values"
+            referencedColumns: ["asset_id"]
+          },
+          {
             foreignKeyName: "assets_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_audit_log: {
+        Row: {
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+          occurred_at: string
+          operation: string
+          reason: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          occurred_at?: string
+          operation: string
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          occurred_at?: string
+          operation?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_audit_log_actor_id_fkey"
+            columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -800,6 +944,7 @@ export type Database = {
           id: string
           notes: string | null
           quantity: number
+          record_source: string
           transaction_date: string
           unit_price: number
           updated_at: string
@@ -816,6 +961,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity?: number
+          record_source?: string
           transaction_date: string
           unit_price: number
           updated_at?: string
@@ -832,6 +978,7 @@ export type Database = {
           id?: string
           notes?: string | null
           quantity?: number
+          record_source?: string
           transaction_date?: string
           unit_price?: number
           updated_at?: string
@@ -1108,6 +1255,7 @@ export type Database = {
           import_batch_id: string | null
           notes: string | null
           recipient: string | null
+          record_source: string
           source_reference: string | null
           status: string
           updated_at: string
@@ -1125,6 +1273,7 @@ export type Database = {
           import_batch_id?: string | null
           notes?: string | null
           recipient?: string | null
+          record_source?: string
           source_reference?: string | null
           status?: string
           updated_at?: string
@@ -1142,6 +1291,7 @@ export type Database = {
           import_batch_id?: string | null
           notes?: string | null
           recipient?: string | null
+          record_source?: string
           source_reference?: string | null
           status?: string
           updated_at?: string
@@ -1290,17 +1440,20 @@ export type Database = {
       }
       purchase_invoices: {
         Row: {
+          correction_reason: string | null
           created_at: string
           created_by: string | null
           data_origin: string
           deleted_at: string | null
           deleted_by: string | null
           id: string
-          import_batch_id: string
+          import_batch_id: string | null
           invoice_source_key: string
           notes: string | null
           purchase_date: string
           receipt_reference: string | null
+          record_source: string
+          reference_source_id: string | null
           source_file: string
           source_sheet: string
           status: string
@@ -1310,17 +1463,20 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
-          import_batch_id: string
+          import_batch_id?: string | null
           invoice_source_key: string
           notes?: string | null
           purchase_date: string
           receipt_reference?: string | null
+          record_source?: string
+          reference_source_id?: string | null
           source_file: string
           source_sheet: string
           status?: string
@@ -1330,17 +1486,20 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
-          import_batch_id?: string
+          import_batch_id?: string | null
           invoice_source_key?: string
           notes?: string | null
           purchase_date?: string
           receipt_reference?: string | null
+          record_source?: string
+          reference_source_id?: string | null
           source_file?: string
           source_sheet?: string
           status?: string
@@ -1372,6 +1531,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_invoices_reference_source_id_fkey"
+            columns: ["reference_source_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_invoices_reference_source_id_fkey"
+            columns: ["reference_source_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_invoice_index"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_invoices_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -1394,6 +1567,7 @@ export type Database = {
           asset_tracking: boolean
           calculated_total: number | null
           classification_policy: string | null
+          correction_reason: string | null
           created_at: string
           created_by: string | null
           data_origin: string
@@ -1401,12 +1575,14 @@ export type Database = {
           deleted_by: string | null
           financial_class: string
           id: string
-          import_batch_id: string
+          import_batch_id: string | null
           item_name_normalized: string
           item_name_raw: string
           line_source_key: string
           purchase_invoice_id: string
           quantity: number
+          record_source: string
+          reference_source_id: string | null
           source_category: string | null
           source_file: string
           source_row: number | null
@@ -1422,6 +1598,7 @@ export type Database = {
           asset_tracking?: boolean
           calculated_total?: number | null
           classification_policy?: string | null
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
@@ -1429,12 +1606,14 @@ export type Database = {
           deleted_by?: string | null
           financial_class: string
           id?: string
-          import_batch_id: string
+          import_batch_id?: string | null
           item_name_normalized: string
           item_name_raw: string
           line_source_key: string
           purchase_invoice_id: string
           quantity: number
+          record_source?: string
+          reference_source_id?: string | null
           source_category?: string | null
           source_file: string
           source_row?: number | null
@@ -1450,6 +1629,7 @@ export type Database = {
           asset_tracking?: boolean
           calculated_total?: number | null
           classification_policy?: string | null
+          correction_reason?: string | null
           created_at?: string
           created_by?: string | null
           data_origin?: string
@@ -1457,12 +1637,14 @@ export type Database = {
           deleted_by?: string | null
           financial_class?: string
           id?: string
-          import_batch_id?: string
+          import_batch_id?: string | null
           item_name_normalized?: string
           item_name_raw?: string
           line_source_key?: string
           purchase_invoice_id?: string
           quantity?: number
+          record_source?: string
+          reference_source_id?: string | null
           source_category?: string | null
           source_file?: string
           source_row?: number | null
@@ -1509,6 +1691,13 @@ export type Database = {
             referencedColumns: ["import_batch_id", "id"]
           },
           {
+            foreignKeyName: "purchase_items_reference_source_id_fkey"
+            columns: ["reference_source_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_items_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
@@ -1529,6 +1718,7 @@ export type Database = {
           notes: string | null
           product_id: string
           quantity: number
+          record_source: string
           sales_category_id: string
           transaction_date: string
           unit_price: number
@@ -1547,6 +1737,7 @@ export type Database = {
           notes?: string | null
           product_id: string
           quantity?: number
+          record_source?: string
           sales_category_id: string
           transaction_date: string
           unit_price: number
@@ -1565,6 +1756,7 @@ export type Database = {
           notes?: string | null
           product_id?: string
           quantity?: number
+          record_source?: string
           sales_category_id?: string
           transaction_date?: string
           unit_price?: number
@@ -1887,6 +2079,7 @@ export type Database = {
           payment_date: string | null
           period_end: string
           period_start: string
+          record_source: string
           source_reference: string | null
           status: string
           tax_type: string
@@ -1905,6 +2098,7 @@ export type Database = {
           payment_date?: string | null
           period_end: string
           period_start: string
+          record_source?: string
           source_reference?: string | null
           status?: string
           tax_type: string
@@ -1923,6 +2117,7 @@ export type Database = {
           payment_date?: string | null
           period_end?: string
           period_start?: string
+          record_source?: string
           source_reference?: string | null
           status?: string
           tax_type?: string
@@ -2122,6 +2317,7 @@ export type Database = {
           purchase_date: string | null
           purchase_items: Json | null
           receipt_reference: string | null
+          record_source: string | null
           record_state: string | null
           search_text: string | null
           status: string | null
@@ -2150,6 +2346,10 @@ export type Database = {
     Functions: {
       add_visitor_purchase: {
         Args: { p_items: Json; p_visit_id: string }
+        Returns: Json
+      }
+      admin_run_batch_reconciliation: {
+        Args: { p_batch_id: string }
         Returns: Json
       }
       admin_update_profile_authorization: {
@@ -2181,6 +2381,30 @@ export type Database = {
       current_user_is_active: { Args: never; Returns: boolean }
       current_user_is_product_manager: { Args: never; Returns: boolean }
       current_user_is_super_admin: { Args: never; Returns: boolean }
+      get_financial_statement_range: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          depreciation: number
+          dividend_amount: number
+          dividend_recorded: boolean
+          ebit_operating_profit: number
+          ebitda: number
+          gross_profit: number
+          historical_batch_ids: string[]
+          hpp: number
+          net_income_final: number
+          net_income_provisional_before_tax: number
+          operating_expense: number
+          period_end: string
+          period_start: string
+          retained_earnings_final: number
+          revenue: number
+          source_record_count: number
+          statement_status: string
+          tax_amount: number
+          tax_recorded: boolean
+        }[]
+      }
       get_operational_dashboard_month: {
         Args: { p_batch_key: string; p_month_start: string }
         Returns: {
@@ -2189,6 +2413,19 @@ export type Database = {
           revenue: number
           source_days: number
           visitors: number
+        }[]
+      }
+      get_purchase_breakdown_range: {
+        Args: {
+          p_end_date: string
+          p_financial_classes?: string[]
+          p_start_date: string
+        }
+        Returns: {
+          amount: number
+          financial_class: string
+          item_name: string
+          line_count: number
         }[]
       }
       hard_delete_visitor: {
@@ -2241,6 +2478,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      lm_reconcile_import_batch_internal: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       record_visitor_purchase: {
         Args: {
           p_full_name?: string
@@ -2256,6 +2497,18 @@ export type Database = {
       restore_visitor_visit: {
         Args: { p_visit_id: string }
         Returns: undefined
+      }
+      save_operational_purchase_invoice: {
+        Args: {
+          p_invoice_id?: string
+          p_items: Json
+          p_notes?: string
+          p_purchase_date: string
+          p_receipt_reference?: string
+          p_supplier_id?: string
+          p_supplier_name_raw?: string
+        }
+        Returns: string
       }
       search_operational_visitors: {
         Args: { p_limit?: number; p_query: string }

@@ -286,7 +286,7 @@ export function aggregatePurchaseBreakdown(rows: Record<string, unknown>[]): Pur
 
     if (current) {
       current.amount += toNumber(row.amount);
-      current.lineCount += 1;
+      current.lineCount += Math.max(toNumber(row.line_count), 1);
       continue;
     }
 
@@ -295,7 +295,7 @@ export function aggregatePurchaseBreakdown(rows: Record<string, unknown>[]): Pur
       name,
       financialClass,
       amount: toNumber(row.amount),
-      lineCount: 1,
+      lineCount: Math.max(toNumber(row.line_count), 1),
     });
   }
 

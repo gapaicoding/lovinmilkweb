@@ -65,7 +65,7 @@ import {
 } from "@/lib/actualData";
 import { formatRupiah } from "@/lib/format";
 
-type SupplierStatusFilter = "active" | "inactive" | "deleted" | "all";
+type SupplierStatusFilter = "active" | "archived" | "all";
 
 interface SupplierSearch {
   q?: string;
@@ -275,6 +275,11 @@ function SupplierPage() {
       if (!isSuperAdmin) {
         throw new Error("Hanya Super Admin yang dapat menghapus permanen.");
       }
+      if (supplier.invoiceCount > 0) {
+        throw new Error(
+          "Supplier memiliki riwayat transaksi dan tidak dapat dihapus permanen.",
+        );
+      }
 
       const { error } = await actualClient.from("suppliers").delete().eq("id", supplier.id);
       if (error) throw error;
@@ -445,8 +450,7 @@ function SupplierPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="inactive">Nonaktif</SelectItem>
-                <SelectItem value="deleted">Terhapus</SelectItem>
+                <SelectItem value="archived">Diarsipkan</SelectItem>
                 <SelectItem value="all">Semua</SelectItem>
               </SelectContent>
             </Select>
@@ -905,7 +909,7 @@ function Metric({ label, value, className }: { label: string; value: string; cla
 }
 
 function SupplierStatusBadge({ supplier }: { supplier: SupplierRecord }) {
-  if (supplier.deleted_at) return <Badge variant="destructive">Terhapus</Badge>;
+  if (supplier.deleted_at) return <Badge variant="outline">Diarsipkan</Badge>;
   return supplier.is_active ? (
     <Badge variant="secondary">Aktif</Badge>
   ) : (
@@ -936,13 +940,13 @@ function normalizeSupplier(row: SupplierDatabaseRow): SupplierRecord {
 
 function matchesSupplierStatus(row: SupplierDatabaseRow, status: SupplierStatusFilter): boolean {
   if (status === "all") return true;
-  if (status === "deleted") return Boolean(row.deleted_at);
+  if (status === "archived") return Boolean(row.deleted_at);
   if (row.deleted_at) return false;
-  return status === "active" ? row.is_active : !row.is_active;
+  return row.is_active;
 }
 
 function parseSupplierStatus(value: unknown): SupplierStatusFilter | undefined {
-  return value === "active" || value === "inactive" || value === "deleted" || value === "all"
+  return value === "active" || value === "archived" || value === "all"
     ? value
     : undefined;
 }

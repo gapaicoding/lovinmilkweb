@@ -19,6 +19,7 @@ import { Route as AuthenticatedDataPembelianRouteImport } from './routes/_authen
 import { Route as AuthenticatedItemPengeluaranRouteImport } from './routes/_authenticated/item-pengeluaran'
 import { Route as AuthenticatedKategoriPengeluaranRouteImport } from './routes/_authenticated/kategori-pengeluaran'
 import { Route as AuthenticatedKategoriPenjualanRouteImport } from './routes/_authenticated/kategori-penjualan'
+import { Route as AuthenticatedKontrolDataRouteImport } from './routes/_authenticated/kontrol-data'
 import { Route as AuthenticatedKunjunganRouteImport } from './routes/_authenticated/kunjungan'
 import { Route as AuthenticatedLaporanKeuanganRouteImport } from './routes/_authenticated/laporan-keuangan'
 import { Route as AuthenticatedPengeluaranRouteImport } from './routes/_authenticated/pengeluaran'
@@ -84,6 +85,12 @@ const AuthenticatedKategoriPenjualanRoute =
     path: '/kategori-penjualan',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedKontrolDataRoute =
+  AuthenticatedKontrolDataRouteImport.update({
+    id: '/kontrol-data',
+    path: '/kontrol-data',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKunjunganRoute = AuthenticatedKunjunganRouteImport.update({
   id: '/kunjungan',
   path: '/kunjungan',
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
+  '/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
   '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -162,6 +170,7 @@ export interface FileRoutesByTo {
   '/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
+  '/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
   '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/item-pengeluaran': typeof AuthenticatedItemPengeluaranRoute
   '/_authenticated/kategori-pengeluaran': typeof AuthenticatedKategoriPengeluaranRoute
   '/_authenticated/kategori-penjualan': typeof AuthenticatedKategoriPenjualanRoute
+  '/_authenticated/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/_authenticated/kunjungan': typeof AuthenticatedKunjunganRoute
   '/_authenticated/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
   '/_authenticated/pengeluaran': typeof AuthenticatedPengeluaranRoute
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
+    | '/kontrol-data'
     | '/kunjungan'
     | '/laporan-keuangan'
     | '/pengeluaran'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/item-pengeluaran'
     | '/kategori-pengeluaran'
     | '/kategori-penjualan'
+    | '/kontrol-data'
     | '/kunjungan'
     | '/laporan-keuangan'
     | '/pengeluaran'
@@ -247,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/item-pengeluaran'
     | '/_authenticated/kategori-pengeluaran'
     | '/_authenticated/kategori-penjualan'
+    | '/_authenticated/kontrol-data'
     | '/_authenticated/kunjungan'
     | '/_authenticated/laporan-keuangan'
     | '/_authenticated/pengeluaran'
@@ -336,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKategoriPenjualanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/kontrol-data': {
+      id: '/_authenticated/kontrol-data'
+      path: '/kontrol-data'
+      fullPath: '/kontrol-data'
+      preLoaderRoute: typeof AuthenticatedKontrolDataRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/kunjungan': {
       id: '/_authenticated/kunjungan'
       path: '/kunjungan'
@@ -410,6 +430,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedItemPengeluaranRoute: typeof AuthenticatedItemPengeluaranRoute
   AuthenticatedKategoriPengeluaranRoute: typeof AuthenticatedKategoriPengeluaranRoute
   AuthenticatedKategoriPenjualanRoute: typeof AuthenticatedKategoriPenjualanRoute
+  AuthenticatedKontrolDataRoute: typeof AuthenticatedKontrolDataRoute
   AuthenticatedKunjunganRoute: typeof AuthenticatedKunjunganRoute
   AuthenticatedLaporanKeuanganRoute: typeof AuthenticatedLaporanKeuanganRoute
   AuthenticatedPengeluaranRoute: typeof AuthenticatedPengeluaranRoute
@@ -429,6 +450,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedItemPengeluaranRoute: AuthenticatedItemPengeluaranRoute,
   AuthenticatedKategoriPengeluaranRoute: AuthenticatedKategoriPengeluaranRoute,
   AuthenticatedKategoriPenjualanRoute: AuthenticatedKategoriPenjualanRoute,
+  AuthenticatedKontrolDataRoute: AuthenticatedKontrolDataRoute,
   AuthenticatedKunjunganRoute: AuthenticatedKunjunganRoute,
   AuthenticatedLaporanKeuanganRoute: AuthenticatedLaporanKeuanganRoute,
   AuthenticatedPengeluaranRoute: AuthenticatedPengeluaranRoute,
