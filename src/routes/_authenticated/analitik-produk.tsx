@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
 import {
   DateRangeFilter,
   computePreviousRange,
@@ -292,6 +293,7 @@ function ProductAnalyticsPage() {
       <PageHeader
         title="Analitik Produk"
         description="Analisis produk terlaris, trending, menurun, tanpa penjualan, serta tren quantity dan omzet."
+        actions={<ExportExcelDialog reportType="products" currentRange={range} />}
       />
 
       <Card className="rounded-xl">

@@ -23,6 +23,8 @@ import type {
 } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
+import { createExportRange, rangeFromDates } from "@/lib/reportExport";
 import { EmptyState } from "@/components/EmptyState";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import {
@@ -880,21 +882,32 @@ export function TransactionManager({
             ? "Catat penjualan berdasarkan produk, jumlah, dan harga satuan."
             : "Catat pengeluaran berdasarkan item, jumlah, dan harga satuan."
         }
-        actions={hasManagementAccess ? (
-          <Button
-            type="button"
-            onClick={openCreateDialog}
-            disabled={
-              authLoading ||
-              categoriesQuery.isLoading ||
-              itemsQuery.isLoading ||
-              optionsError
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah {label}
-          </Button>
-        ) : undefined}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportExcelDialog
+              reportType={isSales ? "sales" : "expenses"}
+              currentRange={
+                dateFrom && dateTo ? rangeFromDates(dateFrom, dateTo) : createExportRange()
+              }
+              filters={{ category: categoryFilter, status: tab }}
+            />
+            {hasManagementAccess ? (
+              <Button
+                type="button"
+                onClick={openCreateDialog}
+                disabled={
+                  authLoading ||
+                  categoriesQuery.isLoading ||
+                  itemsQuery.isLoading ||
+                  optionsError
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Tambah {label}
+              </Button>
+            ) : null}
+          </div>
+        }
       />
 
       <Tabs

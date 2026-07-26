@@ -2482,6 +2482,15 @@ export type Database = {
         Args: { p_batch_id: string }
         Returns: Json
       }
+      record_report_export: {
+        Args: {
+          p_end_date: string
+          p_filters?: Json
+          p_report_type: string
+          p_start_date: string
+        }
+        Returns: undefined
+      }
       record_visitor_purchase: {
         Args: {
           p_full_name?: string

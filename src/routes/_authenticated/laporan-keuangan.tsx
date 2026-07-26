@@ -14,6 +14,8 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { FinanceEntryManager } from "@/components/finance/FinanceEntryManager";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
+import { rangeFromDates } from "@/lib/reportExport";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -158,16 +160,22 @@ function FinanceReportPage() {
         title="Laporan Keuangan"
         description="Laporan aktual dinamis dari historical import, transaksi operasional, dan koreksi valid."
         actions={
-          statement ? (
-            <Badge className="w-fit">
-              <PackageCheck aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
-              Laporan Aktual Dinamis
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="w-fit">
-              {statementQuery.isPending ? "Memuat status data" : "Data aktual tidak tersedia"}
-            </Badge>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            {statement ? (
+              <Badge className="w-fit">
+                <PackageCheck aria-hidden="true" className="mr-1.5 h-3.5 w-3.5" />
+                Laporan Aktual Dinamis
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="w-fit">
+                {statementQuery.isPending ? "Memuat status data" : "Data aktual tidak tersedia"}
+              </Badge>
+            )}
+            <ExportExcelDialog
+              reportType="financial"
+              currentRange={rangeFromDates(month, monthEnd(month))}
+            />
+          </div>
         }
       />
 
