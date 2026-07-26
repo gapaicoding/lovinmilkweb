@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
 import {
   BackgroundRefresh,
   ConfirmActionDialog,
@@ -409,10 +410,13 @@ function SupplierPage() {
         title="Supplier"
         description="Direktori supplier aktual, katalog item, dan nilai pembelian terkait."
         actions={
-          <Button type="button" onClick={openCreate}>
-            <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
-            Tambah Supplier
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportExcelDialog reportType="suppliers" filters={{ status }} />
+            <Button type="button" onClick={openCreate}>
+              <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+              Tambah Supplier
+            </Button>
+          </div>
         }
       />
 

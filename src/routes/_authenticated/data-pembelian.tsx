@@ -17,6 +17,8 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
+import { rangeFromDates } from "@/lib/reportExport";
 import {
   BackgroundRefresh,
   ConfirmActionDialog,
@@ -519,10 +521,19 @@ function PurchasePage() {
         title="Data Pembelian"
         description="Invoice dan item pembelian aktual. Modul ini tidak membaca atau menulis tabel expenses lama."
         actions={
-          <Button type="button" onClick={openCreate}>
-            <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
-            Tambah Invoice
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportExcelDialog
+              reportType="purchases"
+              currentRange={
+                filters.from && filters.to ? rangeFromDates(filters.from, filters.to) : undefined
+              }
+              filters={{ financialClass: filters.financialClass, status: filters.state }}
+            />
+            <Button type="button" onClick={openCreate}>
+              <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+              Tambah Invoice
+            </Button>
+          </div>
         }
       />
 

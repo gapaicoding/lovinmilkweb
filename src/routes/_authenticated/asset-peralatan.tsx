@@ -17,6 +17,8 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
+import { rangeFromDates } from "@/lib/reportExport";
 import {
   BackgroundRefresh,
   ConfirmActionDialog,
@@ -630,10 +632,34 @@ function AssetPage() {
         title="Aset & Peralatan"
         description="Register lengkap aset aktual, status kapitalisasi, dan penyusutan garis lurus."
         actions={
-          <Button type="button" onClick={openCreate}>
-            <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
-            Tambah Aset
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportExcelDialog
+              reportType="assets"
+              currentRange={rangeFromDates(
+                filters.from ?? "2000-01-01",
+                monthEndForAsset(filters.depreciationMonth),
+              )}
+              filters={{
+                from: filters.from,
+                to: filters.to,
+                category: filters.categoryId,
+                status: filters.status,
+                capitalization: filters.capitalization,
+                deleted: filters.deleted,
+              }}
+            />
+            <ExportExcelDialog
+              reportType="depreciation"
+              currentRange={rangeFromDates(
+                filters.depreciationMonth,
+                monthEndForAsset(filters.depreciationMonth),
+              )}
+            />
+            <Button type="button" onClick={openCreate}>
+              <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+              Tambah Aset
+            </Button>
+          </div>
         }
       />
 
@@ -1805,6 +1831,11 @@ function parseDeletedFilter(value: unknown): DeletedFilter | undefined {
 
 function currentMonthStart(): string {
   return `${todayJakarta().slice(0, 7)}-01`;
+}
+
+function monthEndForAsset(monthStart: string): string {
+  const [year, month] = monthStart.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
 }
 
 function todayJakarta(): string {

@@ -8,7 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatJakartaDateTime } from "@/lib/visitor";
 import { formatRupiah } from "@/lib/format";
+import { rangeFromDates } from "@/lib/reportExport";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { VisitorStatusBadge } from "@/components/visitor/VisitorStatusBadge";
 import { VisitorDateFilter } from "@/components/visitor/VisitorDateFilter";
@@ -219,6 +221,20 @@ export function VisitorManager() {
       <PageHeader
         title="Master Pengunjung"
         description="Lihat, koreksi identitas, dan pantau riwayat pengunjung yang terbentuk dari proses operasional."
+        actions={
+          <ExportExcelDialog
+            reportType="visitors"
+            currentRange={rangeFromDates(
+              resolvedRange.from ?? "2000-01-01",
+              resolvedRange.to ?? new Intl.DateTimeFormat("en-CA", {
+                timeZone: "Asia/Jakarta",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+              }).format(new Date()),
+            )}
+          />
+        }
       />
       {canViewDeletedData ? (
         <Tabs
