@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Wrench,
   ShieldCheck,
+  Boxes,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -62,9 +64,13 @@ export function AppSidebar() {
           />
 
           <div className="flex min-w-0 flex-col leading-tight transition-opacity duration-200 group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold">Lovin Milk</span>
+            <span className="text-sm font-semibold">
+              Lovin Milk
+            </span>
 
-            <span className="text-[11px] text-muted-foreground">Dashboard</span>
+            <span className="text-[11px] text-muted-foreground">
+              Outlet Kadirojo
+            </span>
           </div>
         </div>
       </SidebarHeader>
@@ -72,34 +78,56 @@ export function AppSidebar() {
       <SidebarContent>
         {canAccessDashboard ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Ringkasan</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              Ringkasan
+            </SidebarGroupLabel>
 
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/dashboard")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/dashboard")}
+                  >
                     <Link to="/dashboard">
                       <LayoutDashboard />
-                      <span>Dashboard</span>
+
+                      <span>
+                        Dashboard
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/kontrol-data")}>
-                    <Link to="/kontrol-data">
-                      <ShieldCheck />
-                      <span>Kontrol Data</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {canAccessFinancialData ? (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active("/kontrol-data")}
+                    >
+                      <Link to="/kontrol-data">
+                        <ShieldCheck />
+
+                        <span>
+                          Kontrol Data
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ) : null}
 
                 {canAccessAnalytics ? (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={active("/analitik-produk")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active("/analitik-produk")}
+                    >
                       <Link to="/analitik-produk">
                         <BarChart3 />
-                        <span>Analitik Produk</span>
+
+                        <span>
+                          Analitik Produk
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -110,33 +138,68 @@ export function AppSidebar() {
         ) : null}
 
         <SidebarGroup>
-          <SidebarGroupLabel>Data Operasional</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Data Operasional
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active("/penjualan")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/inventory")}
+                >
+                  <Link to="/inventory">
+                    <Boxes />
+
+                    <span>
+                      Inventory & Stok
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/penjualan")}
+                >
                   <Link to="/penjualan">
                     <TrendingUp />
-                    <span>Data Penjualan</span>
+
+                    <span>
+                      Data Penjualan
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active("/kunjungan")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/kunjungan")}
+                >
                   <Link to="/kunjungan">
                     <UserRoundCheck />
-                    <span>Kunjungan Pengunjung</span>
+
+                    <span>
+                      Kunjungan Pengunjung
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active("/pengeluaran")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/pengeluaran")}
+                >
                   <Link to="/pengeluaran">
                     <Wallet />
-                    <span>Data Pengeluaran</span>
+
+                    <span>
+                      Data Pengeluaran
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -146,42 +209,68 @@ export function AppSidebar() {
 
         {canAccessFinancialData ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Keuangan Aktual</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              Keuangan Aktual
+            </SidebarGroupLabel>
 
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/laporan-keuangan")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/laporan-keuangan")}
+                  >
                     <Link to="/laporan-keuangan">
                       <FileText />
-                      <span>Laporan Keuangan</span>
+
+                      <span>
+                        Laporan Keuangan
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/supplier")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/supplier")}
+                  >
                     <Link to="/supplier">
                       <Building2 />
-                      <span>Supplier</span>
+
+                      <span>
+                        Supplier
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/data-pembelian")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/data-pembelian")}
+                  >
                     <Link to="/data-pembelian">
                       <ShoppingCart />
-                      <span>Data Pembelian</span>
+
+                      <span>
+                        Data Pembelian
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/asset-peralatan")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/asset-peralatan")}
+                  >
                     <Link to="/asset-peralatan">
                       <Wrench />
-                      <span>Asset/Peralatan</span>
+
+                      <span>
+                        Asset/Peralatan
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -192,61 +281,129 @@ export function AppSidebar() {
 
         {canAccessMasterData ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Master Data</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              Master Data
+            </SidebarGroupLabel>
 
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/kategori-penjualan")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/subunit-bisnis")}
+                  >
+                    <Link to="/subunit-bisnis">
+                      <Building2 />
+
+                      <span>
+                        Subunit Bisnis
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/kategori-penjualan")}
+                  >
                     <Link to="/kategori-penjualan">
                       <Tag />
-                      <span>Kategori Penjualan</span>
+
+                      <span>
+                        Kategori Penjualan
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/kategori-pengeluaran")}>
-                    <Link to="/kategori-pengeluaran">
-                      <Receipt />
-                      <span>Kategori Pengeluaran</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/item-pengeluaran")}>
-                    <Link to="/item-pengeluaran">
-                      <ClipboardList />
-                      <span>Item Pengeluaran</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/produk")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/produk")}
+                  >
                     <Link to="/produk">
                       <Package />
-                      <span>Produk</span>
+
+                      <span>
+                        Produk
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={active("/pengunjung")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/kategori-biaya")}
+                  >
+                    <Link to="/kategori-biaya">
+                      <Receipt />
+
+                      <span>
+                        Kategori Biaya
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/kategori-pengeluaran")}
+                  >
+                    <Link to="/kategori-pengeluaran">
+                      <Receipt />
+
+                      <span>
+                        Kategori Pengeluaran
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/item-pengeluaran")}
+                  >
+                    <Link to="/item-pengeluaran">
+                      <ClipboardList />
+
+                      <span>
+                        Item Pengeluaran
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/pengunjung")}
+                  >
                     <Link to="/pengunjung">
                       <ContactRound />
-                      <span>Pengunjung</span>
+
+                      <span>
+                        Pengunjung
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 {canManageUsers ? (
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={active("/pengguna")}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active("/pengguna")}
+                    >
                       <Link to="/pengguna">
                         <Users />
-                        <span>Manajemen Pengguna</span>
+
+                        <span>
+                          Manajemen Pengguna
+                        </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -257,15 +414,23 @@ export function AppSidebar() {
         ) : null}
 
         <SidebarGroup>
-          <SidebarGroupLabel>Akun</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            Akun
+          </SidebarGroupLabel>
 
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={active("/profil")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/profil")}
+                >
                   <Link to="/profil">
                     <UserCircle />
-                    <span>Profil</span>
+
+                    <span>
+                      Profil
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -282,7 +447,10 @@ export function AppSidebar() {
                   }}
                 >
                   <LogOut />
-                  <span>Keluar</span>
+
+                  <span>
+                    Keluar
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -18,6 +18,8 @@ interface DashboardKpiCardProps {
   iconBackground?: string;
 
   valueClassName?: string;
+
+  compact?: boolean;
 }
 
 export function DashboardKpiCard({
@@ -29,13 +31,14 @@ export function DashboardKpiCard({
   growth = null,
   iconBackground = "bg-primary/10",
   valueClassName = "",
+  compact = false,
 }: DashboardKpiCardProps) {
   const growthPositive = growth !== null && growth > 0;
   const growthNegative = growth !== null && growth < 0;
   const growthNeutral = growth === null || growth === 0;
 
   return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm transition-all hover:shadow-md">
+    <div className={`rounded-xl border bg-card shadow-sm transition-all hover:shadow-md ${compact ? "p-4" : "p-5"}`}>
 
       <div className="flex items-start justify-between">
 
@@ -49,7 +52,7 @@ export function DashboardKpiCard({
             <Skeleton className="mt-3 h-8 w-36" />
           ) : (
             <h2
-              className={`mt-2 truncate text-2xl font-bold ${valueClassName}`}
+              className={`${compact ? "mt-1.5 break-words text-xl" : "mt-2 truncate text-2xl"} font-bold ${valueClassName}`}
             >
               {value}
             </h2>
@@ -65,9 +68,9 @@ export function DashboardKpiCard({
         </div>
 
         <div
-          className={`flex h-12 w-12 items-center justify-center rounded-xl ${iconBackground}`}
+          className={`flex shrink-0 items-center justify-center rounded-xl ${compact ? "h-10 w-10" : "h-12 w-12"} ${iconBackground}`}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className={compact ? "h-5 w-5" : "h-6 w-6"} />
         </div>
       </div>
 

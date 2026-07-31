@@ -27,12 +27,18 @@ interface BestSellingProductsProps {
   items: ProductRankingItem[];
   loading?: boolean;
   maxItems?: number;
+  revenueAvailable?: boolean;
+  title?: string;
+  description?: string;
 }
 
 export function BestSellingProducts({
   items,
   loading = false,
   maxItems = 8,
+  revenueAvailable = true,
+  title = "Produk Terlaris",
+  description,
 }: BestSellingProductsProps) {
   const [metric, setMetric] =
     useState<RankingMetric>("quantity");
@@ -84,16 +90,17 @@ export function BestSellingProducts({
 
           <div>
             <h2 className="text-base font-semibold">
-              Produk Terlaris
+              {title}
             </h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Ranking berdasarkan quantity atau omzet pada periode
-              terpilih.
+              {description ?? (revenueAvailable
+                ? "Ranking berdasarkan quantity atau omzet pada periode terpilih."
+                : "Ranking berdasarkan quantity tercatat pada periode terpilih.")}
             </p>
           </div>
         </div>
 
-        <Tabs
+        {revenueAvailable ? <Tabs
           value={metric}
           onValueChange={(value) =>
             setMetric(
@@ -109,7 +116,7 @@ export function BestSellingProducts({
               Omzet
             </TabsTrigger>
           </TabsList>
-        </Tabs>
+        </Tabs> : null}
       </div>
 
       <div className="p-5">
@@ -140,6 +147,7 @@ export function BestSellingProducts({
                     index={index}
                     percentage={percentage}
                     metric={metric}
+                    revenueAvailable={revenueAvailable}
                   />
                 );
               },
@@ -156,11 +164,13 @@ function ProductRankingRow({
   index,
   percentage,
   metric,
+  revenueAvailable,
 }: {
   item: ProductRankingItem;
   index: number;
   percentage: number;
   metric: RankingMetric;
+  revenueAvailable: boolean;
 }) {
   const rank = index + 1;
 
@@ -221,39 +231,29 @@ function ProductRankingRow({
             </div>
           </div>
 
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>
-              Quantity:{" "}
-              <strong className="font-medium text-foreground">
-                {formatNumber(
-                  item.quantity,
-                  2,
-                )}{" "}
-                {item.unit}
-              </strong>
-            </span>
-            <span>
+          {(revenueAvailable || item.transactionCount > 0) ? <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {revenueAvailable ? <span>
               Omzet:{" "}
               <strong className="font-medium text-foreground">
                 {formatRupiah(
                   item.revenue,
                 )}
               </strong>
-            </span>
-            <span>
+            </span> : null}
+            {item.transactionCount > 0 ? <span>
               {formatNumber(
                 item.transactionCount,
               )}{" "}
               transaksi
-            </span>
-          </div>
+            </span> : null}
+          </div> : null}
 
           <Progress
             value={Math.min(
               Math.max(percentage, 0),
               100,
             )}
-            className="mt-2.5 h-2"
+            className="mt-2 h-2"
             aria-label={`${item.name}: ${formatPercentage(
               percentage,
             )}`}

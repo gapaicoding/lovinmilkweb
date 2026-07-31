@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Info } from "lucide-react";
+import { History, Info } from "lucide-react";
 
+import { OperationalExpenseManager } from "@/components/expenses/OperationalExpenseManager";
 import { TransactionManager } from "@/components/TransactionManager";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/pengeluaran")({
   component: LegacyExpensesPage,
@@ -13,14 +15,17 @@ function LegacyExpensesPage() {
     <div className="space-y-4">
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertTitle>Data operasional lama / simulasi</AlertTitle>
+        <AlertTitle>Sumber pengeluaran dipisahkan berdasarkan periode</AlertTitle>
         <AlertDescription>
-          Data di halaman ini dipertahankan untuk histori sistem. Pembelian aktual Juni 2026 berada
-          di modul Data Pembelian dan tidak dimasukkan kembali ke pengeluaran lama.
+          Pengeluaran Operasional menjadi sumber laporan setelah tanggal cutover Outlet. Data lama
+          tetap tersedia sebagai histori dan tidak dihitung ulang.
         </AlertDescription>
       </Alert>
-
-      <TransactionManager kind="expenses" />
+      <Tabs defaultValue="operational">
+        <TabsList><TabsTrigger value="operational">Pengeluaran Operasional</TabsTrigger><TabsTrigger value="legacy"><History className="mr-2 h-4 w-4" />Data Historis</TabsTrigger></TabsList>
+        <TabsContent value="operational" className="mt-4"><OperationalExpenseManager /></TabsContent>
+        <TabsContent value="legacy" className="mt-4"><TransactionManager kind="expenses" /></TabsContent>
+      </Tabs>
     </div>
   );
 }

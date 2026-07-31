@@ -1,6 +1,12 @@
 import { actualClient, toFiniteNumber } from "@/lib/actualData";
 import { fetchDynamicFinancialStatement } from "@/lib/dynamicFinance";
 import {
+  fetchDefaultOutletId,
+  fetchOutletReport,
+  fetchProductReport,
+  sourceStatusLabel,
+} from "@/lib/reporting";
+import {
   REPORT_LABELS,
   ReportExportError,
   classifyExportError,
@@ -147,17 +153,17 @@ export async function fetchReportExportPayload(
   try {
     switch (request.reportType) {
       case "financial":
-        return await financialReport(request);
+        return await stage7FinancialReport(request);
       case "sales":
-        return await salesReport(request);
+        return await stage7SalesReport(request);
       case "visitors":
         return await visitorsReport(request);
       case "expenses":
-        return await expensesReport(request);
+        return await stage7ExpensesReport(request);
       case "purchases":
         return await purchasesReport(request);
       case "products":
-        return await productsReport(request);
+        return await stage7ProductsReport(request);
       case "suppliers":
         return await suppliersReport(request);
       case "assets":
@@ -168,6 +174,110 @@ export async function fetchReportExportPayload(
   } catch (error) {
     throw classifyExportError(error);
   }
+}
+
+async function stage7FinancialReport(request: ReportExportRequest) {
+  const period = periodOf(request);
+  const outletId = await fetchDefaultOutletId();
+  const report = await fetchOutletReport(outletId, period.startDate, period.endDate);
+  const metadataRows = [
+    metric("Periode", period.label),
+    metric("Sumber data", sourceStatusLabel(report.source_status)),
+    metric("Tanggal cutover operasional", report.operational_cutover_date),
+    metric("Omzet", report.revenue),
+    metric("HPP", report.hpp),
+    metric("Laba Kotor", report.gross_profit),
+    metric("Pengeluaran Operasional", report.operational_expense),
+    metric("Depresiasi", report.depreciation),
+    metric("Laba Operasional", report.operating_profit),
+    metric("HPP provisional", report.has_provisional_hpp ? "Ya" : "Tidak"),
+    metric("Item HPP provisional", report.provisional_hpp_item_count),
+    metric("Omzet terdampak HPP provisional", report.provisional_hpp_revenue),
+    metric("Catatan", "Laba Operasional bukan Laba Bersih."),
+  ];
+  return payload(request, period, 1, [summarySheet(metadataRows)], stage7DataStatus(report.source_status));
+}
+
+async function stage7SalesReport(request: ReportExportRequest) {
+  const period = periodOf(request);
+  const outletId = await fetchDefaultOutletId();
+  const [outlet, products] = await Promise.all([
+    fetchOutletReport(outletId, period.startDate, period.endDate),
+    fetchProductReport(outletId, period.startDate, period.endDate),
+  ]);
+  const rows = [...products.operational_rows, ...products.legacy_rows].map((row) => ({
+    Produk: row.product_name,
+    Kategori: row.category_name,
+    Subunit: row.subunit_name ?? null,
+    Quantity: row.quantity,
+    Omzet: row.revenue,
+    HPP: row.hpp,
+    "Laba Kotor": row.gross_profit,
+    Margin: row.margin_percent ?? null,
+    "Status HPP": row.has_provisional_hpp ? "Provisional" : row.financial_available ? "Final" : "Tidak tersedia",
+    Sumber: row.source_status === "legacy" ? "Historis — qty saja" : "Operasional",
+  }));
+  return payload(request, period, rows.length || 1, [
+    summarySheet([
+      metric("Periode", period.label),
+      metric("Sumber data", sourceStatusLabel(outlet.source_status)),
+      metric("Omzet", outlet.revenue),
+      metric("Bill / Transaksi", outlet.bill_count),
+      metric("Quantity", outlet.quantity),
+      metric("HPP", outlet.hpp),
+      metric("Laba Kotor", outlet.gross_profit),
+      metric("HPP provisional", outlet.has_provisional_hpp ? "Ya" : "Tidak"),
+    ]),
+    genericSheet("Produk", [
+      col("Produk", "text", 28), col("Kategori", "text", 22), col("Subunit", "text", 20),
+      col("Quantity", "decimal", 12), col("Omzet", "currency", 18), col("HPP", "currency", 18),
+      col("Laba Kotor", "currency", 18), col("Margin", "decimal", 12),
+      col("Status HPP", "status", 18), col("Sumber", "text", 24),
+    ], rows),
+  ], stage7DataStatus(outlet.source_status));
+}
+
+async function stage7ProductsReport(request: ReportExportRequest) {
+  return stage7SalesReport({ ...request, reportType: "products" });
+}
+
+async function stage7ExpensesReport(request: ReportExportRequest) {
+  const period = periodOf(request);
+  const outletId = await fetchDefaultOutletId();
+  const report = await fetchOutletReport(outletId, period.startDate, period.endDate);
+  const rows = await fetchRows<JsonRecord>("operational_expenses", (query) =>
+    query.select("expense_date,category_name_snapshot,scope_snapshot,outlet_name_snapshot,subunit_name_snapshot,amount,notes")
+      .eq("outlet_id", outletId).gte("expense_date", period.startDate).lte("expense_date", period.endDate)
+      .is("deleted_at", null).order("expense_date"),
+  );
+  return payload(request, period, rows.length || (report.operational_expense !== 0 ? 1 : 0), [
+    summarySheet([
+      metric("Periode", period.label),
+      metric("Sumber data", sourceStatusLabel(report.source_status)),
+      metric("Total Pengeluaran Operasional", report.operational_expense),
+      metric("Tanggal cutover operasional", report.operational_cutover_date),
+    ]),
+    genericSheet("Pengeluaran Operasional", [
+      col("Tanggal", "date", 15), col("Kategori", "text", 26), col("Cakupan", "text", 20),
+      col("Outlet", "text", 20), col("Subunit", "text", 20), col("Nominal", "currency", 18),
+      col("Catatan", "text", 34),
+    ], rows.map((row) => ({
+      Tanggal: parseReportDate(String(row.expense_date)),
+      Kategori: row.category_name_snapshot as string,
+      Cakupan: row.scope_snapshot === "subunit" ? "Biaya Langsung Subunit" : "Biaya Bersama Outlet",
+      Outlet: row.outlet_name_snapshot as string,
+      Subunit: row.subunit_name_snapshot as string | null,
+      Nominal: toFiniteNumber(row.amount),
+      Catatan: row.notes as string | null,
+    })), "Tidak ada rincian pengeluaran operasional pada periode ini."),
+  ], stage7DataStatus(report.source_status));
+}
+
+function stage7DataStatus(status: string): ReportExportPayload["dataStatus"] {
+  if (status === "legacy") return "Historical";
+  if (status === "mixed") return "Combined";
+  if (status === "empty") return "No actual data";
+  return "Operational";
 }
 
 async function financialReport(request: ReportExportRequest) {

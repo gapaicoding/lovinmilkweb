@@ -17,6 +17,7 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
+import { OperationalPurchaseManager } from "@/components/purchases/OperationalPurchaseManager";
 import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
 import { rangeFromDates } from "@/lib/reportExport";
 import {
@@ -58,6 +59,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -226,6 +228,31 @@ export const Route = createFileRoute("/_authenticated/data-pembelian")({
 });
 
 function PurchasePage() {
+  const { isAdmin, loading } = useAuth();
+  if (loading) return <ModuleInitialLoading label="Memeriksa akses modul pembelian" />;
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        title="Data Pembelian"
+        description="Pembelian operasional inventory dipisahkan tegas dari 343 invoice legacy/import."
+      />
+      <Tabs defaultValue="operational">
+        <TabsList>
+          <TabsTrigger value="operational">Pembelian Operasional</TabsTrigger>
+          {isAdmin ? <TabsTrigger value="legacy">Riwayat Legacy</TabsTrigger> : null}
+        </TabsList>
+        <TabsContent value="operational" className="pt-4">
+          <OperationalPurchaseManager />
+        </TabsContent>
+        {isAdmin ? <TabsContent value="legacy" className="pt-4">
+          <LegacyPurchasePage />
+        </TabsContent> : null}
+      </Tabs>
+    </div>
+  );
+}
+
+function LegacyPurchasePage() {
   const { isAdmin, isSuperAdmin, loading: authLoading, user } = useAuth();
   const queryClient = useQueryClient();
   const search = Route.useSearch();

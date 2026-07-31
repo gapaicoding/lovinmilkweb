@@ -1,6 +1,6 @@
 import { BarChart3, Trophy } from "lucide-react";
 
-import { formatPercentage, formatRupiah } from "@/lib/format";
+import { formatNumber, formatPercentage, formatRupiah } from "@/lib/format";
 
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,7 @@ interface CategoryRankingProps {
   emptyDescription?: string;
   maxItems?: number;
   valueLabel?: string;
+  metric?: "quantity" | "currency";
 }
 
 export function CategoryRanking({
@@ -34,6 +35,7 @@ export function CategoryRanking({
   emptyDescription = "Data kategori akan muncul setelah transaksi dicatat pada periode terpilih.",
   maxItems = 6,
   valueLabel = "pencatatan",
+  metric = "currency",
 }: CategoryRankingProps) {
   const normalizedItems = [...items]
     .map((item) => ({
@@ -87,7 +89,7 @@ export function CategoryRanking({
             description={emptyDescription}
           />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-4">
             {normalizedItems.map(
               (item, index) => {
                 const percentage =
@@ -104,6 +106,7 @@ export function CategoryRanking({
                     index={index}
                     percentage={percentage}
                     valueLabel={valueLabel}
+                    metric={metric}
                   />
                 );
               },
@@ -120,6 +123,7 @@ interface CategoryRankingRowProps {
   index: number;
   percentage: number;
   valueLabel: string;
+  metric: "quantity" | "currency";
 }
 
 function CategoryRankingRow({
@@ -127,12 +131,13 @@ function CategoryRankingRow({
   index,
   percentage,
   valueLabel,
+  metric,
 }: CategoryRankingRowProps) {
   const rank = index + 1;
   const isTopRank = rank === 1;
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       <div className="flex items-start gap-3">
         <div
           className={[
@@ -164,7 +169,7 @@ function CategoryRankingRow({
 
             <div className="shrink-0 sm:text-right">
               <p className="text-sm font-semibold">
-                {formatRupiah(item.amount)}
+                {metric === "quantity" ? `${formatNumber(item.amount, 2)} qty` : formatRupiah(item.amount)}
               </p>
 
               <p className="mt-0.5 text-xs text-muted-foreground">

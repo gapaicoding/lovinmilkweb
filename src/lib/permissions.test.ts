@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { canAccessAuthenticatedRoute, getRolePermissions, type AppRole } from "@/lib/permissions";
 
-const FINANCIAL_ROUTES = ["/laporan-keuangan", "/supplier", "/data-pembelian", "/asset-peralatan"];
+const FINANCIAL_ROUTES = ["/laporan-keuangan", "/supplier"];
 
 describe("role permissions", () => {
   it("memberi Staff akses dashboard agregat dan operasional saja", () => {
@@ -56,6 +56,8 @@ describe("authenticated route permissions", () => {
   it("mengizinkan Staff membuka dashboard dan route operasional", () => {
     expect(canAccessAuthenticatedRoute("staff", "/dashboard")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/penjualan")).toBe(true);
+    expect(canAccessAuthenticatedRoute("staff", "/data-pembelian")).toBe(true);
+    expect(canAccessAuthenticatedRoute("staff", "/asset-peralatan")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/pengeluaran")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/kunjungan")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/profil")).toBe(true);

@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -238,6 +263,7 @@ export type Database = {
           monthly_depreciation: number | null
           notes: string | null
           original_source_cost: string | null
+          outlet_id: string | null
           record_source: string
           reference_source_id: string | null
           residual_value: number
@@ -245,6 +271,7 @@ export type Database = {
           source_file: string | null
           source_row: number | null
           source_sheet: string | null
+          subunit_id: string | null
           supplier_name_raw: string | null
           updated_at: string
           updated_by: string | null
@@ -278,6 +305,7 @@ export type Database = {
           monthly_depreciation?: number | null
           notes?: string | null
           original_source_cost?: string | null
+          outlet_id?: string | null
           record_source?: string
           reference_source_id?: string | null
           residual_value?: number
@@ -285,6 +313,7 @@ export type Database = {
           source_file?: string | null
           source_row?: number | null
           source_sheet?: string | null
+          subunit_id?: string | null
           supplier_name_raw?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -318,6 +347,7 @@ export type Database = {
           monthly_depreciation?: number | null
           notes?: string | null
           original_source_cost?: string | null
+          outlet_id?: string | null
           record_source?: string
           reference_source_id?: string | null
           residual_value?: number
@@ -325,6 +355,7 @@ export type Database = {
           source_file?: string | null
           source_row?: number | null
           source_sheet?: string | null
+          subunit_id?: string | null
           supplier_name_raw?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -367,6 +398,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "assets_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "assets_reference_source_id_fkey"
             columns: ["reference_source_id"]
             isOneToOne: false
@@ -379,6 +417,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_asset_book_values"
             referencedColumns: ["asset_id"]
+          },
+          {
+            foreignKeyName: "assets_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "assets_updated_by_fkey"
@@ -427,6 +472,174 @@ export type Database = {
           {
             foreignKeyName: "business_audit_log_actor_id_fkey"
             columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      business_subunits: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          id: string
+          inventory_enabled: boolean
+          is_active: boolean
+          name: string
+          outlet_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          inventory_enabled?: boolean
+          is_active?: boolean
+          name: string
+          outlet_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          inventory_enabled?: boolean
+          is_active?: boolean
+          name?: string
+          outlet_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_subunits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subunits_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subunits_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_subunits_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cost_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          outlet_id: string
+          scope: string
+          subunit_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          outlet_id: string
+          scope: string
+          subunit_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          outlet_id?: string
+          scope?: string
+          subunit_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_categories_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_categories_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_categories_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_categories_subunit_outlet_fkey"
+            columns: ["subunit_id", "outlet_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id", "outlet_id"]
+          },
+          {
+            foreignKeyName: "cost_categories_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -523,6 +736,8 @@ export type Database = {
           membership_count: number | null
           opening_cash: number | null
           payment_sum: number | null
+          product_detail_available: boolean
+          product_quantity_recorded: number | null
           qris_dretail: number | null
           qris_dynamic_bca: number | null
           qris_static_bca: number | null
@@ -531,6 +746,7 @@ export type Database = {
           sale_date: string
           source_file: string
           source_key: string
+          source_notes: string | null
           source_row: number | null
           source_sheet: string
           takeaway: number | null
@@ -538,6 +754,7 @@ export type Database = {
           total_sales_arayya: number | null
           total_sales_difference: number | null
           total_sales_lovin: number | null
+          total_sales_lovin_raw: number | null
           visitor_total: number | null
         }
         Insert: {
@@ -563,6 +780,8 @@ export type Database = {
           membership_count?: number | null
           opening_cash?: number | null
           payment_sum?: number | null
+          product_detail_available?: boolean
+          product_quantity_recorded?: number | null
           qris_dretail?: number | null
           qris_dynamic_bca?: number | null
           qris_static_bca?: number | null
@@ -571,6 +790,7 @@ export type Database = {
           sale_date: string
           source_file: string
           source_key: string
+          source_notes?: string | null
           source_row?: number | null
           source_sheet: string
           takeaway?: number | null
@@ -578,6 +798,7 @@ export type Database = {
           total_sales_arayya?: number | null
           total_sales_difference?: number | null
           total_sales_lovin?: number | null
+          total_sales_lovin_raw?: number | null
           visitor_total?: number | null
         }
         Update: {
@@ -603,6 +824,8 @@ export type Database = {
           membership_count?: number | null
           opening_cash?: number | null
           payment_sum?: number | null
+          product_detail_available?: boolean
+          product_quantity_recorded?: number | null
           qris_dretail?: number | null
           qris_dynamic_bca?: number | null
           qris_static_bca?: number | null
@@ -611,6 +834,7 @@ export type Database = {
           sale_date?: string
           source_file?: string
           source_key?: string
+          source_notes?: string | null
           source_row?: number | null
           source_sheet?: string
           takeaway?: number | null
@@ -618,6 +842,7 @@ export type Database = {
           total_sales_arayya?: number | null
           total_sales_difference?: number | null
           total_sales_lovin?: number | null
+          total_sales_lovin_raw?: number | null
           visitor_total?: number | null
         }
         Relationships: [
@@ -1242,6 +1467,458 @@ export type Database = {
           },
         ]
       }
+      inventory_cost_states: {
+        Row: {
+          current_wac: number | null
+          has_cost_basis: boolean
+          inventory_item_id: string
+          inventory_value: number
+          last_effective_date: string | null
+          last_posting_sequence: number | null
+          on_hand_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          current_wac?: number | null
+          has_cost_basis?: boolean
+          inventory_item_id: string
+          inventory_value?: number
+          last_effective_date?: string | null
+          last_posting_sequence?: number | null
+          on_hand_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          current_wac?: number | null
+          has_cost_basis?: boolean
+          inventory_item_id?: string
+          inventory_value?: number
+          last_effective_date?: string | null
+          last_posting_sequence?: number | null
+          on_hand_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_states_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_states_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: true
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_states_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: true
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          is_active: boolean
+          minimum_stock: number
+          name: string
+          notes: string | null
+          outlet_id: string
+          subunit_id: string
+          unit: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_stock?: number
+          name: string
+          notes?: string | null
+          outlet_id: string
+          subunit_id: string
+          unit: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_active?: boolean
+          minimum_stock?: number
+          name?: string
+          notes?: string | null
+          outlet_id?: string
+          subunit_id?: string
+          unit?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          cost_status: string | null
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          inventory_item_id: string
+          inventory_value_after: number | null
+          inventory_value_before: number | null
+          is_reversed: boolean
+          movement_at: string
+          movement_type: string
+          notes: string | null
+          posting_sequence: number
+          quantity_after: number | null
+          quantity_before: number | null
+          quantity_delta: number
+          reference: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          source_id: string | null
+          source_line_id: string | null
+          source_type: string | null
+          unit_cost: number | null
+          value_delta: number | null
+          wac_after: number | null
+          wac_before: number | null
+        }
+        Insert: {
+          cost_status?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          inventory_item_id: string
+          inventory_value_after?: number | null
+          inventory_value_before?: number | null
+          is_reversed?: boolean
+          movement_at?: string
+          movement_type: string
+          notes?: string | null
+          posting_sequence?: number
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_delta: number
+          reference?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_id?: string | null
+          source_line_id?: string | null
+          source_type?: string | null
+          unit_cost?: number | null
+          value_delta?: number | null
+          wac_after?: number | null
+          wac_before?: number | null
+        }
+        Update: {
+          cost_status?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          inventory_item_id?: string
+          inventory_value_after?: number | null
+          inventory_value_before?: number | null
+          is_reversed?: boolean
+          movement_at?: string
+          movement_type?: string
+          notes?: string | null
+          posting_sequence?: number
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_delta?: number
+          reference?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_id?: string | null
+          source_line_id?: string | null
+          source_type?: string | null
+          unit_cost?: number | null
+          value_delta?: number | null
+          wac_after?: number | null
+          wac_before?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+        ]
+      }
+      operational_expenses: {
+        Row: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id: string | null
+          subunit_name_snapshot: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          expense_date: string
+          id?: string
+          notes?: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id?: string | null
+          subunit_name_snapshot?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          category_name_snapshot?: string
+          cost_category_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          outlet_id?: string
+          outlet_name_snapshot?: string
+          scope_snapshot?: string
+          subunit_id?: string | null
+          subunit_name_snapshot?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_expenses_cost_category_id_fkey"
+            columns: ["cost_category_id"]
+            isOneToOne: false
+            referencedRelation: "cost_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_expenses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outlet_reporting_configs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          operational_reporting_start_date: string
+          outlet_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          operational_reporting_start_date: string
+          outlet_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          operational_reporting_start_date?: string
+          outlet_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outlet_reporting_configs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outlet_reporting_configs_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: true
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outlet_reporting_configs_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outlets: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          timezone?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outlets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outlets_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outlets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_distributions: {
         Row: {
           amount: number
@@ -1324,6 +2001,68 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_inventory_requirements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          inventory_item_id: string
+          product_id: string
+          quantity_required: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_item_id: string
+          product_id: string
+          quantity_required: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_item_id?: string
+          product_id?: string
+          quantity_required?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_inventory_requirements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_inventory_requirements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "product_inventory_requirements_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "product_inventory_requirements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -1706,6 +2445,205 @@ export type Database = {
           },
         ]
       }
+      purchase_transaction_items: {
+        Row: {
+          amount: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          inventory_item_id: string
+          is_current: boolean
+          item_code_snapshot: string
+          item_name_snapshot: string
+          line_no: number
+          notes: string | null
+          purchase_transaction_id: string
+          quantity: number
+          revision: number
+          subunit_id: string
+          subunit_name_snapshot: string
+          superseded_at: string | null
+          unit_cost: number
+          unit_snapshot: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_item_id: string
+          is_current?: boolean
+          item_code_snapshot: string
+          item_name_snapshot: string
+          line_no: number
+          notes?: string | null
+          purchase_transaction_id: string
+          quantity: number
+          revision: number
+          subunit_id: string
+          subunit_name_snapshot: string
+          superseded_at?: string | null
+          unit_cost: number
+          unit_snapshot: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          inventory_item_id?: string
+          is_current?: boolean
+          item_code_snapshot?: string
+          item_name_snapshot?: string
+          line_no?: number
+          notes?: string | null
+          purchase_transaction_id?: string
+          quantity?: number
+          revision?: number
+          subunit_id?: string
+          subunit_name_snapshot?: string
+          superseded_at?: string | null
+          unit_cost?: number
+          unit_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_transaction_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transaction_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transaction_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "purchase_transaction_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "purchase_transaction_items_purchase_transaction_id_fkey"
+            columns: ["purchase_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transaction_items_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_transactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          external_invoice_number: string | null
+          id: string
+          notes: string | null
+          outlet_id: string
+          purchase_date: string
+          revision: number
+          supplier_id: string | null
+          supplier_name_snapshot: string | null
+          total_amount: number
+          transaction_number: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          external_invoice_number?: string | null
+          id?: string
+          notes?: string | null
+          outlet_id: string
+          purchase_date: string
+          revision?: number
+          supplier_id?: string | null
+          supplier_name_snapshot?: string | null
+          total_amount?: number
+          transaction_number: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          external_invoice_number?: string | null
+          id?: string
+          notes?: string | null
+          outlet_id?: string
+          purchase_date?: string
+          revision?: number
+          supplier_id?: string | null
+          supplier_name_snapshot?: string | null
+          total_amount?: number
+          transaction_number?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transactions_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transactions_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_transactions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           amount: number
@@ -1817,6 +2755,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          subunit_id: string
           updated_at: string
           updated_by: string | null
         }
@@ -1827,6 +2766,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          subunit_id: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -1837,6 +2777,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          subunit_id?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -1849,10 +2790,407 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_categories_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_categories_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_item_inventory_costs: {
+        Row: {
+          consumed_quantity: number
+          cost_amount: number
+          cost_status: string
+          created_at: string
+          id: string
+          inventory_item_id: string
+          item_code_snapshot: string
+          item_name_snapshot: string
+          product_id: string
+          requirement_quantity: number
+          reversed_at: string | null
+          sales_item_id: string
+          sales_transaction_id: string
+          unit_cost: number
+          unit_snapshot: string
+        }
+        Insert: {
+          consumed_quantity: number
+          cost_amount: number
+          cost_status: string
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          item_code_snapshot: string
+          item_name_snapshot: string
+          product_id: string
+          requirement_quantity: number
+          reversed_at?: string | null
+          sales_item_id: string
+          sales_transaction_id: string
+          unit_cost: number
+          unit_snapshot: string
+        }
+        Update: {
+          consumed_quantity?: number
+          cost_amount?: number
+          cost_status?: string
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          item_code_snapshot?: string
+          item_name_snapshot?: string
+          product_id?: string
+          requirement_quantity?: number
+          reversed_at?: string | null
+          sales_item_id?: string
+          sales_transaction_id?: string
+          unit_cost?: number
+          unit_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_item_inventory_costs_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_item_inventory_costs_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "sales_item_inventory_costs_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "sales_item_inventory_costs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_item_inventory_costs_sales_transaction_id_fkey"
+            columns: ["sales_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_items: {
+        Row: {
+          amount: number | null
+          category_name_snapshot: string
+          created_at: string
+          hpp_amount: number
+          hpp_status: string
+          id: string
+          line_no: number
+          notes: string | null
+          product_id: string
+          product_name_snapshot: string
+          product_sku_snapshot: string | null
+          quantity: number
+          sales_category_id: string
+          sales_transaction_id: string
+          subunit_id: string
+          subunit_name_snapshot: string
+          unit_hpp: number
+          unit_price: number
+          unit_snapshot: string
+        }
+        Insert: {
+          amount?: number | null
+          category_name_snapshot: string
+          created_at?: string
+          hpp_amount?: number
+          hpp_status?: string
+          id?: string
+          line_no: number
+          notes?: string | null
+          product_id: string
+          product_name_snapshot: string
+          product_sku_snapshot?: string | null
+          quantity: number
+          sales_category_id: string
+          sales_transaction_id: string
+          subunit_id: string
+          subunit_name_snapshot: string
+          unit_hpp?: number
+          unit_price: number
+          unit_snapshot: string
+        }
+        Update: {
+          amount?: number | null
+          category_name_snapshot?: string
+          created_at?: string
+          hpp_amount?: number
+          hpp_status?: string
+          id?: string
+          line_no?: number
+          notes?: string | null
+          product_id?: string
+          product_name_snapshot?: string
+          product_sku_snapshot?: string | null
+          quantity?: number
+          sales_category_id?: string
+          sales_transaction_id?: string
+          subunit_id?: string
+          subunit_name_snapshot?: string
+          unit_hpp?: number
+          unit_price?: number
+          unit_snapshot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_items_sales_category_id_fkey"
+            columns: ["sales_category_id"]
+            isOneToOne: false
+            referencedRelation: "sales_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_items_sales_transaction_id_fkey"
+            columns: ["sales_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "sales_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_items_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_transactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          entry_source: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          total_amount: number
+          transaction_date: string
+          transaction_number: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_source?: string
+          id?: string
+          notes?: string | null
+          outlet_id: string
+          total_amount?: number
+          transaction_date: string
+          transaction_number: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          entry_source?: string
+          id?: string
+          notes?: string | null
+          outlet_id?: string
+          total_amount?: number
+          transaction_date?: string
+          transaction_number?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opname_items: {
+        Row: {
+          id: string
+          inventory_item_id: string
+          item_code_snapshot: string
+          item_name_snapshot: string
+          line_no: number
+          physical_quantity: number
+          stock_opname_id: string
+          system_quantity: number
+          unit_snapshot: string
+          variance: number | null
+        }
+        Insert: {
+          id?: string
+          inventory_item_id: string
+          item_code_snapshot: string
+          item_name_snapshot: string
+          line_no: number
+          physical_quantity: number
+          stock_opname_id: string
+          system_quantity: number
+          unit_snapshot: string
+          variance?: number | null
+        }
+        Update: {
+          id?: string
+          inventory_item_id?: string
+          item_code_snapshot?: string
+          item_name_snapshot?: string
+          line_no?: number
+          physical_quantity?: number
+          stock_opname_id?: string
+          system_quantity?: number
+          unit_snapshot?: string
+          variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opname_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_inventory_cost_balances"
+            referencedColumns: ["inventory_item_id"]
+          },
+          {
+            foreignKeyName: "stock_opname_items_stock_opname_id_fkey"
+            columns: ["stock_opname_id"]
+            isOneToOne: false
+            referencedRelation: "stock_opnames"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_opnames: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          opname_date: string
+          outlet_id: string
+          status: string
+          subunit_id: string
+          updated_at: string
+          updated_by: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opname_date: string
+          outlet_id: string
+          status?: string
+          subunit_id: string
+          updated_at?: string
+          updated_by?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          opname_date?: string
+          outlet_id?: string
+          status?: string
+          subunit_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_opnames_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_opnames_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
             referencedColumns: ["id"]
           },
         ]
@@ -2298,6 +3636,69 @@ export type Database = {
         }
         Relationships: []
       }
+      v_inventory_balances: {
+        Row: {
+          code: string | null
+          current_stock: number | null
+          deleted_at: string | null
+          inventory_item_id: string | null
+          is_active: boolean | null
+          minimum_stock: number | null
+          name: string | null
+          outlet_id: string | null
+          recorded_inbound_value: number | null
+          subunit_id: string | null
+          unit: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_inventory_cost_balances: {
+        Row: {
+          code: string | null
+          current_wac: number | null
+          has_cost_basis: boolean | null
+          inventory_item_id: string | null
+          inventory_value: number | null
+          last_effective_date: string | null
+          name: string | null
+          on_hand_quantity: number | null
+          outlet_id: string | null
+          subunit_id: string | null
+          unit: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_subunit_id_fkey"
+            columns: ["subunit_id"]
+            isOneToOne: false
+            referencedRelation: "business_subunits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_purchase_invoice_index: {
         Row: {
           created_at: string | null
@@ -2373,7 +3774,204 @@ export type Database = {
         }
         Returns: string
       }
+      archive_inventory_item: {
+        Args: { p_inventory_item_id: string }
+        Returns: undefined
+      }
+      archive_operational_asset: {
+        Args: { p_asset_id: string }
+        Returns: {
+          accounting_policy_id: string | null
+          acquisition_cost: number
+          acquisition_date: string
+          adjustment_note: string | null
+          asset_category_id: string
+          asset_code: string
+          asset_name: string
+          asset_name_normalized: string
+          asset_source_key: string | null
+          asset_status: string
+          brand: string | null
+          capitalization_status: string
+          capitalization_threshold: number
+          correction_reason: string | null
+          created_at: string
+          created_by: string | null
+          data_origin: string
+          deleted_at: string | null
+          deleted_by: string | null
+          depreciation_method: string
+          depreciation_start_date: string | null
+          id: string
+          import_batch_id: string | null
+          location: string | null
+          monthly_depreciation: number | null
+          notes: string | null
+          original_source_cost: string | null
+          outlet_id: string | null
+          record_source: string
+          reference_source_id: string | null
+          residual_value: number
+          size: string | null
+          source_file: string | null
+          source_row: number | null
+          source_sheet: string | null
+          subunit_id: string | null
+          supplier_name_raw: string | null
+          updated_at: string
+          updated_by: string | null
+          useful_life_months: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      archive_operational_expense: {
+        Args: { p_id: string }
+        Returns: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id: string | null
+          subunit_name_snapshot: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "operational_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_out_visitor: { Args: { p_visit_id: string }; Returns: Json }
+      create_inventory_adjustment: {
+        Args: {
+          p_inventory_item_id: string
+          p_movement_at?: string
+          p_notes?: string
+          p_quantity_delta: number
+        }
+        Returns: string
+      }
+      create_operational_asset: {
+        Args: { p_asset: Json }
+        Returns: {
+          accounting_policy_id: string | null
+          acquisition_cost: number
+          acquisition_date: string
+          adjustment_note: string | null
+          asset_category_id: string
+          asset_code: string
+          asset_name: string
+          asset_name_normalized: string
+          asset_source_key: string | null
+          asset_status: string
+          brand: string | null
+          capitalization_status: string
+          capitalization_threshold: number
+          correction_reason: string | null
+          created_at: string
+          created_by: string | null
+          data_origin: string
+          deleted_at: string | null
+          deleted_by: string | null
+          depreciation_method: string
+          depreciation_start_date: string | null
+          id: string
+          import_batch_id: string | null
+          location: string | null
+          monthly_depreciation: number | null
+          notes: string | null
+          original_source_cost: string | null
+          outlet_id: string | null
+          record_source: string
+          reference_source_id: string | null
+          residual_value: number
+          size: string | null
+          source_file: string | null
+          source_row: number | null
+          source_sheet: string | null
+          subunit_id: string | null
+          supplier_name_raw: string | null
+          updated_at: string
+          updated_by: string | null
+          useful_life_months: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_operational_expense: {
+        Args: {
+          p_amount: number
+          p_cost_category_id: string
+          p_expense_date: string
+          p_notes?: string
+        }
+        Returns: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id: string | null
+          subunit_name_snapshot: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "operational_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_purchase_transaction: {
+        Args: {
+          p_external_invoice_number?: string
+          p_items: Json
+          p_notes?: string
+          p_outlet_id?: string
+          p_purchase_date: string
+          p_supplier_id?: string
+        }
+        Returns: string
+      }
+      create_sales_transaction: {
+        Args: {
+          p_entry_source?: string
+          p_items: Json
+          p_notes?: string
+          p_outlet_id?: string
+          p_transaction_date: string
+        }
+        Returns: string
+      }
       current_user_has_any_role: {
         Args: { p_roles: string[] }
         Returns: boolean
@@ -2381,6 +3979,33 @@ export type Database = {
       current_user_is_active: { Args: never; Returns: boolean }
       current_user_is_product_manager: { Args: never; Returns: boolean }
       current_user_is_super_admin: { Args: never; Returns: boolean }
+      generate_asset_depreciation: {
+        Args: { p_asset_id: string; p_through_period: string }
+        Returns: number
+      }
+      get_asset_book_values: {
+        Args: { p_as_of_period: string }
+        Returns: {
+          accumulated_depreciation: number
+          acquisition_cost: number
+          asset_id: string
+          book_value: number
+          outlet_id: string
+          subunit_id: string
+        }[]
+      }
+      get_asset_depreciation_summary: {
+        Args: { p_as_of_period: string }
+        Returns: {
+          accumulated_depreciation: number
+          acquisition_cost: number
+          asset_count: number
+          book_value: number
+          outlet_id: string
+          period_depreciation: number
+          subunit_id: string
+        }[]
+      }
       get_financial_statement_range: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -2405,6 +4030,10 @@ export type Database = {
           tax_recorded: boolean
         }[]
       }
+      get_july_actual_daily: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       get_operational_dashboard_month: {
         Args: { p_batch_key: string; p_month_start: string }
         Returns: {
@@ -2427,6 +4056,43 @@ export type Database = {
           item_name: string
           line_count: number
         }[]
+      }
+      get_stage7_current_inventory_report: {
+        Args: { p_outlet_id: string }
+        Returns: Json
+      }
+      get_stage7_outlet_report: {
+        Args: { p_end_date: string; p_outlet_id: string; p_start_date: string }
+        Returns: Json
+      }
+      get_stage7_product_report: {
+        Args: {
+          p_end_date: string
+          p_outlet_id: string
+          p_start_date: string
+          p_subunit_id?: string
+        }
+        Returns: Json
+      }
+      get_stage7_subunit_report: {
+        Args: { p_end_date: string; p_start_date: string; p_subunit_id: string }
+        Returns: Json
+      }
+      hard_delete_operational_asset: {
+        Args: { p_asset_id: string }
+        Returns: undefined
+      }
+      hard_delete_operational_expense: {
+        Args: { p_id: string }
+        Returns: string
+      }
+      hard_delete_purchase_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
+      hard_delete_sales_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
       }
       hard_delete_visitor: {
         Args: { p_visitor_id: string }
@@ -2467,9 +4133,48 @@ export type Database = {
         }
         Returns: Json
       }
+      lm_assert_forward_cost_date: {
+        Args: { p_effective_date: string; p_item_id: string }
+        Returns: undefined
+      }
+      lm_generate_purchase_number: { Args: never; Returns: string }
+      lm_generate_sales_transaction_number: { Args: never; Returns: string }
+      lm_insert_purchase_revision: {
+        Args: {
+          p_date: string
+          p_id: string
+          p_items: Json
+          p_outlet: string
+          p_revision: number
+        }
+        Returns: number
+      }
+      lm_insert_sales_transaction_items: {
+        Args: { p_items: Json; p_outlet_id: string; p_transaction_id: string }
+        Returns: number
+      }
       lm_is_active_admin: { Args: never; Returns: boolean }
       lm_is_active_staff_or_above: { Args: never; Returns: boolean }
       lm_is_active_super_admin: { Args: never; Returns: boolean }
+      lm_lock_cost_state: {
+        Args: { p_item_id: string }
+        Returns: {
+          current_wac: number | null
+          has_cost_basis: boolean
+          inventory_item_id: string
+          inventory_value: number
+          last_effective_date: string | null
+          last_posting_sequence: number | null
+          on_hand_quantity: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "inventory_cost_states"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       lm_mark_reconciled_batches_stale: {
         Args: {
           p_batch_ids: string[]
@@ -2478,9 +4183,78 @@ export type Database = {
         }
         Returns: undefined
       }
+      lm_post_purchase_cost: {
+        Args: {
+          p_date: string
+          p_item_id: string
+          p_quantity: number
+          p_reference: string
+          p_source_id: string
+          p_source_line_id: string
+          p_unit_cost: number
+        }
+        Returns: string
+      }
+      lm_post_sale_cost: {
+        Args: {
+          p_date: string
+          p_item_id: string
+          p_quantity: number
+          p_reference: string
+          p_source_id: string
+          p_source_line_id: string
+        }
+        Returns: {
+          cost_amount: number
+          cost_status: string
+          movement_id: string
+          unit_cost: number
+        }[]
+      }
+      lm_post_sales_inventory: {
+        Args: { p_transaction_id: string }
+        Returns: undefined
+      }
       lm_reconcile_import_batch_internal: {
         Args: { p_batch_id: string }
         Returns: Json
+      }
+      lm_resolve_sales_outlet: {
+        Args: { p_outlet_id?: string }
+        Returns: string
+      }
+      lm_reverse_cost_source: {
+        Args: { p_source_id: string; p_source_type: string }
+        Returns: undefined
+      }
+      lm_stage2_create_sales_transaction: {
+        Args: {
+          p_entry_source?: string
+          p_items: Json
+          p_notes?: string
+          p_outlet_id?: string
+          p_transaction_date: string
+        }
+        Returns: string
+      }
+      lm_stage2_update_sales_transaction: {
+        Args: {
+          p_items: Json
+          p_notes?: string
+          p_transaction_date: string
+          p_transaction_id: string
+        }
+        Returns: boolean
+      }
+      post_stock_opname: {
+        Args: {
+          p_items: Json
+          p_notes?: string
+          p_opname_date: string
+          p_outlet_id: string
+          p_subunit_id: string
+        }
+        Returns: string
       }
       record_report_export: {
         Args: {
@@ -2502,6 +4276,93 @@ export type Database = {
         Returns: Json
       }
       require_visitor_role: { Args: { p_roles: string[] }; Returns: string }
+      restore_operational_asset: {
+        Args: { p_asset_id: string }
+        Returns: {
+          accounting_policy_id: string | null
+          acquisition_cost: number
+          acquisition_date: string
+          adjustment_note: string | null
+          asset_category_id: string
+          asset_code: string
+          asset_name: string
+          asset_name_normalized: string
+          asset_source_key: string | null
+          asset_status: string
+          brand: string | null
+          capitalization_status: string
+          capitalization_threshold: number
+          correction_reason: string | null
+          created_at: string
+          created_by: string | null
+          data_origin: string
+          deleted_at: string | null
+          deleted_by: string | null
+          depreciation_method: string
+          depreciation_start_date: string | null
+          id: string
+          import_batch_id: string | null
+          location: string | null
+          monthly_depreciation: number | null
+          notes: string | null
+          original_source_cost: string | null
+          outlet_id: string | null
+          record_source: string
+          reference_source_id: string | null
+          residual_value: number
+          size: string | null
+          source_file: string | null
+          source_row: number | null
+          source_sheet: string | null
+          subunit_id: string | null
+          supplier_name_raw: string | null
+          updated_at: string
+          updated_by: string | null
+          useful_life_months: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      restore_operational_expense: {
+        Args: { p_id: string }
+        Returns: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id: string | null
+          subunit_name_snapshot: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "operational_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      restore_purchase_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
+      restore_sales_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       restore_visitor: { Args: { p_visitor_id: string }; Returns: undefined }
       restore_visitor_visit: {
         Args: { p_visit_id: string }
@@ -2531,7 +4392,15 @@ export type Database = {
         }[]
       }
       soft_delete_expense: { Args: { p_id: string }; Returns: boolean }
+      soft_delete_purchase_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       soft_delete_sale: { Args: { p_id: string }; Returns: boolean }
+      soft_delete_sales_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       soft_delete_visitor: {
         Args: { p_visitor_id: string }
         Returns: undefined
@@ -2539,6 +4408,126 @@ export type Database = {
       soft_delete_visitor_visit: {
         Args: { p_visit_id: string }
         Returns: undefined
+      }
+      stage7_resolve_expense: {
+        Args: {
+          p_amount: number
+          p_cost_category_id: string
+          p_expense_date: string
+        }
+        Returns: {
+          category_name: string
+          category_scope: string
+          outlet_id: string
+          outlet_name: string
+          subunit_id: string
+          subunit_name: string
+        }[]
+      }
+      update_operational_asset: {
+        Args: { p_asset: Json; p_asset_id: string }
+        Returns: {
+          accounting_policy_id: string | null
+          acquisition_cost: number
+          acquisition_date: string
+          adjustment_note: string | null
+          asset_category_id: string
+          asset_code: string
+          asset_name: string
+          asset_name_normalized: string
+          asset_source_key: string | null
+          asset_status: string
+          brand: string | null
+          capitalization_status: string
+          capitalization_threshold: number
+          correction_reason: string | null
+          created_at: string
+          created_by: string | null
+          data_origin: string
+          deleted_at: string | null
+          deleted_by: string | null
+          depreciation_method: string
+          depreciation_start_date: string | null
+          id: string
+          import_batch_id: string | null
+          location: string | null
+          monthly_depreciation: number | null
+          notes: string | null
+          original_source_cost: string | null
+          outlet_id: string | null
+          record_source: string
+          reference_source_id: string | null
+          residual_value: number
+          size: string | null
+          source_file: string | null
+          source_row: number | null
+          source_sheet: string | null
+          subunit_id: string | null
+          supplier_name_raw: string | null
+          updated_at: string
+          updated_by: string | null
+          useful_life_months: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "assets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_operational_expense: {
+        Args: {
+          p_amount: number
+          p_cost_category_id: string
+          p_expense_date: string
+          p_id: string
+          p_notes?: string
+        }
+        Returns: {
+          amount: number
+          category_name_snapshot: string
+          cost_category_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          expense_date: string
+          id: string
+          notes: string | null
+          outlet_id: string
+          outlet_name_snapshot: string
+          scope_snapshot: string
+          subunit_id: string | null
+          subunit_name_snapshot: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "operational_expenses"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_purchase_transaction: {
+        Args: {
+          p_external_invoice_number?: string
+          p_items: Json
+          p_notes?: string
+          p_purchase_date: string
+          p_supplier_id?: string
+          p_transaction_id: string
+        }
+        Returns: boolean
+      }
+      update_sales_transaction: {
+        Args: {
+          p_items: Json
+          p_notes?: string
+          p_transaction_date: string
+          p_transaction_id: string
+        }
+        Returns: boolean
       }
       update_visitor_identity: {
         Args: {
@@ -2566,6 +4555,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      void_stock_opname: {
+        Args: { p_stock_opname_id: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -2695,6 +4688,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "super_admin", "staff"],
