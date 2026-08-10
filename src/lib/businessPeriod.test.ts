@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { jakartaMonthRange, jakartaToday, validateBusinessRange } from "./businessPeriod";
+import {
+  dashboardPeriodRange,
+  jakartaMonthRange,
+  jakartaToday,
+  validateBusinessRange,
+} from "./businessPeriod";
 
 describe("business period", () => {
   it("uses the Jakarta calendar day", () => {
@@ -13,5 +18,17 @@ describe("business period", () => {
   });
   it("rejects a reversed range", () => {
     expect(validateBusinessRange({ startDate: "2026-07-02", endDate: "2026-07-01" })).toBeTruthy();
+  });
+  it("builds Dashboard month-to-date in Jakarta", () => {
+    expect(dashboardPeriodRange("monthToDate", "2026-08-10")).toEqual({
+      startDate: "2026-08-01",
+      endDate: "2026-08-10",
+    });
+  });
+  it("handles previous-month year boundaries", () => {
+    expect(dashboardPeriodRange("previousMonth", "2026-01-05")).toEqual({
+      startDate: "2025-12-01",
+      endDate: "2025-12-31",
+    });
   });
 });

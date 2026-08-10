@@ -4112,6 +4112,10 @@ export type Database = {
           subunit_id: string
         }[]
       }
+      get_dashboard_daily_series: {
+        Args: { p_end_date: string; p_outlet_id: string; p_start_date: string }
+        Returns: Json
+      }
       get_financial_statement_range: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
