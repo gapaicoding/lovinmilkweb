@@ -155,15 +155,20 @@ export function SalesTransactionManager() {
     setCategoryFilter,
   ] = useState("all");
 
+  const defaultListDate = useMemo(
+    () => getJakartaTodayIso(),
+    [],
+  );
+
   const [
     dateFrom,
     setDateFrom,
-  ] = useState("");
+  ] = useState(defaultListDate);
 
   const [
     dateTo,
     setDateTo,
-  ] = useState("");
+  ] = useState(defaultListDate);
 
   const [
     deletedFilter,
@@ -585,12 +590,20 @@ export function SalesTransactionManager() {
       setCategoryFilter(
         "all",
       );
-      setDateFrom("");
-      setDateTo("");
+      setDateFrom(
+        defaultListDate,
+      );
+      setDateTo(
+        defaultListDate,
+      );
       setDeletedFilter(
         "active",
       );
     };
+
+  const isDefaultTodayRange =
+    dateFrom === defaultListDate &&
+    dateTo === defaultListDate;
 
   const hasActiveFilters =
     Boolean(
@@ -600,8 +613,7 @@ export function SalesTransactionManager() {
       "all" ||
     categoryFilter !==
       "all" ||
-    Boolean(dateFrom) ||
-    Boolean(dateTo) ||
+    !isDefaultTodayRange ||
     (canViewDeletedData &&
       deletedFilter !==
         "active");
@@ -1246,7 +1258,9 @@ export function SalesTransactionManager() {
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
               {hasActiveFilters
                 ? "Tidak ada transaksi yang cocok dengan filter saat ini."
-                : "Belum ada transaksi penjualan pada sistem baru."}
+                : isDefaultTodayRange
+                  ? "Belum ada transaksi penjualan hari ini."
+                  : "Belum ada transaksi penjualan pada sistem baru."}
             </p>
 
             {hasActiveFilters ? (

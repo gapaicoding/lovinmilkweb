@@ -73,8 +73,9 @@ export function OperationalExpenseManager() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const defaultFilterDate = useMemo(() => jakartaToday(), []);
+  const [startDate, setStartDate] = useState(defaultFilterDate);
+  const [endDate, setEndDate] = useState(defaultFilterDate);
   const [confirm, setConfirm] = useState<{
     action: "archive" | "restore" | "delete";
     row: OperationalExpenseRow;
@@ -246,7 +247,7 @@ export function OperationalExpenseManager() {
           ) : null}
           {!expenses.isPending && filtered.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              Belum ada data pengeluaran.
+              Belum ada data pengeluaran pada periode ini.
             </p>
           ) : null}
           {filtered.length ? (
