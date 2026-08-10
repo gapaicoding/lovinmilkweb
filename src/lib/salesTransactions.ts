@@ -1,5 +1,43 @@
 export type SalesEntrySource = "manual" | "visitor";
 
+export type SalesVisitMode = "none" | "existing" | "new";
+
+export interface ExistingVisitOption {
+  visitId: string;
+  visitorId: string | null;
+  visitorName: string;
+  visitorPhone: string | null;
+  adultCount: number;
+  childCount: number;
+  totalVisitors: number;
+  activeTransactionCount: number;
+  activePurchaseTotal: number;
+  checkOutAt: string | null;
+}
+
+export interface NewVisitInput {
+  visitorId: string | null;
+  adultCount: number;
+  childCount: number;
+  notes: string | null;
+}
+
+export interface LinkedVisitSummary {
+  visitId: string;
+  visitorId: string | null;
+  visitorName: string;
+  adultCount: number;
+  childCount: number;
+  totalVisitors: number;
+  visitDate: string;
+  deletedAt: string | null;
+}
+
+export type SalesVisitSelection =
+  | { mode: "none" }
+  | { mode: "existing"; existingVisitId: string }
+  | { mode: "new"; newVisit: NewVisitInput };
+
 export interface SalesTransactionFormItem {
   productId: string;
   quantity: number;
@@ -69,6 +107,9 @@ export interface SalesTransaction {
   deletedAt: string | null;
   deletedBy: string | null;
 
+  visitorVisitId: string | null;
+  linkedVisit: LinkedVisitSummary | null;
+
   items: SalesTransactionItem[];
 }
 
@@ -85,6 +126,7 @@ export interface CreateSalesTransactionInput {
   notes?: string | null;
   entrySource?: SalesEntrySource;
   outletId?: string | null;
+  visit?: SalesVisitSelection;
 }
 
 export interface UpdateSalesTransactionInput {
@@ -92,6 +134,7 @@ export interface UpdateSalesTransactionInput {
   transactionDate: string;
   items: readonly SalesTransactionFormItem[];
   notes?: string | null;
+  visit?: SalesVisitSelection;
 }
 
 export interface CreateSalesTransactionRpcArgs {
@@ -100,6 +143,8 @@ export interface CreateSalesTransactionRpcArgs {
   p_notes: string | null;
   p_entry_source: SalesEntrySource;
   p_outlet_id: string | null;
+  p_existing_visit_id: string | null;
+  p_new_visit: NewVisitRpcInput | null;
 }
 
 export interface UpdateSalesTransactionRpcArgs {
@@ -107,6 +152,15 @@ export interface UpdateSalesTransactionRpcArgs {
   p_transaction_date: string;
   p_items: SalesTransactionRpcItem[];
   p_notes: string | null;
+  p_existing_visit_id: string | null;
+  p_new_visit: NewVisitRpcInput | null;
+}
+
+export interface NewVisitRpcInput {
+  visitor_id: string | null;
+  adult_count: number;
+  child_count: number;
+  notes: string | null;
 }
 
 export interface SalesMoneyLine {
@@ -233,6 +287,7 @@ export function buildCreateTransactionPayload(
     p_notes: normalizeNotes(input.notes, "Catatan transaksi"),
     p_entry_source: normalizeEntrySource(input.entrySource),
     p_outlet_id: outletId,
+    ...normalizeVisitSelection(input.visit),
   };
 }
 
@@ -249,6 +304,45 @@ export function buildUpdateTransactionPayload(
     p_transaction_date: normalizeTransactionDate(input.transactionDate),
     p_items: normalizeTransactionItems(input.items),
     p_notes: normalizeNotes(input.notes, "Catatan transaksi"),
+    ...normalizeVisitSelection(input.visit),
+  };
+}
+
+function normalizeVisitSelection(
+  selection: SalesVisitSelection = { mode: "none" },
+): Pick<CreateSalesTransactionRpcArgs, "p_existing_visit_id" | "p_new_visit"> {
+  if (selection.mode === "none") {
+    return { p_existing_visit_id: null, p_new_visit: null };
+  }
+
+  if (selection.mode === "existing") {
+    return {
+      p_existing_visit_id: normalizeUuid(selection.existingVisitId, "Kunjungan"),
+      p_new_visit: null,
+    };
+  }
+
+  const { newVisit } = selection;
+  if (!Number.isInteger(newVisit.adultCount) || newVisit.adultCount < 0) {
+    throw new Error("Jumlah pengunjung dewasa harus berupa bilangan bulat minimal 0.");
+  }
+  if (!Number.isInteger(newVisit.childCount) || newVisit.childCount < 0) {
+    throw new Error("Jumlah pengunjung anak harus berupa bilangan bulat minimal 0.");
+  }
+  if (newVisit.adultCount + newVisit.childCount < 1) {
+    throw new Error("Jumlah pengunjung minimal satu orang.");
+  }
+
+  return {
+    p_existing_visit_id: null,
+    p_new_visit: {
+      visitor_id: newVisit.visitorId
+        ? normalizeUuid(newVisit.visitorId, "Pengunjung")
+        : null,
+      adult_count: newVisit.adultCount,
+      child_count: newVisit.childCount,
+      notes: normalizeNotes(newVisit.notes, "Catatan kunjungan"),
+    },
   };
 }
 

@@ -5,9 +5,12 @@ import {
   Package,
   ReceiptText,
   Store,
+  Users,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   formatDate,
   formatDateTime,
@@ -157,6 +160,31 @@ export function SalesTransactionDetail({
           </p>
         </div>
       ) : null}
+
+      <div className="space-y-3 rounded-lg border p-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold">Kunjungan Pengunjung</h3>
+        </div>
+        {transaction.linkedVisit ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium">{transaction.linkedVisit.visitorName}</p>
+              <p className="text-sm text-muted-foreground">
+                {transaction.linkedVisit.adultCount} dewasa · {transaction.linkedVisit.childCount} anak ·{" "}
+                {transaction.linkedVisit.totalVisitors} pengunjung · {formatDate(transaction.linkedVisit.visitDate)}
+              </p>
+            </div>
+            <Button asChild type="button" variant="outline" size="sm">
+              <Link to="/kunjungan" search={{ visitId: transaction.linkedVisit.visitId }}>
+                Lihat Kunjungan
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Tidak ada kunjungan yang dicatat.</p>
+        )}
+      </div>
 
       {/* =====================================================
           ITEMS

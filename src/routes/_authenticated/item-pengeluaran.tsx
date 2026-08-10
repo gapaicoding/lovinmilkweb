@@ -1,8 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ExpenseItemManager } from "@/components/ExpenseItemManager";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
-export const Route = createFileRoute(
-  "/_authenticated/item-pengeluaran",
-)({
-  component: () => <ExpenseItemManager />,
+export const Route = createFileRoute("/_authenticated/item-pengeluaran")({
+  component: () => <Navigate to="/pengeluaran" replace />,
 });

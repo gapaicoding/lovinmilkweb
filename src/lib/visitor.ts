@@ -18,6 +18,14 @@ export interface VisitProductSummary {
   amount: number;
 }
 
+export interface LinkedVisitorSalesTransaction {
+  transaction_id: string;
+  transaction_number: string;
+  transaction_date: string;
+  total_amount: number;
+  deleted_at: string | null;
+}
+
 export interface VisitorVisitRow {
   id: string;
   visitor_id: string;
@@ -27,6 +35,18 @@ export interface VisitorVisitRow {
   check_in_at: string;
   check_out_at: string | null;
   notes: string | null;
+  outlet_id: string | null;
+  visit_date: string;
+  adult_count: number | null;
+  child_count: number | null;
+  total_visitors: number | null;
+  record_source: "legacy_manual" | "operational";
+  active_transaction_count: number;
+  active_purchase_total: number;
+  archived_transaction_count: number;
+  linked_transactions: LinkedVisitorSalesTransaction[];
+  legacy_manual_purchase_amount: number | null;
+  legacy_manual_quantity: number | null;
   total_quantity: number;
   total_amount: number;
   products: VisitProductSummary[];
@@ -96,6 +116,29 @@ function parseVisitRow(value: Json): VisitorVisitRow | null {
     check_in_at: String(row.check_in_at ?? ""),
     check_out_at: typeof row.check_out_at === "string" ? row.check_out_at : null,
     notes: typeof row.notes === "string" ? row.notes : null,
+    outlet_id: typeof row.outlet_id === "string" ? row.outlet_id : null,
+    visit_date: String(row.visit_date ?? ""),
+    adult_count: toNullableNumber(row.adult_count),
+    child_count: toNullableNumber(row.child_count),
+    total_visitors: toNullableNumber(row.total_visitors),
+    record_source: row.record_source === "operational" ? "operational" : "legacy_manual",
+    active_transaction_count: toNumber(row.active_transaction_count),
+    active_purchase_total: toNumber(row.active_purchase_total),
+    archived_transaction_count: toNumber(row.archived_transaction_count),
+    linked_transactions: Array.isArray(row.linked_transactions)
+      ? row.linked_transactions.map((transaction) => {
+          const item = asRecord(transaction);
+          return {
+            transaction_id: String(item.transaction_id ?? ""),
+            transaction_number: String(item.transaction_number ?? ""),
+            transaction_date: String(item.transaction_date ?? ""),
+            total_amount: toNumber(item.total_amount),
+            deleted_at: typeof item.deleted_at === "string" ? item.deleted_at : null,
+          };
+        })
+      : [],
+    legacy_manual_purchase_amount: toNullableNumber(row.legacy_manual_purchase_amount),
+    legacy_manual_quantity: toNullableNumber(row.legacy_manual_quantity),
     total_quantity: toNumber(row.total_quantity),
     total_amount: toNumber(row.total_amount),
     products: Array.isArray(row.products)
@@ -110,6 +153,12 @@ function parseVisitRow(value: Json): VisitorVisitRow | null {
         })
       : [],
   };
+}
+
+function toNullableNumber(value: Json | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function asRecord(value: Json | undefined): Record<string, Json | undefined> {

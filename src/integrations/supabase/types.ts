@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       asset_accounting_policies: {
@@ -1711,14 +1686,20 @@ export type Database = {
           deleted_by: string | null
           expense_date: string
           id: string
+          item_name: string | null
           notes: string | null
           outlet_id: string
           outlet_name_snapshot: string
+          quantity: number | null
+          receipt_reference: string | null
           scope_snapshot: string
           subunit_id: string | null
           subunit_name_snapshot: string | null
+          unit: string | null
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
+          vendor_name: string | null
         }
         Insert: {
           amount: number
@@ -1730,14 +1711,20 @@ export type Database = {
           deleted_by?: string | null
           expense_date: string
           id?: string
+          item_name?: string | null
           notes?: string | null
           outlet_id: string
           outlet_name_snapshot: string
+          quantity?: number | null
+          receipt_reference?: string | null
           scope_snapshot: string
           subunit_id?: string | null
           subunit_name_snapshot?: string | null
+          unit?: string | null
+          unit_price?: number | null
           updated_at?: string
           updated_by?: string | null
+          vendor_name?: string | null
         }
         Update: {
           amount?: number
@@ -1749,14 +1736,20 @@ export type Database = {
           deleted_by?: string | null
           expense_date?: string
           id?: string
+          item_name?: string | null
           notes?: string | null
           outlet_id?: string
           outlet_name_snapshot?: string
+          quantity?: number | null
+          receipt_reference?: string | null
           scope_snapshot?: string
           subunit_id?: string | null
           subunit_name_snapshot?: string | null
+          unit?: string | null
+          unit_price?: number | null
           updated_at?: string
           updated_by?: string | null
+          vendor_name?: string | null
         }
         Relationships: [
           {
@@ -3005,6 +2998,7 @@ export type Database = {
           transaction_number: string
           updated_at: string
           updated_by: string | null
+          visitor_visit_id: string | null
         }
         Insert: {
           created_at?: string
@@ -3020,6 +3014,7 @@ export type Database = {
           transaction_number: string
           updated_at?: string
           updated_by?: string | null
+          visitor_visit_id?: string | null
         }
         Update: {
           created_at?: string
@@ -3035,6 +3030,7 @@ export type Database = {
           transaction_number?: string
           updated_at?: string
           updated_by?: string | null
+          visitor_visit_id?: string | null
         }
         Relationships: [
           {
@@ -3063,6 +3059,13 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_transactions_visitor_visit_id_fkey"
+            columns: ["visitor_visit_id"]
+            isOneToOne: false
+            referencedRelation: "visitor_visits"
             referencedColumns: ["id"]
           },
         ]
@@ -3495,45 +3498,67 @@ export type Database = {
       }
       visitor_visits: {
         Row: {
+          adult_count: number | null
           check_in_at: string
           check_out_at: string | null
+          child_count: number | null
           created_at: string
           created_by: string
           deleted_at: string | null
           deleted_by: string | null
           id: string
           notes: string | null
+          outlet_id: string | null
+          record_source: string
           updated_at: string
           updated_by: string
-          visitor_id: string
+          visit_date: string | null
+          visitor_id: string | null
         }
         Insert: {
+          adult_count?: number | null
           check_in_at?: string
           check_out_at?: string | null
+          child_count?: number | null
           created_at?: string
           created_by: string
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           notes?: string | null
+          outlet_id?: string | null
+          record_source?: string
           updated_at?: string
           updated_by: string
-          visitor_id: string
+          visit_date?: string | null
+          visitor_id?: string | null
         }
         Update: {
+          adult_count?: number | null
           check_in_at?: string
           check_out_at?: string | null
+          child_count?: number | null
           created_at?: string
           created_by?: string
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
           notes?: string | null
+          outlet_id?: string | null
+          record_source?: string
           updated_at?: string
           updated_by?: string
-          visitor_id?: string
+          visit_date?: string | null
+          visitor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "visitor_visits_outlet_id_fkey"
+            columns: ["outlet_id"]
+            isOneToOne: false
+            referencedRelation: "outlets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "visitor_visits_visitor_id_fkey"
             columns: ["visitor_id"]
@@ -3841,14 +3866,20 @@ export type Database = {
           deleted_by: string | null
           expense_date: string
           id: string
+          item_name: string | null
           notes: string | null
           outlet_id: string
           outlet_name_snapshot: string
+          quantity: number | null
+          receipt_reference: string | null
           scope_snapshot: string
           subunit_id: string | null
           subunit_name_snapshot: string | null
+          unit: string | null
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
+          vendor_name: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3918,38 +3949,101 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      create_operational_expense: {
+      create_operational_expense:
+        | {
+            Args: {
+              p_amount: number
+              p_cost_category_id: string
+              p_expense_date: string
+              p_notes?: string
+            }
+            Returns: {
+              amount: number
+              category_name_snapshot: string
+              cost_category_id: string
+              created_at: string
+              created_by: string | null
+              deleted_at: string | null
+              deleted_by: string | null
+              expense_date: string
+              id: string
+              item_name: string | null
+              notes: string | null
+              outlet_id: string
+              outlet_name_snapshot: string
+              quantity: number | null
+              receipt_reference: string | null
+              scope_snapshot: string
+              subunit_id: string | null
+              subunit_name_snapshot: string | null
+              unit: string | null
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+              vendor_name: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "operational_expenses"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_cost_category_id: string
+              p_expense_date: string
+              p_item_name: string
+              p_notes?: string
+              p_quantity: number
+              p_receipt_reference?: string
+              p_unit: string
+              p_unit_price: number
+              p_vendor_name?: string
+            }
+            Returns: {
+              amount: number
+              category_name_snapshot: string
+              cost_category_id: string
+              created_at: string
+              created_by: string | null
+              deleted_at: string | null
+              deleted_by: string | null
+              expense_date: string
+              id: string
+              item_name: string | null
+              notes: string | null
+              outlet_id: string
+              outlet_name_snapshot: string
+              quantity: number | null
+              receipt_reference: string | null
+              scope_snapshot: string
+              subunit_id: string | null
+              subunit_name_snapshot: string | null
+              unit: string | null
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+              vendor_name: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "operational_expenses"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      create_operational_visitor_visit: {
         Args: {
-          p_amount: number
-          p_cost_category_id: string
-          p_expense_date: string
+          p_adult_count: number
+          p_child_count: number
           p_notes?: string
+          p_outlet_id?: string
+          p_visit_date: string
+          p_visitor_id?: string
         }
-        Returns: {
-          amount: number
-          category_name_snapshot: string
-          cost_category_id: string
-          created_at: string
-          created_by: string | null
-          deleted_at: string | null
-          deleted_by: string | null
-          expense_date: string
-          id: string
-          notes: string | null
-          outlet_id: string
-          outlet_name_snapshot: string
-          scope_snapshot: string
-          subunit_id: string | null
-          subunit_name_snapshot: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "operational_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
+        Returns: string
       }
       create_purchase_transaction: {
         Args: {
@@ -3971,6 +4065,18 @@ export type Database = {
           p_transaction_date: string
         }
         Returns: string
+      }
+      create_sales_transaction_with_visit: {
+        Args: {
+          p_entry_source?: string
+          p_existing_visit_id?: string
+          p_items: Json
+          p_new_visit?: Json
+          p_notes?: string
+          p_outlet_id?: string
+          p_transaction_date: string
+        }
+        Returns: Json
       }
       current_user_has_any_role: {
         Args: { p_roles: string[] }
@@ -4057,6 +4163,20 @@ export type Database = {
           line_count: number
         }[]
       }
+      get_sales_linked_visit_summaries: {
+        Args: { p_transaction_ids: string[] }
+        Returns: {
+          adult_count: number
+          child_count: number
+          sales_transaction_id: string
+          total_visitors: number
+          visit_date: string
+          visit_deleted_at: string
+          visit_id: string
+          visitor_id: string
+          visitor_name: string
+        }[]
+      }
       get_stage7_current_inventory_report: {
         Args: { p_outlet_id: string }
         Returns: Json
@@ -4113,6 +4233,21 @@ export type Database = {
       }
       is_admin_or_super_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      list_visitor_visit_options: {
+        Args: { p_outlet_id: string; p_visit_date: string }
+        Returns: {
+          active_purchase_total: number
+          active_transaction_count: number
+          adult_count: number
+          check_out_at: string
+          child_count: number
+          total_visitors: number
+          visit_id: string
+          visitor_id: string
+          visitor_name: string
+          visitor_phone: string
+        }[]
+      }
       list_visitor_visits: {
         Args: {
           p_from?: string
@@ -4136,6 +4271,17 @@ export type Database = {
       lm_assert_forward_cost_date: {
         Args: { p_effective_date: string; p_item_id: string }
         Returns: undefined
+      }
+      lm_create_operational_visitor_visit: {
+        Args: {
+          p_adult_count: number
+          p_child_count: number
+          p_notes: string
+          p_outlet_id: string
+          p_visit_date: string
+          p_visitor_id: string
+        }
+        Returns: string
       }
       lm_generate_purchase_number: { Args: never; Returns: string }
       lm_generate_sales_transaction_number: { Args: never; Returns: string }
@@ -4339,14 +4485,20 @@ export type Database = {
           deleted_by: string | null
           expense_date: string
           id: string
+          item_name: string | null
           notes: string | null
           outlet_id: string
           outlet_name_snapshot: string
+          quantity: number | null
+          receipt_reference: string | null
           scope_snapshot: string
           subunit_id: string | null
           subunit_name_snapshot: string | null
+          unit: string | null
+          unit_price: number | null
           updated_at: string
           updated_by: string | null
+          vendor_name: string | null
         }
         SetofOptions: {
           from: "*"
@@ -4424,6 +4576,23 @@ export type Database = {
           subunit_name: string
         }[]
       }
+      stage7_resolve_outlet_expense_detail: {
+        Args: {
+          p_amount: number
+          p_cost_category_id: string
+          p_expense_date: string
+          p_item_name: string
+          p_quantity: number
+          p_unit: string
+          p_unit_price: number
+        }
+        Returns: {
+          category_name: string
+          category_scope: string
+          outlet_id: string
+          outlet_name: string
+        }[]
+      }
       update_operational_asset: {
         Args: { p_asset: Json; p_asset_id: string }
         Returns: {
@@ -4475,40 +4644,93 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      update_operational_expense: {
-        Args: {
-          p_amount: number
-          p_cost_category_id: string
-          p_expense_date: string
-          p_id: string
-          p_notes?: string
-        }
-        Returns: {
-          amount: number
-          category_name_snapshot: string
-          cost_category_id: string
-          created_at: string
-          created_by: string | null
-          deleted_at: string | null
-          deleted_by: string | null
-          expense_date: string
-          id: string
-          notes: string | null
-          outlet_id: string
-          outlet_name_snapshot: string
-          scope_snapshot: string
-          subunit_id: string | null
-          subunit_name_snapshot: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "operational_expenses"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      update_operational_expense:
+        | {
+            Args: {
+              p_amount: number
+              p_cost_category_id: string
+              p_expense_date: string
+              p_id: string
+              p_notes?: string
+            }
+            Returns: {
+              amount: number
+              category_name_snapshot: string
+              cost_category_id: string
+              created_at: string
+              created_by: string | null
+              deleted_at: string | null
+              deleted_by: string | null
+              expense_date: string
+              id: string
+              item_name: string | null
+              notes: string | null
+              outlet_id: string
+              outlet_name_snapshot: string
+              quantity: number | null
+              receipt_reference: string | null
+              scope_snapshot: string
+              subunit_id: string | null
+              subunit_name_snapshot: string | null
+              unit: string | null
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+              vendor_name: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "operational_expenses"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_cost_category_id: string
+              p_expense_date: string
+              p_id: string
+              p_item_name: string
+              p_notes?: string
+              p_quantity: number
+              p_receipt_reference?: string
+              p_unit: string
+              p_unit_price: number
+              p_vendor_name?: string
+            }
+            Returns: {
+              amount: number
+              category_name_snapshot: string
+              cost_category_id: string
+              created_at: string
+              created_by: string | null
+              deleted_at: string | null
+              deleted_by: string | null
+              expense_date: string
+              id: string
+              item_name: string | null
+              notes: string | null
+              outlet_id: string
+              outlet_name_snapshot: string
+              quantity: number | null
+              receipt_reference: string | null
+              scope_snapshot: string
+              subunit_id: string | null
+              subunit_name_snapshot: string | null
+              unit: string | null
+              unit_price: number | null
+              updated_at: string
+              updated_by: string | null
+              vendor_name: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "operational_expenses"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       update_purchase_transaction: {
         Args: {
           p_external_invoice_number?: string
@@ -4528,6 +4750,17 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: boolean
+      }
+      update_sales_transaction_with_visit: {
+        Args: {
+          p_existing_visit_id?: string
+          p_items: Json
+          p_new_visit?: Json
+          p_notes?: string
+          p_transaction_date: string
+          p_transaction_id: string
+        }
+        Returns: Json
       }
       update_visitor_identity: {
         Args: {
@@ -4688,9 +4921,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: ["admin", "super_admin", "staff"],

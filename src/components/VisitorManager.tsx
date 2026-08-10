@@ -220,7 +220,7 @@ export function VisitorManager() {
     <div className="space-y-4">
       <PageHeader
         title="Master Pengunjung"
-        description="Lihat, koreksi identitas, dan pantau riwayat pengunjung yang terbentuk dari proses operasional."
+        description="Lihat dan koreksi identitas pengunjung. Nilai di tabel ini adalah pembelian manual lama yang dipertahankan sebagai riwayat."
         actions={
           <ExportExcelDialog
             reportType="visitors"
@@ -285,8 +285,8 @@ export function VisitorManager() {
                     <TableHead>Pengunjung</TableHead>
                     <TableHead>Kunjungan</TableHead>
                     <TableHead>Terakhir</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Qty Manual Lama</TableHead>
+                    <TableHead className="text-right">Pembelian Manual Lama</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>

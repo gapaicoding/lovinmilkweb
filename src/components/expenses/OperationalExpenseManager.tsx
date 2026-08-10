@@ -1,72 +1,146 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Archive, Loader2, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  type OperationalExpenseRow,
-  useOperationalExpenses,
-} from "@/hooks/useOperationalExpenses";
+import { type OperationalExpenseRow, useOperationalExpenses } from "@/hooks/useOperationalExpenses";
 import { jakartaToday } from "@/lib/businessPeriod";
 import {
-  expenseScopeLabel,
+  suggestedExpenseAmount,
   type OperationalExpenseInput,
   validateOperationalExpense,
 } from "@/lib/operationalExpenses";
+import { ExpenseExportDialog } from "@/components/expenses/ExpenseExportDialog";
 import { formatDate, formatRupiah } from "@/lib/format";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
-const EMPTY: OperationalExpenseInput = {
+const emptyForm = (): OperationalExpenseInput => ({
   expenseDate: jakartaToday(),
+  itemName: "",
+  quantity: 0,
+  unit: "",
+  unitPrice: 0,
   amount: 0,
   costCategoryId: "",
+  receiptReference: "",
+  vendorName: "",
   notes: "",
-};
+});
 
 export function OperationalExpenseManager() {
   const permissions = useAuth();
-  const showArchived = permissions.canViewDeletedData;
-  const { expenses, categories, mutation } = useOperationalExpenses(showArchived);
+  const { expenses, categories, mutation } = useOperationalExpenses(permissions.canViewDeletedData);
   const [editing, setEditing] = useState<OperationalExpenseRow | null>(null);
-  const [form, setForm] = useState<OperationalExpenseInput>(EMPTY);
+  const [form, setForm] = useState(emptyForm);
+  const [totalEdited, setTotalEdited] = useState(false);
   const [open, setOpen] = useState(false);
-  const [confirm, setConfirm] = useState<{ action: "archive" | "restore" | "delete"; row: OperationalExpenseRow } | null>(null);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [confirm, setConfirm] = useState<{
+    action: "archive" | "restore" | "delete";
+    row: OperationalExpenseRow;
+  } | null>(null);
 
-  const categoryMap = useMemo(
-    () => new Map((categories.data ?? []).map((category) => [category.id, category])),
-    [categories.data],
+  const filtered = useMemo(
+    () =>
+      (expenses.data ?? []).filter((row) => {
+        const haystack = [
+          row.item_name,
+          row.category_name_snapshot,
+          row.receipt_reference,
+          row.vendor_name,
+        ]
+          .join(" ")
+          .toLocaleLowerCase("id-ID");
+        return (
+          (!search || haystack.includes(search.toLocaleLowerCase("id-ID"))) &&
+          (category === "all" || row.cost_category_id === category) &&
+          (!startDate || row.expense_date >= startDate) &&
+          (!endDate || row.expense_date <= endDate)
+        );
+      }),
+    [expenses.data, search, category, startDate, endDate],
   );
+  const active = filtered.filter((row) => !row.deleted_at);
+  const total = active.reduce((sum, row) => sum + Number(row.amount), 0);
 
   const beginCreate = () => {
     setEditing(null);
-    setForm({ ...EMPTY, expenseDate: jakartaToday() });
+    setForm(emptyForm());
+    setTotalEdited(false);
     setOpen(true);
   };
   const beginEdit = (row: OperationalExpenseRow) => {
     setEditing(row);
     setForm({
       expenseDate: row.expense_date,
+      itemName: row.item_name ?? "",
+      quantity: Number(row.quantity ?? 0),
+      unit: row.unit ?? "",
+      unitPrice: Number(row.unit_price ?? 0),
       amount: Number(row.amount),
       costCategoryId: row.cost_category_id,
+      receiptReference: row.receipt_reference ?? "",
+      vendorName: row.vendor_name ?? "",
       notes: row.notes ?? "",
     });
+    setTotalEdited(true);
     setOpen(true);
   };
+  const setNumeric = (field: "quantity" | "unitPrice", value: number) =>
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      return totalEdited
+        ? next
+        : { ...next, amount: suggestedExpenseAmount(next.quantity, next.unitPrice) };
+    });
   const save = async () => {
-    const validation = validateOperationalExpense(form);
-    if (validation) return toast.error(validation);
+    const error = validateOperationalExpense(form);
+    if (error) return toast.error(error);
     try {
       await mutation.mutateAsync(
-        editing ? { action: "update", id: editing.id, input: form } : { action: "create", input: form },
+        editing
+          ? { action: "update", id: editing.id, input: form }
+          : { action: "create", input: form },
       );
       toast.success(editing ? "Pengeluaran diperbarui." : "Pengeluaran dicatat.");
       setOpen(false);
@@ -74,11 +148,11 @@ export function OperationalExpenseManager() {
       toast.error(error instanceof Error ? error.message : "Pengeluaran gagal disimpan.");
     }
   };
-  const runLifecycle = async () => {
+  const lifecycle = async () => {
     if (!confirm) return;
     try {
       await mutation.mutateAsync({ action: confirm.action, id: confirm.row.id });
-      toast.success(confirm.action === "archive" ? "Pengeluaran diarsipkan." : confirm.action === "restore" ? "Pengeluaran dipulihkan." : "Pengeluaran dihapus permanen.");
+      toast.success("Lifecycle pengeluaran berhasil diperbarui.");
       setConfirm(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Aksi lifecycle gagal.");
@@ -86,55 +160,337 @@ export function OperationalExpenseManager() {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <div>
-          <CardTitle>Pengeluaran Operasional</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Biaya langsung Subunit dan biaya bersama Outlet berdasarkan kategori biaya.
-          </p>
-        </div>
-        {permissions.canManageExpenses ? <Button onClick={beginCreate}><Plus className="mr-2 h-4 w-4" />Catat</Button> : null}
-      </CardHeader>
-      <CardContent>
-        {expenses.isError ? <Alert variant="destructive"><AlertTitle>Data gagal dimuat</AlertTitle><AlertDescription>{expenses.error.message}</AlertDescription></Alert> : null}
-        {expenses.isPending ? <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div> : null}
-        {!expenses.isPending && (expenses.data?.length ?? 0) === 0 ? <p className="py-10 text-center text-sm text-muted-foreground">Belum ada pengeluaran operasional.</p> : null}
-        {(expenses.data?.length ?? 0) > 0 ? (
-          <div className="overflow-x-auto"><Table>
-            <TableHeader><TableRow><TableHead>Tanggal</TableHead><TableHead>Kategori</TableHead><TableHead>Cakupan</TableHead><TableHead>Catatan</TableHead><TableHead className="text-right">Nominal</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader>
-            <TableBody>{expenses.data?.map((row) => (
-              <TableRow key={row.id} className={row.deleted_at ? "opacity-60" : ""}>
-                <TableCell>{formatDate(row.expense_date)}</TableCell>
-                <TableCell className="font-medium">{row.category_name_snapshot}</TableCell>
-                <TableCell><Badge variant="outline">{expenseScopeLabel(row.scope_snapshot, row.subunit_name_snapshot)}</Badge></TableCell>
-                <TableCell>{row.notes || "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatRupiah(Number(row.amount))}</TableCell>
-                <TableCell><div className="flex justify-end gap-1">
-                  {!row.deleted_at && permissions.canManageExpenses ? <><Button size="icon" variant="ghost" aria-label="Edit" onClick={() => beginEdit(row)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label="Arsipkan" onClick={() => setConfirm({ action: "archive", row })}><Archive className="h-4 w-4" /></Button></> : null}
-                  {row.deleted_at && permissions.isSuperAdmin ? <><Button size="icon" variant="ghost" aria-label="Pulihkan" onClick={() => setConfirm({ action: "restore", row })}><RotateCcw className="h-4 w-4" /></Button><Button size="icon" variant="ghost" aria-label="Hapus permanen" onClick={() => setConfirm({ action: "delete", row })}><Trash2 className="h-4 w-4" /></Button></> : null}
-                </div></TableCell>
-              </TableRow>
-            ))}</TableBody>
-          </Table></div>
-        ) : null}
-      </CardContent>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div>
+            <CardTitle>Data Pengeluaran</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Pencatatan biaya bersama Outlet Kadirojo.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <ExpenseExportDialog rows={expenses.data ?? []} categories={categories.data ?? []} />
+            {permissions.canManageExpenses ? (
+              <Button onClick={beginCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Catat Pengeluaran
+              </Button>
+            ) : null}
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <Input
+            aria-label="Cari pengeluaran"
+            placeholder="Cari barang, kategori, nota, toko"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger aria-label="Filter kategori">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Kategori</SelectItem>
+              {categories.data?.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            aria-label="Tanggal mulai"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+          <Input
+            aria-label="Tanggal akhir"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </CardContent>
+      </Card>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["Jumlah Pencatatan", active.length.toLocaleString("id-ID")],
+          ["Total Pengeluaran", formatRupiah(total)],
+          [
+            "Kategori Digunakan",
+            new Set(active.map((row) => row.cost_category_id)).size.toString(),
+          ],
+          ["Rata-rata", formatRupiah(active.length ? total / active.length : 0)],
+        ].map(([label, value]) => (
+          <Card key={label}>
+            <CardContent className="pt-5">
+              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className="mt-1 text-xl font-semibold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardContent className="pt-6">
+          {expenses.isError ? (
+            <Alert variant="destructive">
+              <AlertTitle>Data gagal dimuat</AlertTitle>
+              <AlertDescription>{expenses.error.message}</AlertDescription>
+            </Alert>
+          ) : null}
+          {expenses.isPending ? (
+            <div className="flex justify-center p-10">
+              <Loader2 className="animate-spin" />
+            </div>
+          ) : null}
+          {!expenses.isPending && filtered.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Belum ada data pengeluaran.
+            </p>
+          ) : null}
+          {filtered.length ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead>Nama Barang</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead>Jumlah</TableHead>
+                    <TableHead>Satuan</TableHead>
+                    <TableHead>Nota</TableHead>
+                    <TableHead>Toko</TableHead>
+                    <TableHead className="text-right">Harga Total</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((row) => (
+                    <TableRow key={row.id} className={row.deleted_at ? "opacity-60" : ""}>
+                      <TableCell>{formatDate(row.expense_date)}</TableCell>
+                      <TableCell className="min-w-40 font-medium">
+                        {row.item_name ?? (
+                          <span className="text-muted-foreground">Data historis</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="min-w-48">{row.category_name_snapshot}</TableCell>
+                      <TableCell>{row.quantity ?? "â€”"}</TableCell>
+                      <TableCell>{row.unit ?? "â€”"}</TableCell>
+                      <TableCell>{row.receipt_reference ?? "â€”"}</TableCell>
+                      <TableCell>{row.vendor_name ?? "â€”"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatRupiah(Number(row.amount))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {row.deleted_at ? <Badge variant="secondary">Arsip</Badge> : null}
+                          {!row.deleted_at && permissions.canManageExpenses ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Edit pengeluaran"
+                                onClick={() => beginEdit(row)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Arsipkan pengeluaran"
+                                onClick={() => setConfirm({ action: "archive", row })}
+                              >
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : null}
+                          {row.deleted_at && permissions.isSuperAdmin ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Pulihkan pengeluaran"
+                                onClick={() => setConfirm({ action: "restore", row })}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label="Hapus permanen pengeluaran"
+                                onClick={() => setConfirm({ action: "delete", row })}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Pengeluaran" : "Catat Pengeluaran"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Tanggal *" id="expense-date">
+              <Input
+                id="expense-date"
+                type="date"
+                value={form.expenseDate}
+                onChange={(e) => setForm({ ...form, expenseDate: e.target.value })}
+              />
+            </Field>
+            <Field label="Nama Barang *" id="expense-item" wide>
+              <Input
+                id="expense-item"
+                maxLength={200}
+                value={form.itemName}
+                onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+              />
+            </Field>
+            <Field label="Jumlah / Ukuran *" id="expense-quantity">
+              <Input
+                id="expense-quantity"
+                type="number"
+                min="0.0001"
+                step="any"
+                value={form.quantity || ""}
+                onChange={(e) => setNumeric("quantity", Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Satuan Ukuran *" id="expense-unit">
+              <Input
+                id="expense-unit"
+                list="expense-units"
+                maxLength={50}
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              />
+              <datalist id="expense-units">
+                {["pcs", "kg", "pack", "ikat", "dus", "gr", "ons", "mtr"].map((unit) => (
+                  <option key={unit} value={unit} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Harga Satuan *" id="expense-unit-price">
+              <Input
+                id="expense-unit-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.unitPrice || ""}
+                onChange={(e) => setNumeric("unitPrice", Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Harga Total *" id="expense-amount">
+              <Input
+                id="expense-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.amount || ""}
+                onChange={(e) => {
+                  setTotalEdited(true);
+                  setForm({ ...form, amount: Number(e.target.value) });
+                }}
+              />
+            </Field>
+            <Field label="Kategori *" id="expense-category" wide>
+              <Select
+                value={form.costCategoryId}
+                onValueChange={(value) => setForm({ ...form, costCategoryId: value })}
+              >
+                <SelectTrigger id="expense-category">
+                  <SelectValue placeholder="Pilih kategori pengeluaran" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.data?.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Nota" id="expense-receipt">
+              <Input
+                id="expense-receipt"
+                maxLength={100}
+                value={form.receiptReference}
+                onChange={(e) => setForm({ ...form, receiptReference: e.target.value })}
+              />
+            </Field>
+            <Field label="Toko" id="expense-vendor">
+              <Input
+                id="expense-vendor"
+                maxLength={150}
+                value={form.vendorName}
+                onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
+              />
+            </Field>
+            <Field label="Catatan" id="expense-notes" wide>
+              <Textarea
+                id="expense-notes"
+                maxLength={500}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Batal
+            </Button>
+            <Button disabled={mutation.isPending} onClick={() => void save()}>
+              {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={Boolean(confirm)} onOpenChange={(value) => !value && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi perubahan</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.action === "delete"
+                ? "Data terarsip akan dihapus permanen dan tidak dapat dipulihkan."
+                : "Perubahan ini memengaruhi data pengeluaran aktif."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void lifecycle()}>Lanjutkan</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
 
-      <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>{editing ? "Edit Pengeluaran" : "Catat Pengeluaran"}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div><Label htmlFor="expense-date">Tanggal</Label><Input id="expense-date" type="date" value={form.expenseDate} onChange={(e) => setForm({ ...form, expenseDate: e.target.value })} /></div>
-          <div><Label htmlFor="expense-category">Kategori biaya</Label><Select value={form.costCategoryId} onValueChange={(value) => setForm({ ...form, costCategoryId: value })}><SelectTrigger id="expense-category"><SelectValue placeholder="Pilih kategori" /></SelectTrigger><SelectContent>{categories.data?.map((category) => {
-            const subunit = Array.isArray(category.business_subunits) ? category.business_subunits[0] : category.business_subunits;
-            return <SelectItem key={category.id} value={category.id}>{category.name} · {expenseScopeLabel(category.scope, subunit?.name)}</SelectItem>;
-          })}</SelectContent></Select></div>
-          <div><Label htmlFor="expense-amount">Nominal</Label><Input id="expense-amount" type="number" min="0.01" step="0.01" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
-          <div><Label htmlFor="expense-notes">Catatan</Label><Textarea id="expense-notes" maxLength={500} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-          {form.costCategoryId && categoryMap.get(form.costCategoryId) ? <p className="text-xs text-muted-foreground">Ownership ditentukan server dari kategori biaya; tidak dapat diubah manual.</p> : null}
-        </div>
-        <DialogFooter><Button variant="outline" onClick={() => setOpen(false)}>Batal</Button><Button disabled={mutation.isPending} onClick={() => void save()}>{mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Simpan</Button></DialogFooter>
-      </DialogContent></Dialog>
-
-      <AlertDialog open={Boolean(confirm)} onOpenChange={(value) => !value && setConfirm(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Konfirmasi lifecycle</AlertDialogTitle><AlertDialogDescription>{confirm?.action === "delete" ? "Penghapusan permanen hanya berlaku untuk data yang sudah diarsipkan dan tidak dapat dibatalkan." : "Perubahan ini akan langsung memengaruhi laporan operasional aktif."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Batal</AlertDialogCancel><AlertDialogAction disabled={mutation.isPending} onClick={() => void runLifecycle()}>Lanjutkan</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-    </Card>
+function Field({
+  label,
+  id,
+  wide,
+  children,
+}: {
+  label: string;
+  id: string;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={wide ? "space-y-2 md:col-span-2" : "space-y-2"}>
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+    </div>
   );
 }

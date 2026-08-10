@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json, Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useBusinessStructure } from "@/hooks/useBusinessStructure";
+import { visitorSalesQueryKeys } from "@/hooks/useVisitorSalesIntegration";
 import {
   buildCreateTransactionPayload,
   buildUpdateTransactionPayload,
   calculateLineSubtotal,
   type CreateSalesTransactionInput,
+  type LinkedVisitSummary,
   type SalesEntrySource,
   type SalesProductOption,
   type SalesTransaction,
@@ -43,6 +45,9 @@ export const salesTransactionQueryKeys = {
       outletId,
       ...transactionIds,
     ] as const,
+
+  linkedVisits: (outletId: string | null, transactionIds: readonly string[]) =>
+    [...salesTransactionQueryKeys.all, "linked-visits", outletId, ...transactionIds] as const,
 
   categories: (outletId: string | null) =>
     [...salesTransactionQueryKeys.all, "categories", outletId] as const,
@@ -304,6 +309,37 @@ export function useSalesTransactions() {
     [transactionItemsQuery.data],
   );
 
+  const linkedVisitsQuery = useQuery({
+    queryKey: salesTransactionQueryKeys.linkedVisits(outletId, transactionIds),
+    enabled:
+      !authLoading && Boolean(user) && Boolean(outletId) && transactionIds.length > 0,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_sales_linked_visit_summaries", {
+        p_transaction_ids: transactionIds,
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const linkedVisitByTransactionId = useMemo(() => {
+    const result = new Map<string, LinkedVisitSummary>();
+    for (const row of linkedVisitsQuery.data ?? []) {
+      result.set(row.sales_transaction_id, {
+        visitId: row.visit_id,
+        visitorId: row.visitor_id,
+        visitorName: row.visitor_name,
+        adultCount: row.adult_count,
+        childCount: row.child_count,
+        totalVisitors: row.total_visitors,
+        visitDate: row.visit_date,
+        deletedAt: row.visit_deleted_at,
+      });
+    }
+    return result;
+  }, [linkedVisitsQuery.data]);
+
   // ==========================================================
   // LOOKUP MAPS
   // ==========================================================
@@ -521,10 +557,12 @@ export function useSalesTransactions() {
         mapSalesTransaction(
           row,
           itemsByTransactionId.get(row.id) ?? [],
+          linkedVisitByTransactionId.get(row.id) ?? null,
         ),
       ),
     [
       itemsByTransactionId,
+      linkedVisitByTransactionId,
       transactionRows,
     ],
   );
@@ -534,9 +572,12 @@ export function useSalesTransactions() {
   // ==========================================================
 
   const invalidateSalesTransactions = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: salesTransactionQueryKeys.all,
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: salesTransactionQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: visitorSalesQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: ["visitor-visits"] }),
+      queryClient.invalidateQueries({ queryKey: ["visitors"] }),
+    ]);
   };
 
   // ==========================================================
@@ -587,22 +628,31 @@ export function useSalesTransactions() {
       };
 
       const { data, error } =
-        await supabase.rpc(
-          "create_sales_transaction",
-          rpcArgs,
-        );
+        await supabase.rpc("create_sales_transaction_with_visit", {
+          ...rpcArgs,
+          ...(payload.p_existing_visit_id
+            ? { p_existing_visit_id: payload.p_existing_visit_id }
+            : {}),
+          ...(payload.p_new_visit
+            ? { p_new_visit: payload.p_new_visit as unknown as Json }
+            : {}),
+        });
 
       if (error) {
         throw error;
       }
 
-      if (!data) {
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
         throw new Error(
           "Transaksi berhasil diproses, tetapi ID transaksi tidak dikembalikan.",
         );
       }
 
-      return data;
+      const transactionId = data.sales_transaction_id;
+      if (typeof transactionId !== "string") {
+        throw new Error("ID transaksi tidak dikembalikan oleh server.");
+      }
+      return transactionId;
     },
 
     onSuccess:
@@ -644,16 +694,21 @@ export function useSalesTransactions() {
       };
 
       const { data, error } =
-        await supabase.rpc(
-          "update_sales_transaction",
-          rpcArgs,
-        );
+        await supabase.rpc("update_sales_transaction_with_visit", {
+          ...rpcArgs,
+          ...(payload.p_existing_visit_id
+            ? { p_existing_visit_id: payload.p_existing_visit_id }
+            : {}),
+          ...(payload.p_new_visit
+            ? { p_new_visit: payload.p_new_visit as unknown as Json }
+            : {}),
+        });
 
       if (error) {
         throw error;
       }
 
-      if (data !== true) {
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
         throw new Error(
           "Transaksi tidak dapat diperbarui.",
         );
@@ -778,14 +833,16 @@ export function useSalesTransactions() {
     categoriesQuery.isLoading ||
     productsQuery.isLoading ||
     transactionRowsQuery.isLoading ||
-    transactionItemsQuery.isLoading;
+    transactionItemsQuery.isLoading ||
+    linkedVisitsQuery.isLoading;
 
   const isFetching =
     businessStructureFetching ||
     categoriesQuery.isFetching ||
     productsQuery.isFetching ||
     transactionRowsQuery.isFetching ||
-    transactionItemsQuery.isFetching;
+    transactionItemsQuery.isFetching ||
+    linkedVisitsQuery.isFetching;
 
   const isMutating =
     createMutation.isPending ||
@@ -800,6 +857,7 @@ export function useSalesTransactions() {
     productsQuery.error ??
     transactionRowsQuery.error ??
     transactionItemsQuery.error ??
+    linkedVisitsQuery.error ??
     null;
 
   return {
@@ -842,6 +900,7 @@ export function useSalesTransactions() {
     productsQuery,
     transactionRowsQuery,
     transactionItemsQuery,
+    linkedVisitsQuery,
 
     // --------------------------------------------------------
     // Mutations
@@ -954,6 +1013,7 @@ function mapSalesTransactionItem(
 function mapSalesTransaction(
   row: SalesTransactionRow,
   items: SalesTransactionItem[],
+  linkedVisit: LinkedVisitSummary | null,
 ): SalesTransaction {
   return {
     id:
@@ -996,6 +1056,10 @@ function mapSalesTransaction(
 
     deletedBy:
       row.deleted_by,
+
+    visitorVisitId: row.visitor_visit_id,
+
+    linkedVisit,
 
     items,
   };

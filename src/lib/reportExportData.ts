@@ -1,4 +1,5 @@
 import { actualClient, toFiniteNumber } from "@/lib/actualData";
+import type { SalesTransaction } from "@/lib/salesTransactions";
 import { fetchDynamicFinancialStatement } from "@/lib/dynamicFinance";
 import {
   fetchDefaultOutletId,
@@ -145,6 +146,385 @@ interface Depreciation {
   accumulated_depreciation: number | string;
   ending_book_value: number | string;
   status: string;
+}
+
+
+export interface OperationalSalesExportOptions {
+  transactions: readonly SalesTransaction[];
+  startDate: string;
+  endDate: string;
+  outletName?: string | null;
+  subunitId?: string | null;
+  categoryId?: string | null;
+}
+
+interface OperationalSalesDetailRow extends Record<string, unknown> {
+  transactionId: string;
+  itemId: string;
+  date: Date;
+  transactionNumber: string;
+  product: string;
+  sku: string | null;
+  category: string;
+  subunit: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  subtotal: number;
+  transactionTotal: number;
+  visitorCount: number | null;
+  transactionNotes: string | null;
+  itemNotes: string | null;
+}
+
+export function buildOperationalSalesExportPayload(
+  options: OperationalSalesExportOptions,
+): ReportExportPayload {
+  const {
+    transactions,
+    startDate,
+    endDate,
+    outletName = null,
+    subunitId = null,
+    categoryId = null,
+  } = options;
+
+  const activeTransactions = transactions.filter(
+    (transaction) =>
+      !transaction.deletedAt &&
+      transaction.transactionDate >= startDate &&
+      transaction.transactionDate <= endDate,
+  );
+
+  const detailRows: OperationalSalesDetailRow[] = [];
+
+  for (const transaction of activeTransactions) {
+    const scopedItems = transaction.items.filter((item) => {
+      if (subunitId && item.subunitId !== subunitId) {
+        return false;
+      }
+
+      if (categoryId && item.salesCategoryId !== categoryId) {
+        return false;
+      }
+
+      return true;
+    });
+
+    for (const item of scopedItems) {
+      detailRows.push({
+        transactionId: transaction.id,
+        itemId: item.id,
+        date: parseReportDate(transaction.transactionDate),
+        transactionNumber: transaction.transactionNumber,
+        product: item.productNameSnapshot,
+        sku: item.productSkuSnapshot,
+        category: item.categoryNameSnapshot,
+        subunit: item.subunitNameSnapshot,
+        quantity: item.quantity,
+        unit: item.unitSnapshot,
+        unitPrice: item.unitPrice,
+        subtotal: item.amount,
+        transactionTotal: transaction.totalAmount,
+        visitorCount: transaction.linkedVisit?.totalVisitors ?? null,
+        transactionNotes: transaction.notes,
+        itemNotes: item.notes,
+      });
+    }
+  }
+
+  const transactionIds = new Set(
+    detailRows.map((row) => row.transactionId),
+  );
+
+  const totalQuantity = detailRows.reduce(
+    (sum, row) => sum + row.quantity,
+    0,
+  );
+
+  const totalRevenue = detailRows.reduce(
+    (sum, row) => sum + row.subtotal,
+    0,
+  );
+
+  const productGroups = new Map<
+    string,
+    {
+      product: string;
+      sku: string | null;
+      category: string;
+      subunit: string;
+      quantity: number;
+      revenue: number;
+      transactionIds: Set<string>;
+    }
+  >();
+
+  const subunitGroups = new Map<
+    string,
+    {
+      subunit: string;
+      quantity: number;
+      revenue: number;
+      itemCount: number;
+      transactionIds: Set<string>;
+    }
+  >();
+
+  const dailyGroups = new Map<
+    string,
+    {
+      quantity: number;
+      revenue: number;
+      itemCount: number;
+      transactionIds: Set<string>;
+    }
+  >();
+
+  for (const row of detailRows) {
+    const productKey = [
+      row.product,
+      row.sku ?? "",
+      row.category,
+      row.subunit,
+    ].join("::");
+
+    const productGroup =
+      productGroups.get(productKey) ?? {
+        product: row.product,
+        sku: row.sku,
+        category: row.category,
+        subunit: row.subunit,
+        quantity: 0,
+        revenue: 0,
+        transactionIds: new Set<string>(),
+      };
+
+    productGroup.quantity += row.quantity;
+    productGroup.revenue += row.subtotal;
+    productGroup.transactionIds.add(row.transactionId);
+    productGroups.set(productKey, productGroup);
+
+    const subunitGroup =
+      subunitGroups.get(row.subunit) ?? {
+        subunit: row.subunit,
+        quantity: 0,
+        revenue: 0,
+        itemCount: 0,
+        transactionIds: new Set<string>(),
+      };
+
+    subunitGroup.quantity += row.quantity;
+    subunitGroup.revenue += row.subtotal;
+    subunitGroup.itemCount += 1;
+    subunitGroup.transactionIds.add(row.transactionId);
+    subunitGroups.set(row.subunit, subunitGroup);
+
+    const dateKey = toIsoDate(row.date);
+    const dailyGroup =
+      dailyGroups.get(dateKey) ?? {
+        quantity: 0,
+        revenue: 0,
+        itemCount: 0,
+        transactionIds: new Set<string>(),
+      };
+
+    dailyGroup.quantity += row.quantity;
+    dailyGroup.revenue += row.subtotal;
+    dailyGroup.itemCount += 1;
+    dailyGroup.transactionIds.add(row.transactionId);
+    dailyGroups.set(dateKey, dailyGroup);
+  }
+
+  const productRows = [...productGroups.values()]
+    .map((group) => ({
+      Produk: group.product,
+      SKU: group.sku,
+      Kategori: group.category,
+      Subunit: group.subunit,
+      Transaksi: group.transactionIds.size,
+      Quantity: group.quantity,
+      Omzet: group.revenue,
+      "Harga Rata-rata":
+        group.quantity > 0
+          ? group.revenue / group.quantity
+          : null,
+    }))
+    .sort(
+      (left, right) =>
+        toFiniteNumber(right.Quantity) -
+        toFiniteNumber(left.Quantity),
+    );
+
+  const subunitRows = [...subunitGroups.values()]
+    .map((group) => ({
+      Subunit: group.subunit,
+      "Transaksi Terlibat": group.transactionIds.size,
+      "Baris Item": group.itemCount,
+      Quantity: group.quantity,
+      Omzet: group.revenue,
+      "Kontribusi Omzet":
+        totalRevenue > 0
+          ? (group.revenue / totalRevenue) * 100
+          : null,
+    }))
+    .sort(
+      (left, right) =>
+        toFiniteNumber(right.Omzet) -
+        toFiniteNumber(left.Omzet),
+    );
+
+  const dailyRows = [...dailyGroups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, group]) => ({
+      Tanggal: parseReportDate(date),
+      Transaksi: group.transactionIds.size,
+      "Baris Item": group.itemCount,
+      Quantity: group.quantity,
+      Omzet: group.revenue,
+    }));
+
+  const detailSheetRows = detailRows
+    .sort((left, right) => {
+      const dateCompare = left.date.getTime() - right.date.getTime();
+
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      const transactionCompare =
+        left.transactionNumber.localeCompare(
+          right.transactionNumber,
+          "id-ID",
+        );
+
+      if (transactionCompare !== 0) {
+        return transactionCompare;
+      }
+
+      return left.itemId.localeCompare(right.itemId);
+    })
+    .map((row) => ({
+      Tanggal: row.date,
+      "No. Transaksi": row.transactionNumber,
+      Produk: row.product,
+      SKU: row.sku,
+      Kategori: row.category,
+      Subunit: row.subunit,
+      Quantity: row.quantity,
+      Satuan: row.unit,
+      "Harga Satuan": row.unitPrice,
+      Subtotal: row.subtotal,
+      "Total Transaksi Outlet": row.transactionTotal,
+      Pengunjung: row.visitorCount,
+      "Catatan Item": row.itemNotes,
+      "Catatan Transaksi": row.transactionNotes,
+    }));
+
+  const periodLabel = reportPeriodLabel(startDate, endDate);
+
+  const filterLabel = [
+    subunitId ? "Subunit terpilih" : "Semua Subunit",
+    categoryId ? "Category terpilih" : "Semua Category",
+  ].join(" · ");
+
+  const sheets: ExportSheet[] =
+    detailRows.length > 0
+      ? [
+          summarySheet([
+            metric("Periode", periodLabel),
+            metric("Outlet", outletName ?? "Outlet aktif"),
+            metric("Cakupan", filterLabel),
+            metric("Transaksi terlibat", transactionIds.size),
+            metric("Baris item", detailRows.length),
+            metric("Total quantity", totalQuantity),
+            metric("Total penjualan sesuai filter", totalRevenue),
+            metric("Produk unik", productRows.length),
+            metric("Subunit terlibat", subunitRows.length),
+            metric(
+              "Catatan",
+              "Transaksi campuran dapat terlibat di lebih dari satu Subunit. Kolom Transaksi Terlibat per Subunit tidak bersifat additive.",
+            ),
+          ]),
+          genericSheet(
+            "Penjualan Harian",
+            [
+              col("Tanggal", "date", 15),
+              col("Transaksi", "integer", 14),
+              col("Baris Item", "integer", 14),
+              col("Quantity", "decimal", 14),
+              col("Omzet", "currency", 20),
+            ],
+            dailyRows,
+          ),
+          genericSheet(
+            "Penjualan Produk",
+            [
+              col("Produk", "text", 32),
+              col("SKU", "text", 18),
+              col("Kategori", "text", 24),
+              col("Subunit", "text", 20),
+              col("Transaksi", "integer", 14),
+              col("Quantity", "decimal", 14),
+              col("Omzet", "currency", 20),
+              col("Harga Rata-rata", "currency", 20),
+            ],
+            productRows,
+          ),
+          genericSheet(
+            "Per Subunit",
+            [
+              col("Subunit", "text", 22),
+              col("Transaksi Terlibat", "integer", 20),
+              col("Baris Item", "integer", 14),
+              col("Quantity", "decimal", 14),
+              col("Omzet", "currency", 20),
+              col("Kontribusi Omzet", "decimal", 18),
+            ],
+            subunitRows,
+          ),
+          genericSheet(
+            "Detail Transaksi",
+            [
+              col("Tanggal", "date", 15),
+              col("No. Transaksi", "text", 20),
+              col("Produk", "text", 32),
+              col("SKU", "text", 18),
+              col("Kategori", "text", 24),
+              col("Subunit", "text", 20),
+              col("Quantity", "decimal", 14),
+              col("Satuan", "text", 12),
+              col("Harga Satuan", "currency", 18),
+              col("Subtotal", "currency", 18),
+              col("Total Transaksi Outlet", "currency", 22),
+              col("Pengunjung", "integer", 14),
+              col("Catatan Item", "text", 30),
+              col("Catatan Transaksi", "text", 34),
+            ],
+            detailSheetRows,
+          ),
+        ]
+      : [];
+
+  return {
+    reportType: "sales",
+    title: "Penjualan Operasional",
+    startDate,
+    endDate,
+    periodLabel,
+    dataStatus: "Operational",
+    sheets,
+    sourceRecordCount: detailRows.length,
+    filename: safeReportFilename(
+      "sales",
+      startDate,
+      endDate,
+    ),
+  };
+}
+
+function toIsoDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
 }
 
 export async function fetchReportExportPayload(

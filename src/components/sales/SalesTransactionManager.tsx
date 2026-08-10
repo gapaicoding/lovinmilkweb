@@ -7,7 +7,9 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
+  Download,
   Eye,
+  FileSpreadsheet,
   LoaderCircle,
   Pencil,
   Plus,
@@ -19,10 +21,12 @@ import {
   Trash2,
   WalletCards,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   SalesTransactionDetail,
 } from "@/components/sales/SalesTransactionDetail";
+import { Route } from "@/routes/_authenticated/penjualan";
 import {
   SalesTransactionForm,
   type SalesTransactionFormSubmitInput,
@@ -33,6 +37,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -77,6 +82,11 @@ import {
   summarizeSubunits,
   type SalesTransaction,
 } from "@/lib/salesTransactions";
+import {
+  buildOperationalSalesExportPayload,
+} from "@/lib/reportExportData";
+import { exportReportToExcel } from "@/lib/reportWorkbook";
+import { actualClient } from "@/lib/actualData";
 
 const PAGE_SIZE = 10;
 
@@ -96,6 +106,8 @@ interface ConfirmAction {
 }
 
 export function SalesTransactionManager() {
+  const routeSearch = Route.useSearch();
+  const navigate = Route.useNavigate();
   const {
     canManageSales,
     canViewDeletedData,
@@ -165,6 +177,11 @@ export function SalesTransactionManager() {
     setPage,
   ] = useState(1);
 
+  const [
+    exportOpen,
+    setExportOpen,
+  ] = useState(false);
+
   // ==========================================================
   // DIALOG STATE
   // ==========================================================
@@ -173,6 +190,17 @@ export function SalesTransactionManager() {
     createOpen,
     setCreateOpen,
   ] = useState(false);
+  const [prefilledVisit, setPrefilledVisit] = useState<{
+    visitId: string | null;
+    date: string | null;
+  }>({ visitId: routeSearch.visitId ?? null, date: routeSearch.date ?? null });
+
+  useEffect(() => {
+    if (!routeSearch.visitId || !canManageSales) return;
+    setPrefilledVisit({ visitId: routeSearch.visitId, date: routeSearch.date ?? null });
+    setCreateOpen(true);
+    void navigate({ search: {}, replace: true });
+  }, [canManageSales, navigate, routeSearch.date, routeSearch.visitId]);
 
   const [
     detailTransaction,
@@ -180,6 +208,12 @@ export function SalesTransactionManager() {
   ] = useState<SalesTransaction | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!routeSearch.transactionId) return;
+    const target = transactions.find((transaction) => transaction.id === routeSearch.transactionId);
+    if (target) setDetailTransaction(target);
+  }, [routeSearch.transactionId, transactions]);
 
   const [
     editTransaction,
@@ -608,6 +642,7 @@ export function SalesTransactionManager() {
         );
 
         setCreateOpen(false);
+        setPrefilledVisit({ visitId: null, date: null });
 
         setActionMessage(
           "Transaksi berhasil dibuat.",
@@ -781,6 +816,20 @@ export function SalesTransactionManager() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={
+              isLoading ||
+              isFetching ||
+              isMutating
+            }
+            onClick={() => setExportOpen(true)}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+
           <Button
             type="button"
             variant="outline"
@@ -1230,6 +1279,10 @@ export function SalesTransactionManager() {
                     Subunit
                   </TableHead>
 
+                  <TableHead className="min-w-44">
+                    Kunjungan
+                  </TableHead>
+
                   <TableHead className="text-right">
                     Item
                   </TableHead>
@@ -1336,6 +1389,19 @@ export function SalesTransactionManager() {
                               subunitSummary
                             }
                           </span>
+                        </TableCell>
+
+                        <TableCell>
+                          {transaction.linkedVisit ? (
+                            <div className="text-sm">
+                              <p className="font-medium">{transaction.linkedVisit.totalVisitors} pengunjung</p>
+                              <p className="text-xs text-muted-foreground">
+                                {transaction.linkedVisit.adultCount} dewasa · {transaction.linkedVisit.childCount} anak
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Tidak dicatat</span>
+                          )}
                         </TableCell>
 
                         {/* ITEM COUNT */}
@@ -1603,6 +1669,17 @@ export function SalesTransactionManager() {
         ) : null}
       </div>
 
+      <SalesExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        transactions={transactions}
+        outletName={outlet?.name ?? null}
+        subunits={subunits}
+        categories={categories}
+        initialSubunitId={subunitFilter}
+        initialCategoryId={categoryFilter}
+      />
+
       {/* =====================================================
           CREATE DIALOG
           ===================================================== */}
@@ -1621,6 +1698,7 @@ export function SalesTransactionManager() {
           setCreateOpen(
             open,
           );
+          if (!open) setPrefilledVisit({ visitId: null, date: null });
         }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-6xl">
@@ -1637,17 +1715,19 @@ export function SalesTransactionManager() {
 
           <SalesTransactionForm
             mode="create"
+            outletId={outlet?.id ?? null}
+            preselectedVisitId={prefilledVisit.visitId}
+            initialTransactionDate={prefilledVisit.date}
             products={
               products
             }
             isSubmitting={
               isMutating
             }
-            onCancel={() =>
-              setCreateOpen(
-                false,
-              )
-            }
+            onCancel={() => {
+              setCreateOpen(false);
+              setPrefilledVisit({ visitId: null, date: null });
+            }}
             onSubmit={
               handleFormSubmit
             }
@@ -1697,6 +1777,7 @@ export function SalesTransactionManager() {
           {editTransaction ? (
             <SalesTransactionForm
               mode="edit"
+              outletId={outlet?.id ?? null}
               products={
                 products
               }
@@ -1736,6 +1817,7 @@ export function SalesTransactionManager() {
             setDetailTransaction(
               null,
             );
+            if (routeSearch.transactionId) void navigate({ search: {}, replace: true });
           }
         }}
       >
@@ -1843,6 +1925,761 @@ export function SalesTransactionManager() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+
+// ============================================================
+// SALES EXPORT DIALOG
+// ============================================================
+
+type SalesExportPreset =
+  | "today"
+  | "yesterday"
+  | "last7"
+  | "this-month"
+  | "previous-month"
+  | "month"
+  | "custom";
+
+interface SalesExportDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  transactions: readonly SalesTransaction[];
+  outletName: string | null;
+  subunits: readonly { id: string; name: string }[];
+  categories: readonly {
+    categoryId: string;
+    categoryName: string;
+    subunitId: string;
+  }[];
+  initialSubunitId: string;
+  initialCategoryId: string;
+}
+
+function SalesExportDialog({
+  open,
+  onOpenChange,
+  transactions,
+  outletName,
+  subunits,
+  categories,
+  initialSubunitId,
+  initialCategoryId,
+}: SalesExportDialogProps) {
+  const today = useMemo(
+    () => getJakartaTodayIso(),
+    [],
+  );
+
+  const initialRange = useMemo(
+    () => salesExportPresetRange(
+      "today",
+      today,
+    ),
+    [today],
+  );
+
+  const [preset, setPreset] =
+    useState<SalesExportPreset>(
+      "today",
+    );
+
+  const [startDate, setStartDate] =
+    useState(
+      initialRange.startDate,
+    );
+
+  const [endDate, setEndDate] =
+    useState(
+      initialRange.endDate,
+    );
+
+  const [monthValue, setMonthValue] =
+    useState(
+      today.slice(0, 7),
+    );
+
+  const [subunitId, setSubunitId] =
+    useState("all");
+
+  const [categoryId, setCategoryId] =
+    useState("all");
+
+  const [exporting, setExporting] =
+    useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const nextRange =
+      salesExportPresetRange(
+        "today",
+        today,
+      );
+
+    setPreset("today");
+    setStartDate(
+      nextRange.startDate,
+    );
+    setEndDate(
+      nextRange.endDate,
+    );
+    setMonthValue(
+      today.slice(0, 7),
+    );
+    setSubunitId(
+      initialSubunitId ===
+        "all"
+        ? "all"
+        : initialSubunitId,
+    );
+    setCategoryId(
+      initialCategoryId ===
+        "all"
+        ? "all"
+        : initialCategoryId,
+    );
+  }, [
+    initialCategoryId,
+    initialSubunitId,
+    open,
+    today,
+  ]);
+
+  const availableCategories =
+    useMemo(
+      () =>
+        categories.filter(
+          (category) =>
+            subunitId ===
+              "all" ||
+            category.subunitId ===
+              subunitId,
+        ),
+      [
+        categories,
+        subunitId,
+      ],
+    );
+
+  useEffect(() => {
+    if (
+      categoryId === "all"
+    ) {
+      return;
+    }
+
+    const category =
+      categories.find(
+        (candidate) =>
+          candidate.categoryId ===
+          categoryId,
+      );
+
+    if (
+      !category ||
+      (subunitId !==
+        "all" &&
+        category.subunitId !==
+          subunitId)
+    ) {
+      setCategoryId("all");
+    }
+  }, [
+    categories,
+    categoryId,
+    subunitId,
+  ]);
+
+  const applyPreset = (
+    nextPreset: SalesExportPreset,
+  ) => {
+    setPreset(nextPreset);
+
+    if (
+      nextPreset === "month" ||
+      nextPreset === "custom"
+    ) {
+      return;
+    }
+
+    const range =
+      salesExportPresetRange(
+        nextPreset,
+        today,
+      );
+
+    setStartDate(
+      range.startDate,
+    );
+    setEndDate(
+      range.endDate,
+    );
+  };
+
+  const handleMonthChange = (
+    value: string,
+  ) => {
+    setMonthValue(value);
+
+    if (!/^\d{4}-\d{2}$/.test(value)) {
+      return;
+    }
+
+    const range =
+      monthRange(value);
+
+    setStartDate(
+      range.startDate,
+    );
+    setEndDate(
+      range.endDate,
+    );
+  };
+
+  const handleExport = async () => {
+    if (
+      !isIsoDate(startDate) ||
+      !isIsoDate(endDate) ||
+      startDate > endDate
+    ) {
+      toast.error(
+        "Periode export tidak valid.",
+      );
+      return;
+    }
+
+    setExporting(true);
+
+    try {
+      const payload =
+        buildOperationalSalesExportPayload(
+          {
+            transactions,
+            startDate,
+            endDate,
+            outletName,
+            subunitId:
+              subunitId === "all"
+                ? null
+                : subunitId,
+            categoryId:
+              categoryId === "all"
+                ? null
+                : categoryId,
+          },
+        );
+
+      if (
+        payload.sourceRecordCount <=
+        0
+      ) {
+        toast.error(
+          "Tidak ada transaksi operasional aktif pada periode dan filter yang dipilih.",
+        );
+        return;
+      }
+
+      await exportReportToExcel(
+        payload,
+      );
+
+      void recordSalesExportAudit({
+        startDate,
+        endDate,
+        subunitId,
+        categoryId,
+      });
+
+      toast.success(
+        "Excel penjualan berhasil disiapkan.",
+        {
+          description:
+            payload.filename,
+        },
+      );
+
+      onOpenChange(false);
+    } catch (error) {
+      console.error(
+        "[sales-export]",
+        error,
+      );
+
+      toast.error(
+        "Excel penjualan gagal dibuat.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!exporting) {
+          onOpenChange(nextOpen);
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            Export Penjualan Operasional
+          </DialogTitle>
+
+          <DialogDescription>
+            Buat workbook Excel untuk memantau transaksi, Product terjual,
+            Subunit, quantity, dan omzet pada periode yang dipilih.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <Label>
+              Periode export
+            </Label>
+
+            <Select
+              value={preset}
+              disabled={exporting}
+              onValueChange={(value) =>
+                applyPreset(
+                  value as SalesExportPreset,
+                )
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="today">
+                  Hari ini
+                </SelectItem>
+                <SelectItem value="yesterday">
+                  Kemarin
+                </SelectItem>
+                <SelectItem value="last7">
+                  7 hari terakhir
+                </SelectItem>
+                <SelectItem value="this-month">
+                  Bulan ini
+                </SelectItem>
+                <SelectItem value="previous-month">
+                  Bulan sebelumnya
+                </SelectItem>
+                <SelectItem value="month">
+                  Pilih bulan
+                </SelectItem>
+                <SelectItem value="custom">
+                  Range tanggal
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {preset === "month" ? (
+            <div className="space-y-2">
+              <Label htmlFor="sales-export-month">
+                Bulan
+              </Label>
+              <Input
+                id="sales-export-month"
+                type="month"
+                value={monthValue}
+                disabled={exporting}
+                onChange={(event) =>
+                  handleMonthChange(
+                    event.target.value,
+                  )
+                }
+              />
+            </div>
+          ) : null}
+
+          {preset === "custom" ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="sales-export-start">
+                  Dari tanggal
+                </Label>
+                <Input
+                  id="sales-export-start"
+                  type="date"
+                  value={startDate}
+                  max={endDate || undefined}
+                  disabled={exporting}
+                  onChange={(event) =>
+                    setStartDate(
+                      event.target.value,
+                    )
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sales-export-end">
+                  Sampai tanggal
+                </Label>
+                <Input
+                  id="sales-export-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  disabled={exporting}
+                  onChange={(event) =>
+                    setEndDate(
+                      event.target.value,
+                    )
+                  }
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border bg-muted/20 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">
+                Periode:
+              </span>{" "}
+              <span className="font-medium">
+                {formatDate(startDate)}
+                {startDate !== endDate
+                  ? ` – ${formatDate(endDate)}`
+                  : ""}
+              </span>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>
+                Subunit
+              </Label>
+              <Select
+                value={subunitId}
+                disabled={exporting}
+                onValueChange={
+                  setSubunitId
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    Semua Subunit
+                  </SelectItem>
+                  {subunits.map(
+                    (subunit) => (
+                      <SelectItem
+                        key={subunit.id}
+                        value={subunit.id}
+                      >
+                        {subunit.name}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Category
+              </Label>
+              <Select
+                value={categoryId}
+                disabled={exporting}
+                onValueChange={
+                  setCategoryId
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    Semua Category
+                  </SelectItem>
+                  {availableCategories.map(
+                    (category) => (
+                      <SelectItem
+                        key={
+                          category.categoryId
+                        }
+                        value={
+                          category.categoryId
+                        }
+                      >
+                        {
+                          category.categoryName
+                        }
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+            Workbook berisi Ringkasan, Penjualan Harian, Penjualan Produk,
+            Per Subunit, dan Detail Transaksi. Data yang diarsipkan tidak
+            dihitung sebagai penjualan aktif.
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={exporting}
+            onClick={() =>
+              onOpenChange(false)
+            }
+          >
+            Batal
+          </Button>
+
+          <Button
+            type="button"
+            disabled={exporting}
+            onClick={() => {
+              void handleExport();
+            }}
+          >
+            {exporting ? (
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+
+            {exporting
+              ? "Menyiapkan Excel..."
+              : "Export .xlsx"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+async function recordSalesExportAudit(input: {
+  startDate: string;
+  endDate: string;
+  subunitId: string;
+  categoryId: string;
+}) {
+  const client =
+    actualClient as unknown as {
+      rpc(
+        name: "record_report_export",
+        args: {
+          p_report_type: string;
+          p_start_date: string;
+          p_end_date: string;
+          p_filters: Record<
+            string,
+            unknown
+          >;
+        },
+      ): PromiseLike<{
+        error: unknown;
+      }>;
+    };
+
+  try {
+    const { error } =
+      await client.rpc(
+        "record_report_export",
+        {
+          p_report_type:
+            "sales",
+          p_start_date:
+            input.startDate,
+          p_end_date:
+            input.endDate,
+          p_filters: {
+            operationalOnly:
+              true,
+            subunitId:
+              input.subunitId ===
+              "all"
+                ? null
+                : input.subunitId,
+            categoryId:
+              input.categoryId ===
+              "all"
+                ? null
+                : input.categoryId,
+          },
+        },
+      );
+
+    if (error) {
+      console.warn(
+        "[sales-export-audit]",
+        error,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "[sales-export-audit]",
+      error,
+    );
+  }
+}
+
+function getJakartaTodayIso(): string {
+  return new Intl.DateTimeFormat(
+    "en-CA",
+    {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    },
+  ).format(new Date());
+}
+
+function salesExportPresetRange(
+  preset: Exclude<
+    SalesExportPreset,
+    "month" | "custom"
+  >,
+  today: string,
+): {
+  startDate: string;
+  endDate: string;
+} {
+  if (preset === "today") {
+    return {
+      startDate: today,
+      endDate: today,
+    };
+  }
+
+  if (preset === "yesterday") {
+    const yesterday =
+      addIsoDays(
+        today,
+        -1,
+      );
+
+    return {
+      startDate: yesterday,
+      endDate: yesterday,
+    };
+  }
+
+  if (preset === "last7") {
+    return {
+      startDate:
+        addIsoDays(
+          today,
+          -6,
+        ),
+      endDate: today,
+    };
+  }
+
+  if (preset === "this-month") {
+    return {
+      startDate:
+        `${today.slice(0, 7)}-01`,
+      endDate: today,
+    };
+  }
+
+  const currentMonthStart =
+    `${today.slice(0, 7)}-01`;
+
+  const previousMonthEnd =
+    addIsoDays(
+      currentMonthStart,
+      -1,
+    );
+
+  return {
+    startDate:
+      `${previousMonthEnd.slice(0, 7)}-01`,
+    endDate:
+      previousMonthEnd,
+  };
+}
+
+function monthRange(
+  month: string,
+): {
+  startDate: string;
+  endDate: string;
+} {
+  const [
+    yearText,
+    monthText,
+  ] = month.split("-");
+
+  const year =
+    Number(yearText);
+
+  const monthNumber =
+    Number(monthText);
+
+  const lastDay =
+    new Date(
+      Date.UTC(
+        year,
+        monthNumber,
+        0,
+      ),
+    )
+      .getUTCDate()
+      .toString()
+      .padStart(2, "0");
+
+  return {
+    startDate:
+      `${yearText}-${monthText}-01`,
+    endDate:
+      `${yearText}-${monthText}-${lastDay}`,
+  };
+}
+
+function addIsoDays(
+  date: string,
+  amount: number,
+): string {
+  const [
+    year,
+    month,
+    day,
+  ] = date
+    .split("-")
+    .map(Number);
+
+  const value =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day + amount,
+      ),
+    );
+
+  return value
+    .toISOString()
+    .slice(0, 10);
+}
+
+function isIsoDate(
+  value: string,
+): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(
+    value,
   );
 }
 

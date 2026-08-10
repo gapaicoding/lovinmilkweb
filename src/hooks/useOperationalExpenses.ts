@@ -38,8 +38,10 @@ export function useOperationalExpenses(showArchived: boolean) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cost_categories")
-        .select("id,name,scope,outlet_id,subunit_id,business_subunits(name)")
+        .select("id,name,scope,outlet_id,subunit_id")
         .eq("is_active", true)
+        .eq("scope", "outlet")
+        .is("subunit_id", null)
         .is("deleted_at", null)
         .order("name");
       if (error) throw error;
@@ -52,8 +54,14 @@ export function useOperationalExpenses(showArchived: boolean) {
       if (request.action === "create" || request.action === "update") {
         const args = {
           p_expense_date: request.input.expenseDate,
+          p_item_name: request.input.itemName.trim(),
+          p_quantity: request.input.quantity,
+          p_unit: request.input.unit.trim(),
+          p_unit_price: request.input.unitPrice,
           p_amount: request.input.amount,
           p_cost_category_id: request.input.costCategoryId,
+          p_receipt_reference: request.input.receiptReference?.trim() || undefined,
+          p_vendor_name: request.input.vendorName?.trim() || undefined,
           p_notes: request.input.notes || undefined,
         };
         const result =

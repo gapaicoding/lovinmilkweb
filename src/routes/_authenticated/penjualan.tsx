@@ -5,6 +5,17 @@ import { JulyAggregateHistory } from "@/components/sales/JulyAggregateHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/penjualan")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...(typeof search.visitId === "string" && /^[0-9a-f-]{36}$/i.test(search.visitId)
+      ? { visitId: search.visitId }
+      : {}),
+    ...(typeof search.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(search.date)
+      ? { date: search.date }
+      : {}),
+    ...(typeof search.transactionId === "string" && /^[0-9a-f-]{36}$/i.test(search.transactionId)
+      ? { transactionId: search.transactionId }
+      : {}),
+  }),
   component: SalesPage,
 });
 

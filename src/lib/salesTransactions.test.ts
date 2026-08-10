@@ -133,6 +133,8 @@ describe("sales transaction payload", () => {
       p_notes: "Transaksi Lovin + Arayya",
       p_entry_source: "manual",
       p_outlet_id: outletId,
+      p_existing_visit_id: null,
+      p_new_visit: null,
     });
   });
 
@@ -162,6 +164,8 @@ describe("sales transaction payload", () => {
         },
       ],
       p_notes: null,
+      p_existing_visit_id: null,
+      p_new_visit: null,
     });
   });
 
@@ -190,6 +194,53 @@ describe("sales transaction payload", () => {
       p_notes: null,
       p_entry_source: "manual",
       p_outlet_id: null,
+      p_existing_visit_id: null,
+      p_new_visit: null,
+    });
+  });
+
+  it("membangun pilihan kunjungan existing secara eksklusif", () => {
+    expect(
+      buildCreateTransactionPayload({
+        transactionDate: "2026-08-02",
+        items: mixedItems,
+        visit: { mode: "existing", existingVisitId: transactionId },
+      }),
+    ).toMatchObject({
+      p_existing_visit_id: transactionId,
+      p_new_visit: null,
+    });
+  });
+
+  it("memvalidasi jumlah orang pada kunjungan baru", () => {
+    expect(() =>
+      buildCreateTransactionPayload({
+        transactionDate: "2026-08-02",
+        items: mixedItems,
+        visit: {
+          mode: "new",
+          newVisit: { visitorId: null, adultCount: 0, childCount: 0, notes: null },
+        },
+      }),
+    ).toThrow("Jumlah pengunjung minimal satu orang.");
+
+    expect(
+      buildCreateTransactionPayload({
+        transactionDate: "2026-08-02",
+        items: mixedItems,
+        visit: {
+          mode: "new",
+          newVisit: { visitorId: null, adultCount: 2, childCount: 1, notes: " Grup " },
+        },
+      }),
+    ).toMatchObject({
+      p_existing_visit_id: null,
+      p_new_visit: {
+        visitor_id: null,
+        adult_count: 2,
+        child_count: 1,
+        notes: "Grup",
+      },
     });
   });
 
