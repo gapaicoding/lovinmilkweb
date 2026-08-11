@@ -172,7 +172,7 @@ export function OperationalExpenseManager() {
           </div>
           <div className="flex gap-2">
             <ExpenseExportDialog rows={expenses.data ?? []} categories={categories.data ?? []} />
-            {permissions.canManageExpenses ? (
+            {permissions.canCreateExpenses ? (
               <Button onClick={beginCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Catat Pengeluaran
@@ -286,25 +286,25 @@ export function OperationalExpenseManager() {
                       <TableCell>
                         <div className="flex justify-end gap-1">
                           {row.deleted_at ? <Badge variant="secondary">Arsip</Badge> : null}
-                          {!row.deleted_at && permissions.canManageExpenses ? (
-                            <>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                aria-label="Edit pengeluaran"
-                                onClick={() => beginEdit(row)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                aria-label="Arsipkan pengeluaran"
-                                onClick={() => setConfirm({ action: "archive", row })}
-                              >
-                                <Archive className="h-4 w-4" />
-                              </Button>
-                            </>
+                          {!row.deleted_at && permissions.canEditExpenses ? (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Edit pengeluaran"
+                              onClick={() => beginEdit(row)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                          {!row.deleted_at && permissions.canArchiveExpenses ? (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Arsipkan pengeluaran"
+                              onClick={() => setConfirm({ action: "archive", row })}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
                           ) : null}
                           {row.deleted_at && permissions.isSuperAdmin ? (
                             <>

@@ -11,6 +11,12 @@ export interface AppPermissions {
   canViewOperationalData: boolean;
   canManageSales: boolean;
   canManageExpenses: boolean;
+  canCreateSales: boolean;
+  canEditSales: boolean;
+  canArchiveSales: boolean;
+  canCreateExpenses: boolean;
+  canEditExpenses: boolean;
+  canArchiveExpenses: boolean;
   canManageVisitorVisits: boolean;
 
   canAccessMasterData: boolean;
@@ -36,6 +42,12 @@ const NO_PERMISSIONS: AppPermissions = {
   canViewOperationalData: false,
   canManageSales: false,
   canManageExpenses: false,
+  canCreateSales: false,
+  canEditSales: false,
+  canArchiveSales: false,
+  canCreateExpenses: false,
+  canEditExpenses: false,
+  canArchiveExpenses: false,
   canManageVisitorVisits: false,
 
   canAccessMasterData: false,
@@ -94,9 +106,7 @@ export function isAppRole(role: unknown): role is AppRole {
   return role === "staff" || role === "admin" || role === "super_admin";
 }
 
-export function getRolePermissions(
-  role: AppRole | null | undefined,
-): AppPermissions {
+export function getRolePermissions(role: AppRole | null | undefined): AppPermissions {
   if (!isAppRole(role)) {
     return NO_PERMISSIONS;
   }
@@ -122,6 +132,12 @@ export function getRolePermissions(
 
     canManageSales: isAdmin,
     canManageExpenses: isAdmin,
+    canCreateSales: true,
+    canEditSales: true,
+    canArchiveSales: isAdmin,
+    canCreateExpenses: true,
+    canEditExpenses: true,
+    canArchiveExpenses: isAdmin,
 
     canManageVisitorVisits: true,
 
@@ -143,13 +159,9 @@ export function canAccessAuthenticatedRoute(
   role: AppRole | null | undefined,
   pathname: string,
 ): boolean {
-  const normalizedPath =
-    pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 
-  const capability =
-    ROUTE_CAPABILITIES[
-      normalizedPath as keyof typeof ROUTE_CAPABILITIES
-    ];
+  const capability = ROUTE_CAPABILITIES[normalizedPath as keyof typeof ROUTE_CAPABILITIES];
 
   if (!capability) {
     return false;

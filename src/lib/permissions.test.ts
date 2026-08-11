@@ -16,6 +16,12 @@ describe("role permissions", () => {
     expect(permissions.canAccessFinancialData).toBe(false);
     expect(permissions.canManageSales).toBe(false);
     expect(permissions.canManageExpenses).toBe(false);
+    expect(permissions.canCreateSales).toBe(true);
+    expect(permissions.canEditSales).toBe(true);
+    expect(permissions.canArchiveSales).toBe(false);
+    expect(permissions.canCreateExpenses).toBe(true);
+    expect(permissions.canEditExpenses).toBe(true);
+    expect(permissions.canArchiveExpenses).toBe(false);
     expect(permissions.canHardDelete).toBe(false);
   });
 
@@ -27,6 +33,12 @@ describe("role permissions", () => {
     expect(permissions.canAccessFinancialData).toBe(true);
     expect(permissions.canManageFinancialData).toBe(true);
     expect(permissions.canManageUsers).toBe(false);
+    expect(permissions.canCreateSales).toBe(true);
+    expect(permissions.canEditSales).toBe(true);
+    expect(permissions.canArchiveSales).toBe(true);
+    expect(permissions.canCreateExpenses).toBe(true);
+    expect(permissions.canEditExpenses).toBe(true);
+    expect(permissions.canArchiveExpenses).toBe(true);
     expect(permissions.canHardDelete).toBe(false);
   });
 
@@ -36,6 +48,12 @@ describe("role permissions", () => {
     expect(permissions.canManageUsers).toBe(true);
     expect(permissions.canViewDeletedData).toBe(true);
     expect(permissions.canHardDelete).toBe(true);
+    expect(permissions.canCreateSales).toBe(true);
+    expect(permissions.canEditSales).toBe(true);
+    expect(permissions.canArchiveSales).toBe(true);
+    expect(permissions.canCreateExpenses).toBe(true);
+    expect(permissions.canEditExpenses).toBe(true);
+    expect(permissions.canArchiveExpenses).toBe(true);
   });
 
   it("gagal tertutup untuk role yang tidak tersedia", () => {
@@ -44,6 +62,12 @@ describe("role permissions", () => {
         canAccessDashboard: false,
         canViewOperationalData: false,
         canAccessFinancialData: false,
+        canCreateSales: false,
+        canEditSales: false,
+        canArchiveSales: false,
+        canCreateExpenses: false,
+        canEditExpenses: false,
+        canArchiveExpenses: false,
         canHardDelete: false,
       }),
     );
