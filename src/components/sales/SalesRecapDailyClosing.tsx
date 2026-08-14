@@ -11,26 +11,66 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTime, formatRupiah } from "@/lib/format";
-import { calculateClosingPreview, closingDraftFromRow, DEPOSIT_METHODS, type DepositMethod, type SalesDailyClosingDraft, type SalesRecapDailyRow } from "@/lib/salesRecap";
+import { calculateClosingPreview, closingDraftFromRow, DEPOSIT_METHODS, extractCashDraft, getClosingDirtyState, type DepositMethod, type SalesDailyCashDraft, type SalesDailyClosingDraft, type SalesRecapDailyRow } from "@/lib/salesRecap";
 
 interface Props {
   row: SalesRecapDailyRow;
   canValidate: boolean;
   isMutating: boolean;
   onSave: (draft: SalesDailyClosingDraft) => Promise<void>;
+  onSaveCash: (cash: SalesDailyCashDraft) => Promise<void>;
   onValidateSales: () => Promise<void>;
   onValidateCash: () => Promise<void>;
 }
 
-export function SalesRecapDailyClosing({ row, canValidate, isMutating, onSave, onValidateSales, onValidateCash }: Props) {
-  const [draft, setDraft] = useState(() => closingDraftFromRow(row));
-  useEffect(() => setDraft(closingDraftFromRow(row)), [row]);
+export function SalesRecapDailyClosing({ row, canValidate, isMutating, onSave, onSaveCash, onValidateSales, onValidateCash }: Props) {
+  const [formState, setFormState] = useState(() => {
+    const initial = closingDraftFromRow(row);
+    return { businessDate: row.business_date, draft: initial, baseline: initial };
+  });
+  useEffect(() => {
+    const serverDraft = closingDraftFromRow(row);
+    setFormState((current) => {
+      if (current.businessDate !== row.business_date) {
+        return { businessDate: row.business_date, draft: serverDraft, baseline: serverDraft };
+      }
+      if (getClosingDirtyState(current.draft, current.baseline).isDirty) return current;
+      return { businessDate: row.business_date, draft: serverDraft, baseline: serverDraft };
+    });
+  }, [row]);
+  const draft = formState.draft;
+  const dirtyState = useMemo(
+    () => getClosingDirtyState(draft, formState.baseline),
+    [draft, formState.baseline],
+  );
   const preview = useMemo(() => calculateClosingPreview(draft, row.system_total_sales), [draft, row.system_total_sales]);
-  const set = <K extends keyof SalesDailyClosingDraft>(key: K, value: SalesDailyClosingDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
+  const set = <K extends keyof SalesDailyClosingDraft>(key: K, value: SalesDailyClosingDraft[K]) => setFormState((current) => ({ ...current, draft: { ...current.draft, [key]: value } }));
   const mismatch = row.subunit_variance !== 0;
+  const establishFullBaseline = (accepted: SalesDailyClosingDraft) => setFormState((current) => ({ ...current, baseline: { ...accepted } }));
+  const establishCashBaseline = (accepted: SalesDailyCashDraft) => setFormState((current) => ({ ...current, baseline: { ...current.baseline, ...accepted } }));
+  const handleSave = async () => {
+    try { await onSave(draft); establishFullBaseline(draft); } catch { /* Parent mutation displays the domain error. */ }
+  };
+  const handleValidateSales = async () => {
+    try {
+      await onSave(draft);
+      establishFullBaseline(draft);
+      await onValidateSales();
+    } catch { /* Parent mutation displays the domain error. */ }
+  };
+  const handleValidateCash = async () => {
+    if (dirtyState.hasUnsavedSalesChanges) return;
+    const cash = extractCashDraft(draft);
+    try {
+      await onSaveCash(cash);
+      establishCashBaseline(cash);
+      await onValidateCash();
+    } catch { /* Cash draft may be saved even when authoritative validation fails. */ }
+  };
 
   return <div className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><SalesRecapStatusBadge status={row.overall_status} /><span className="text-sm text-muted-foreground">Revisi transaksi {row.current_revision}</span></div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><SalesRecapStatusBadge status={row.overall_status} /><span className="text-sm text-muted-foreground">Status data tersimpan · Revisi transaksi {row.current_revision}</span></div></div>
+    {dirtyState.isDirty ? <Alert><AlertTriangle className="h-4 w-4" /><AlertTitle>Perubahan belum disimpan</AlertTitle><AlertDescription>Status validasi berdasarkan data terakhir yang sudah tersimpan.</AlertDescription></Alert> : null}
     {row.sales_validated_at && !row.sales_validation_is_current ? <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Rekap perlu divalidasi ulang</AlertTitle><AlertDescription>Data transaksi atau isi closing berubah setelah validasi terakhir ({formatDateTime(row.sales_validated_at)}).</AlertDescription></Alert> : null}
     {mismatch ? <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Rekonsiliasi sistem bermasalah</AlertTitle><AlertDescription>Total Lovin + Arayya berbeda {formatRupiah(row.subunit_variance)} dari Total Sales. Validasi diblokir.</AlertDescription></Alert> : null}
     <SalesRecapSummaryCards row={row} />
@@ -63,9 +103,10 @@ export function SalesRecapDailyClosing({ row, canValidate, isMutating, onSave, o
     <Card><CardHeader><CardTitle>Catatan Internal</CardTitle></CardHeader><CardContent><Textarea value={draft.notes ?? ""} onChange={(event) => set("notes", event.target.value || null)} maxLength={1000} placeholder="Catatan closing (opsional)" /></CardContent></Card>
 
     <div className="flex flex-wrap justify-end gap-2">
-      <Button variant="outline" disabled={isMutating} onClick={() => void onSave(draft)}>{isMutating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Simpan Draft</Button>
-      {canValidate ? <Button variant="secondary" disabled={isMutating || mismatch} onClick={() => void onSave(draft).then(onValidateSales)}><CheckCircle2 className="mr-2 h-4 w-4" />Validasi Sales</Button> : null}
-      {canValidate ? <Button disabled={isMutating || !row.sales_validation_is_current} onClick={() => void onValidateCash()}><CheckCircle2 className="mr-2 h-4 w-4" />Validasi Cash Akhir</Button> : null}
+      {dirtyState.hasUnsavedSalesChanges && row.sales_validation_is_current ? <p className="w-full text-right text-sm text-destructive">Perubahan Sales belum disimpan. Validasi ulang Sales sebelum Validasi Cash.</p> : null}
+      <Button variant="outline" disabled={isMutating} onClick={() => void handleSave()}>{isMutating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Simpan Draft</Button>
+      {canValidate ? <Button variant="secondary" disabled={isMutating || mismatch} onClick={() => void handleValidateSales()}><CheckCircle2 className="mr-2 h-4 w-4" />Validasi Sales</Button> : null}
+      {canValidate ? <Button disabled={isMutating || !row.sales_validation_is_current || dirtyState.hasUnsavedSalesChanges} onClick={() => void handleValidateCash()}><CheckCircle2 className="mr-2 h-4 w-4" />Validasi Cash Akhir</Button> : null}
     </div>
   </div>;
 }

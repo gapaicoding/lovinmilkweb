@@ -10,6 +10,7 @@ begin
 
   if to_regprocedure('public.get_sales_recap_daily(uuid,date,date)') is null
      or to_regprocedure('public.upsert_sales_daily_closing(uuid,date,jsonb)') is null
+     or to_regprocedure('public.upsert_sales_daily_cash_closing(uuid,date,jsonb)') is null
      or to_regprocedure('public.validate_sales_daily_closing(uuid,date,bigint)') is null
      or to_regprocedure('public.validate_cash_daily_closing(uuid,date,bigint)') is null then
     raise exception 'Sales recap RPC surface is incomplete.';
@@ -36,6 +37,14 @@ begin
   if not has_function_privilege('authenticated','public.get_sales_recap_daily(uuid,date,date)','EXECUTE')
      or not has_function_privilege('authenticated','public.upsert_sales_daily_closing(uuid,date,jsonb)','EXECUTE') then
     raise exception 'Authenticated is missing required recap RPC privileges.';
+  end if;
+
+  if not has_function_privilege(
+    'authenticated',
+    'public.upsert_sales_daily_cash_closing(uuid,date,jsonb)',
+    'EXECUTE'
+  ) then
+    raise exception 'Authenticated is missing Cash-only save RPC privilege.';
   end if;
 end;
 $smoke$;

@@ -17,7 +17,7 @@ import { computeRange, type RangePreset } from "@/components/DateRangeFilter";
 import { toDateInput } from "@/lib/format";
 import { jakartaToday } from "@/lib/reportExport";
 import { exportSalesRecapWorkbook } from "@/lib/salesRecapWorkbook";
-import { fetchSalesRecapDaily, saveSalesDailyClosing, validateCashDailyClosing, validateSalesDailyClosing, type SalesDailyClosingDraft } from "@/lib/salesRecap";
+import { fetchSalesRecapDaily, saveSalesDailyCashClosing, saveSalesDailyClosing, validateCashDailyClosing, validateSalesDailyClosing, type SalesDailyCashDraft, type SalesDailyClosingDraft } from "@/lib/salesRecap";
 
 type PeriodPreset = "today" | "yesterday" | "this_week" | "last_7_days" | "this_month" | "last_month" | "selected_month" | "custom";
 const recapKeys = { all: ["sales-recap"] as const, range: (outlet: string | null, from: string, to: string) => ["sales-recap", outlet, from, to] as const };
@@ -63,6 +63,10 @@ export function SalesRecap() {
     await mutation.mutateAsync(() => validateSalesDailyClosing(outletId, dailyDate, dailyRow.current_revision));
     toast.success("Validasi Sales berhasil.");
   };
+  const saveCash = async (cash: SalesDailyCashDraft) => {
+    if (!outletId) return;
+    await mutation.mutateAsync(() => saveSalesDailyCashClosing(outletId, dailyDate, cash));
+  };
   const validateCash = async () => {
     if (!outletId || !dailyRow) return;
     await mutation.mutateAsync(() => validateCashDailyClosing(outletId, dailyDate, dailyRow.current_revision));
@@ -90,7 +94,7 @@ export function SalesRecap() {
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex items-center gap-2"><CalendarDays className="h-6 w-6" /><h1 className="text-2xl font-bold tracking-tight">Rekap Sales</h1></div><p className="mt-2 text-sm text-muted-foreground">Closing harian dan rekonsiliasi berbasis transaksi aktif. Satu transaksi aktif dihitung sebagai satu struk.</p></div><div className="flex gap-2"><Button variant="outline" onClick={() => void refresh()}><RefreshCcw className="mr-2 h-4 w-4" />Refresh</Button><Button variant="outline" disabled={(view === "daily" ? dailyQuery : periodQuery).isLoading} onClick={() => void exportCurrent()}><FileSpreadsheet className="mr-2 h-4 w-4" />Export Rekap</Button></div></div>
     <Tabs value={view} onValueChange={setView}><TabsList><TabsTrigger value="daily">Closing Harian</TabsTrigger><TabsTrigger value="period">Rekap Periode</TabsTrigger></TabsList>
       <TabsContent value="daily" className="space-y-5"><Card><CardContent className="pt-6"><div className="max-w-xs space-y-2"><Label htmlFor="closing-date">Tanggal Closing</Label><Input id="closing-date" type="date" max={today} value={dailyDate} onChange={(event) => setDailyDate(event.target.value)} /></div>{isFuture ? <p className="mt-2 text-sm text-destructive">Tanggal masa depan tidak dapat ditutup.</p> : null}</CardContent></Card>
-        {dailyQuery.isLoading ? <Loading /> : dailyQuery.error ? <ErrorAlert error={dailyQuery.error} /> : dailyRow ? <SalesRecapDailyClosing row={dailyRow} canValidate={isAdmin && !isFuture} isMutating={mutation.isPending} onSave={save} onValidateSales={validateSales} onValidateCash={validateCash} /> : <ErrorAlert error={new Error("Data harian tidak tersedia.")} />}
+        {dailyQuery.isLoading ? <Loading /> : dailyQuery.error ? <ErrorAlert error={dailyQuery.error} /> : dailyRow ? <SalesRecapDailyClosing row={dailyRow} canValidate={isAdmin && !isFuture} isMutating={mutation.isPending} onSave={save} onSaveCash={saveCash} onValidateSales={validateSales} onValidateCash={validateCash} /> : <ErrorAlert error={new Error("Data harian tidak tersedia.")} />}
       </TabsContent>
       <TabsContent value="period" className="space-y-5"><Card><CardHeader><CardTitle>Periode Rekap</CardTitle></CardHeader><CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"><div className="space-y-2"><Label>Preset</Label><Select value={periodPreset} onValueChange={(value) => applyPreset(value as PeriodPreset)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{[
         ["today","Hari Ini"],["yesterday","Kemarin"],["this_week","Minggu Ini"],["last_7_days","7 Hari Terakhir"],["this_month","Bulan Ini"],["last_month","Bulan Sebelumnya"],["selected_month","Pilih Bulan"],["custom","Custom Range"],

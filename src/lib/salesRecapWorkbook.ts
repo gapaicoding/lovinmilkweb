@@ -25,7 +25,7 @@ export async function createSalesRecapWorkbookBlob(
   rows: SalesRecapDailyRow[], startDate: string, endDate: string,
 ): Promise<Blob> {
   const { default: writeXlsxFile } = await import("write-excel-file/browser");
-  const sheet = createSalesRecapSheet(rows, startDate, endDate);
+  const sheet = createSalesRecapSheetModel(rows, startDate, endDate);
   return writeXlsxFile([sheet], { fontFamily: "Aptos", fontSize: 10 }).toBlob();
 }
 
@@ -37,7 +37,7 @@ export function salesRecapFilename(startDate: string, endDate: string): string {
   return `Rekap Sales - ${label}.xlsx`.replace(/[<>:"/\\|?*]/g, "-");
 }
 
-function createSalesRecapSheet(
+export function createSalesRecapSheetModel(
   rows: SalesRecapDailyRow[], startDate: string, endDate: string,
 ): Sheet<BrowserFileContent> {
   const numberOfDays = inclusiveDays(startDate, endDate);
@@ -111,8 +111,8 @@ function createTotalRow(rows: SalesRecapDailyRow[]): Row {
     integerCell(sums("promo_transaction_count"), true), styled("", { backgroundColor: "#FFF7ED" }), styled("", { backgroundColor: "#FFF7ED" }),
     integerCell(sums("adult_visitors"), true), integerCell(sums("child_visitors"), true),
     ...["qris_dretail","qris_dynamic_bca","qris_static_bca","debit_edc_bca","qris_static_bri","cash_payment","system_total_sales","arayya_sales","lovin_sales","dine_in_sales","takeaway_sales","reservation_sales"].map((key) => currencyCell(sums(key as keyof SalesRecapDailyRow), true)),
-    styled("", { backgroundColor: "#FFF7ED" }), currencyCell(sums("cash_opening"), true), currencyCell(sums("cash_deposited"), true),
-    styled("", { backgroundColor: "#FFF7ED" }), currencyCell(sums("cash_closing_actual"), true), styled("", { backgroundColor: "#FFF7ED" }),
+    styled("", { backgroundColor: "#FFF7ED" }), styled("", { backgroundColor: "#FFF7ED" }), currencyCell(sums("cash_deposited"), true),
+    styled("", { backgroundColor: "#FFF7ED" }), styled("", { backgroundColor: "#FFF7ED" }), styled("", { backgroundColor: "#FFF7ED" }),
   ];
 }
 

@@ -32,6 +32,42 @@ export interface SalesDailyClosingDraft {
   notes: string | null;
 }
 
+export const SALES_CLOSING_FIELDS = [
+  "membership_transaction_count",
+  "promo_transaction_count",
+  "cashier_name",
+  "adult_visitors",
+  "child_visitors",
+  "qris_dretail",
+  "qris_dynamic_bca",
+  "qris_static_bca",
+  "debit_edc_bca",
+  "qris_static_bri",
+  "cash_payment",
+  "dine_in_sales",
+  "takeaway_sales",
+  "reservation_sales",
+  "notes",
+] as const satisfies ReadonlyArray<keyof SalesDailyClosingDraft>;
+
+export const CASH_CLOSING_FIELDS = [
+  "cash_opening",
+  "cash_deposited",
+  "deposit_method",
+  "cash_closing_actual",
+] as const satisfies ReadonlyArray<keyof SalesDailyClosingDraft>;
+
+export type SalesDailyCashDraft = Pick<
+  SalesDailyClosingDraft,
+  (typeof CASH_CLOSING_FIELDS)[number]
+>;
+
+export interface ClosingDirtyState {
+  isDirty: boolean;
+  hasUnsavedSalesChanges: boolean;
+  hasUnsavedCashChanges: boolean;
+}
+
 export interface SalesRecapDailyRow extends SalesDailyClosingDraft {
   business_date: string;
   bill_count: number;
@@ -113,6 +149,32 @@ export function closingDraftFromRow(row: SalesRecapDailyRow): SalesDailyClosingD
   return Object.fromEntries(keys.map((key) => [key, row[key]])) as unknown as SalesDailyClosingDraft;
 }
 
+export function extractCashDraft(draft: SalesDailyClosingDraft): SalesDailyCashDraft {
+  return {
+    cash_opening: draft.cash_opening,
+    cash_deposited: draft.cash_deposited,
+    deposit_method: draft.deposit_method,
+    cash_closing_actual: draft.cash_closing_actual,
+  };
+}
+
+export function getClosingDirtyState(
+  current: SalesDailyClosingDraft,
+  baseline: SalesDailyClosingDraft,
+): ClosingDirtyState {
+  const hasUnsavedSalesChanges = SALES_CLOSING_FIELDS.some(
+    (field) => !closingFieldEqual(field, current[field], baseline[field]),
+  );
+  const hasUnsavedCashChanges = CASH_CLOSING_FIELDS.some(
+    (field) => !closingFieldEqual(field, current[field], baseline[field]),
+  );
+  return {
+    isDirty: hasUnsavedSalesChanges || hasUnsavedCashChanges,
+    hasUnsavedSalesChanges,
+    hasUnsavedCashChanges,
+  };
+}
+
 export function calculateClosingPreview(draft: SalesDailyClosingDraft, systemTotal: number) {
   const paymentTotal = sumNullable([
     draft.qris_dretail, draft.qris_dynamic_bca, draft.qris_static_bca,
@@ -156,6 +218,19 @@ export async function saveSalesDailyClosing(
     p_outlet_id: outletId, p_business_date: businessDate, p_closing: closing,
   });
   if (error) throw rpcError(error, "Draft closing gagal disimpan.");
+}
+
+export async function saveSalesDailyCashClosing(
+  outletId: string,
+  businessDate: string,
+  cash: SalesDailyCashDraft,
+): Promise<void> {
+  const { error } = await recapClient.rpc("upsert_sales_daily_cash_closing", {
+    p_outlet_id: outletId,
+    p_business_date: businessDate,
+    p_cash: cash,
+  });
+  if (error) throw rpcError(error, "Draft closing Cash gagal disimpan.");
 }
 
 export async function validateSalesDailyClosing(
@@ -241,6 +316,26 @@ function textValue(value: unknown): string | null {
 }
 function sumNullable(values: Array<number | null>): number {
   return values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+function closingFieldEqual(
+  field: keyof SalesDailyClosingDraft,
+  left: SalesDailyClosingDraft[keyof SalesDailyClosingDraft] | undefined,
+  right: SalesDailyClosingDraft[keyof SalesDailyClosingDraft] | undefined,
+): boolean {
+  return normalizeClosingField(field, left) === normalizeClosingField(field, right);
+}
+function normalizeClosingField(
+  field: keyof SalesDailyClosingDraft,
+  value: SalesDailyClosingDraft[keyof SalesDailyClosingDraft] | undefined,
+): string | number | null {
+  if (field === "cashier_name" || field === "notes") {
+    if (typeof value !== "string") return null;
+    return value.trim() || null;
+  }
+  if (field === "deposit_method") {
+    return typeof value === "string" && value.trim() ? value : null;
+  }
+  return value === undefined || value === null ? null : value;
 }
 function rpcError(error: RpcError, fallback: string): Error {
   const result = new Error(error.message?.trim() || fallback);
