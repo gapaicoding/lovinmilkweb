@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { SalesTransactionManager } from "@/components/sales/SalesTransactionManager";
 import { JulyAggregateHistory } from "@/components/sales/JulyAggregateHistory";
+import { SalesRecap } from "@/components/sales/SalesRecap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/penjualan")({
@@ -21,8 +22,9 @@ export const Route = createFileRoute("/_authenticated/penjualan")({
 
 function SalesPage() {
   return <Tabs defaultValue="operational" className="space-y-4">
-    <TabsList><TabsTrigger value="operational">Transaksi Operasional</TabsTrigger><TabsTrigger value="aggregate">Riwayat Aktual Agregat</TabsTrigger></TabsList>
+    <TabsList><TabsTrigger value="operational">Transaksi</TabsTrigger><TabsTrigger value="recap">Rekap Sales</TabsTrigger><TabsTrigger value="aggregate">Riwayat Historis</TabsTrigger></TabsList>
     <TabsContent value="operational"><SalesTransactionManager /></TabsContent>
+    <TabsContent value="recap"><SalesRecap /></TabsContent>
     <TabsContent value="aggregate"><JulyAggregateHistory /></TabsContent>
   </Tabs>;
 }
