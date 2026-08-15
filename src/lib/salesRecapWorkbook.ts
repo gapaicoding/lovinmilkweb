@@ -6,6 +6,9 @@ const CURRENCY_FORMAT = '"Rp" #,##0;[Red]("Rp" #,##0);-';
 const HEADER = "#9A3412";
 const GROUP_HEADER = "#C2410C";
 const WHITE = "#FFFFFF";
+const MILLISECONDS_PER_DAY = 86_400_000;
+const EXCEL_UNIX_EPOCH_SERIAL = 25_569;
+const EXCEL_PRE_LEAP_BUG_UNIX_EPOCH_SERIAL = 25_568;
 type BrowserFileContent = File | Blob | ArrayBuffer;
 
 export async function exportSalesRecapWorkbook(
@@ -66,7 +69,7 @@ function createHeaders(): Row[] {
   const mainLabels = [
     "HARI", "TANGGAL", "Jumlah Struk Transaksi", "Transaksi Membership",
     "Transaksi Kupon/Promo", "", "Petugas Kasir", "Pengunjung Dewasa",
-    "Pengunjung Anak2",
+    "Pengunjung Anak",
   ];
   const trailing = [
     "TOTAL SALES", "Total Sales Arayya", "Total Sales Lovin", "Sub Total DINE IN",
@@ -126,7 +129,39 @@ function currencyCell(value: number, total = false): Cell { return styled(value,
 function nullableCurrency(value: number | null): Cell { return value === null ? styled("") : currencyCell(value); }
 function integerCell(value: number, total = false): Cell { return styled(value, { type: Number, format: "#,##0", align: "right", ...(total ? { fontWeight: "bold", backgroundColor: "#FFF7ED" } : {}) }); }
 function nullableInteger(value: number | null): Cell { return value === null ? styled("") : integerCell(value); }
-function dateCell(value: string): Cell { return styled(parseReportDate(value), { type: Date, format: "dd mmm yyyy" }); }
+function dateCell(value: string): Cell { return styled(excelSerialFromIsoDate(value), { type: Number, format: "dd mmm yyyy" }); }
 function booleanCell(value: boolean): Cell { return styled(value, { type: Boolean, fontWeight: "bold", textColor: value ? "#166534" : "#991B1B", align: "center" }); }
 function blanks(count: number): Row { return Array.from({ length: count }, () => null); }
-function inclusiveDays(startDate: string, endDate: string): number { return Math.round((parseReportDate(endDate).getTime() - parseReportDate(startDate).getTime()) / 86_400_000) + 1; }
+function inclusiveDays(startDate: string, endDate: string): number { return excelSerialFromIsoDate(endDate) - excelSerialFromIsoDate(startDate) + 1; }
+
+/**
+ * Converts a calendar-only ISO date to an Excel 1900-system serial without
+ * creating a timezone-bearing local Date. Excel's fictitious 1900-02-29 is
+ * accounted for so modern dates remain compatible with its serial calendar.
+ */
+export function excelSerialFromIsoDate(value: string): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error(`Invalid ISO business date: ${value}`);
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getTime() < Date.UTC(1900, 0, 1)
+  ) {
+    throw new Error(`Invalid ISO business date: ${value}`);
+  }
+
+  const unixDay = date.getTime() / MILLISECONDS_PER_DAY;
+  const epochSerial = date.getTime() < Date.UTC(1900, 2, 1)
+    ? EXCEL_PRE_LEAP_BUG_UNIX_EPOCH_SERIAL
+    : EXCEL_UNIX_EPOCH_SERIAL;
+  return unixDay + epochSerial;
+}
