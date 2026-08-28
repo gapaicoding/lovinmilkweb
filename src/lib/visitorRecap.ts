@@ -12,6 +12,25 @@ export interface VisitorRecapEntryInput { arrival_time: string; adult_count: num
 export interface VisitorRecapEntry extends VisitorRecapEntryInput { id: string; check_in_at: string; created_at: string; updated_at: string }
 export interface VisitorDailyRecap { id: string; outlet_id: string; business_date: string; recorder_name: string; entries: VisitorRecapEntry[] }
 export interface VisitorRecapPeriodRow { business_date: string; recorder_name: string | null; arrival_time: string | null; adult_count: number; child_count: number }
+export interface VisitorHourlySlot { arrival_time: string; adult_count: number; child_count: number; total_visitors: number }
+
+export function aggregateVisitorRecapBySlot(
+  entries: ReadonlyArray<Pick<VisitorRecapEntryInput, "arrival_time" | "adult_count" | "child_count">>,
+): VisitorHourlySlot[] {
+  const totals = new Map(VISITOR_ARRIVAL_SLOTS.map((arrival_time) => [arrival_time, { adult_count: 0, child_count: 0 }]));
+
+  for (const entry of entries) {
+    const slot = totals.get(entry.arrival_time);
+    if (!slot) continue;
+    slot.adult_count += entry.adult_count;
+    slot.child_count += entry.child_count;
+  }
+
+  return VISITOR_ARRIVAL_SLOTS.map((arrival_time) => {
+    const slot = totals.get(arrival_time)!;
+    return { arrival_time, ...slot, total_visitors: slot.adult_count + slot.child_count };
+  });
+}
 
 export function canArchiveVisitorRecapEntry(role: AppRole | null | undefined): boolean {
   return role === "admin" || role === "super_admin";
