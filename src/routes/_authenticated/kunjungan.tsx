@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { VisitorVisitManager } from "@/components/VisitorVisitManager";
+import { VisitorRecapPage } from "@/components/VisitorRecapPage";
 import { validateVisitorDateSearch } from "@/lib/visitorDatePeriod";
 
 export const Route = createFileRoute("/_authenticated/kunjungan")({
@@ -9,5 +9,5 @@ export const Route = createFileRoute("/_authenticated/kunjungan")({
       ? { visitId: search.visitId }
       : {}),
   }),
-  component: VisitorVisitManager,
+  component: VisitorRecapPage,
 });
