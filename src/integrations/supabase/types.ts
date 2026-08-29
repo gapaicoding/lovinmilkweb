@@ -3222,9 +3222,11 @@ export type Database = {
           financial_class: string | null
           id: string
           import_batch_id: string | null
+          inputter_name: string | null
           is_active: boolean
           item_name_normalized: string
           item_name_raw: string
+          outlet_id: string | null
           price_parse_status: string | null
           price_raw: string | null
           reference_price: number | null
@@ -3248,9 +3250,11 @@ export type Database = {
           financial_class?: string | null
           id?: string
           import_batch_id?: string | null
+          inputter_name?: string | null
           is_active?: boolean
           item_name_normalized: string
           item_name_raw: string
+          outlet_id?: string | null
           price_parse_status?: string | null
           price_raw?: string | null
           reference_price?: number | null
@@ -3274,9 +3278,11 @@ export type Database = {
           financial_class?: string | null
           id?: string
           import_batch_id?: string | null
+          inputter_name?: string | null
           is_active?: boolean
           item_name_normalized?: string
           item_name_raw?: string
+          outlet_id?: string | null
           price_parse_status?: string | null
           price_raw?: string | null
           reference_price?: number | null
@@ -3337,9 +3343,11 @@ export type Database = {
           deleted_by: string | null
           id: string
           import_batch_id: string | null
+          inputter_name: string | null
           is_active: boolean
           link: string | null
           normalized_name: string
+          outlet_id: string | null
           phone: string | null
           source_references: string | null
           source_type: string | null
@@ -3357,9 +3365,11 @@ export type Database = {
           deleted_by?: string | null
           id?: string
           import_batch_id?: string | null
+          inputter_name?: string | null
           is_active?: boolean
           link?: string | null
           normalized_name: string
+          outlet_id?: string | null
           phone?: string | null
           source_references?: string | null
           source_type?: string | null
@@ -3377,9 +3387,11 @@ export type Database = {
           deleted_by?: string | null
           id?: string
           import_batch_id?: string | null
+          inputter_name?: string | null
           is_active?: boolean
           link?: string | null
           normalized_name?: string
+          outlet_id?: string | null
           phone?: string | null
           source_references?: string | null
           source_type?: string | null
@@ -4108,6 +4120,10 @@ export type Database = {
       set_operational_inputter: {
         Args: { p_section: string; p_inputter_name: string; p_outlet_id?: string }
         Returns: { outlet_id: string; section: string; inputter_name: string }[]
+      }
+      save_supplier_with_items: {
+        Args: { p_supplier: Json; p_items: Json; p_supplier_id?: string; p_outlet_id?: string }
+        Returns: string
       }
       get_asset_book_values: {
         Args: { p_as_of_period: string }

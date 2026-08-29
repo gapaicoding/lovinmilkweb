@@ -54,6 +54,10 @@ interface Supplier {
   is_active: boolean;
   deleted_at: string | null;
   source_type: string | null;
+  link: string | null;
+  inputter_name: string | null;
+  updated_at: string;
+  supplier_items: Array<{ id: string; item_name_raw: string; brand_raw: string | null; size_raw: string | null; price_raw: string | null; inputter_name: string | null; created_at: string; updated_at: string; deleted_at: string | null }> | null;
 }
 interface Sale {
   transaction_date: string;
@@ -1135,10 +1139,7 @@ async function productsReport(request: ReportExportRequest) {
 async function suppliersReport(request: ReportExportRequest) {
   const period = periodOf(request);
   const status = String(request.filters?.status ?? "active");
-  const [suppliers, purchases] = await Promise.all([
-    fetchRows<Supplier>("suppliers", (query) => query.select("id,supplier_key,supplier_name,contact_person,phone,address,is_active,deleted_at,source_type")),
-    fetchPurchases(period.startDate, period.endDate),
-  ]);
+  const suppliers = await fetchRows<Supplier>("suppliers", (query) => query.select("id,supplier_key,supplier_name,contact_person,phone,address,link,is_active,deleted_at,source_type,inputter_name,updated_at,supplier_items(id,item_name_raw,brand_raw,size_raw,price_raw,inputter_name,created_at,updated_at,deleted_at)"));
   const filtered = suppliers.filter((supplier) => {
     const archived = Boolean(supplier.deleted_at) || !supplier.is_active;
     if (status === "archived") return archived;
@@ -1146,54 +1147,35 @@ async function suppliersReport(request: ReportExportRequest) {
     return !archived;
   });
   if (!filtered.length) return emptyPayload(request, period);
-  const rows = filtered.map((supplier) => {
-    const invoices = purchases.invoices.filter((invoice) => invoice.supplier_id === supplier.id);
-    const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
-    const items = purchases.items.filter((item) => invoiceIds.has(item.purchase_invoice_id));
-    return {
-      Kode: supplier.supplier_key,
-      Nama: supplier.supplier_name,
-      Kontak: supplier.contact_person,
-      Telepon: supplier.phone,
-      Alamat: supplier.address,
-      Status: supplier.deleted_at || !supplier.is_active ? "Diarsipkan" : "Aktif",
-      "Jumlah Item": items.length,
-      "Jumlah Invoice": invoices.length,
-      "Nilai Pembelian": items.reduce((sum, item) => sum + toFiniteNumber(item.amount), 0),
-    };
-  });
-  return payload(request, period, filtered.length, [
+  const ordered = [...filtered].sort((a,b) => a.supplier_name.localeCompare(b.supplier_name, "id-ID"));
+  const rows = ordered.flatMap((supplier) => [...(supplier.supplier_items ?? [])].filter((item) => !item.deleted_at).sort((a,b) => a.created_at.localeCompare(b.created_at)).map((item) => ({
+    "No.": 0, "Nama produk": item.item_name_raw, "Merk produk": item.brand_raw ?? "", "Ukuran produk": item.size_raw ?? "", "Harga satuan": item.price_raw ?? "", "Nama Toko": supplier.supplier_name,
+    "Alamat (Ketik alamat lengkap jika offline store, ketik nama aplikasi jika online store Shopee/Tokopedia dll)": supplier.address ?? "",
+    "Masukkan link google maps jika offline store / Link checkout jika online store": supplier.link ?? "",
+    "Nama pelayan/pemilik untuk mempermudah pencarian": supplier.contact_person ?? "",
+    "No WA toko (usahakan minta agar bisa mudah kalau mau pesan tinggal ambil)": supplier.phone ?? "",
+    _updatedAt: item.updated_at > supplier.updated_at ? item.updated_at : supplier.updated_at,
+    _inputter: item.updated_at > supplier.updated_at ? item.inputter_name : supplier.inputter_name,
+  })));
+  rows.forEach((row,index) => { row["No."] = index + 1; });
+  if (!rows.length) return emptyPayload(request, period);
+  const result = payload(request, period, rows.length, [
     genericSheet(
-      "Supplier",
+      "Supplier Catalog",
       [
-        col("Kode", "text", 18),
-        col("Nama", "text", 28),
-        col("Kontak", "text", 22),
-        col("Telepon", "text", 18),
-        col("Alamat", "text", 36),
-        col("Status", "status", 14),
-        col("Jumlah Item", "integer", 14),
-        col("Jumlah Invoice", "integer", 16),
-        col("Nilai Pembelian", "currency", 20),
+        col("No.", "integer", 6), col("Nama produk", "text", 30), col("Merk produk", "text", 20), col("Ukuran produk", "text", 18), col("Harga satuan", "text", 25), col("Nama Toko", "text", 24),
+        col("Alamat (Ketik alamat lengkap jika offline store, ketik nama aplikasi jika online store Shopee/Tokopedia dll)", "text", 45),
+        col("Masukkan link google maps jika offline store / Link checkout jika online store", "text", 35),
+        col("Nama pelayan/pemilik untuk mempermudah pencarian", "text", 28),
+        col("No WA toko (usahakan minta agar bisa mudah kalau mau pesan tinggal ambil)", "text", 26),
       ],
       rows,
     ),
-    genericSheet(
-      "Pembelian per Supplier",
-      [
-        col("Supplier", "text", 28),
-        col("Invoice", "integer", 14),
-        col("Item", "integer", 12),
-        col("Nilai", "currency", 20),
-      ],
-      rows.map((row) => ({
-        Supplier: row.Nama,
-        Invoice: row["Jumlah Invoice"],
-        Item: row["Jumlah Item"],
-        Nilai: row["Nilai Pembelian"],
-      })),
-    ),
-  ], detectDataStatus(purchases.invoices.map((row) => row.record_source)));
+  ], "Operational");
+  const latest = rows.reduce((a,b) => a._updatedAt > b._updatedAt ? a : b);
+  result.supplierUpdateLabel = `Update Terakhir: ${latest._inputter ?? "—"} ${new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }).format(new Date(latest._updatedAt))}`;
+  result.filename = `supplier-catalog-lovin-milk-${period.endDate}.xlsx`;
+  return result;
 }
 
 async function assetsReport(request: ReportExportRequest) {

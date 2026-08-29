@@ -12,6 +12,8 @@ describe("operational inputter", () => {
   });
   it("keeps section query state independent", () => {
     expect(operationalInputterQueryKey("outlet", "sales")).not.toEqual(operationalInputterQueryKey("outlet", "expenses"));
+    expect(operationalInputterQueryKey("outlet", "suppliers")).not.toEqual(operationalInputterQueryKey("outlet", "sales"));
+    expect(operationalInputterQueryKey("outlet", "suppliers")).not.toEqual(operationalInputterQueryKey("outlet", "expenses"));
   });
   it("displays historical null safely", () => {
     expect(displayOperationalInputter(null)).toBe("—");

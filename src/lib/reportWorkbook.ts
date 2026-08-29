@@ -30,9 +30,25 @@ export function prepareWorkbook(payload: ReportExportPayload): PreparedWorkbook 
   }
   const metadata = createMetadataRows(payload);
   const sheets = payload.sheets.map((sheet, index) =>
-    createSheet(sheet, index === 0 ? metadata : createCompactMetadataRows(payload)),
+    payload.reportType === "suppliers" ? createSupplierSheet(sheet, payload) : createSheet(sheet, index === 0 ? metadata : createCompactMetadataRows(payload)),
   );
   return { sheets, filename: payload.filename };
+}
+
+function createSupplierSheet(sheet: ExportSheet, payload: ReportExportPayload): Sheet<BrowserFileContent> {
+  const border = { borderColor: "#000000", borderStyle: "thin" as const, alignVertical: "center" as const, wrap: true };
+  const metadata: Row = [cell(payload.supplierUpdateLabel ?? "Update Terakhir: —", { fontWeight: "bold", columnSpan: 10 }), ...Array.from({ length: 9 }, () => null)];
+  const header: Row = sheet.columns.map((column) => cell(column.label, { ...border, backgroundColor: "#BDD7EE", textColor: "#000000", fontWeight: "bold", align: "center", height: 72 }));
+  const rows: Row[] = sheet.rows.map((row) => sheet.columns.map((column) => {
+    const raw = row[column.key];
+    const value = raw === null || raw === undefined ? "" : String(typeof raw === "object" && !(raw instanceof Date) && "value" in raw ? raw.value ?? "" : raw);
+    if (column.key.startsWith("Masukkan link") && /^https?:\/\//i.test(value)) {
+      return cell(`HYPERLINK("${value.replaceAll('"', '""')}","${value.replaceAll('"', '""')}")`, { ...border, type: "Formula", textColor: "#0563C1", textDecoration: { underline: true } });
+    }
+    if (column.key === "No.") return cell(Number(value), { ...border, type: Number, align: "center" });
+    return cell(value, border);
+  }));
+  return { sheet: "Supplier Catalog", data: [metadata, blankRow(10), header, ...rows], columns: sheet.columns.map((column) => ({ width: column.width ?? 20 })), stickyRowsCount: 3, zoomScale: 0.8 };
 }
 
 export async function exportReportToExcel(payload: ReportExportPayload): Promise<void> {

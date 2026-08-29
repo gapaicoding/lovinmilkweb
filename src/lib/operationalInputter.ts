@@ -1,4 +1,4 @@
-export type OperationalInputterSection = "sales" | "expenses";
+export type OperationalInputterSection = "sales" | "expenses" | "suppliers";
 
 export const operationalInputterQueryKey = (outletId: string | null, section: OperationalInputterSection) =>
   ["operational-inputter", outletId, section] as const;

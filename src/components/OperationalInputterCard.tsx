@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function OperationalInputterCard({ outletId, section }: { outletId: string | null; section: OperationalInputterSection }) {
-  const label = section === "sales" ? "Penjualan" : "Pengeluaran";
+  const label = section === "sales" ? "Penjualan" : section === "expenses" ? "Pengeluaran" : "Supplier";
   const { name, query, mutation } = useOperationalInputter(outletId, section);
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
