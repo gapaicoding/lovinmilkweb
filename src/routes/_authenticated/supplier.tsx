@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportExcelDialog } from "@/components/reports/ExportExcelDialog";
+import { OperationalInputterCard } from "@/components/OperationalInputterCard";
 import {
   BackgroundRefresh,
   ConfirmActionDialog,
@@ -56,10 +57,12 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+import { useBusinessStructure } from "@/hooks/useBusinessStructure";
+import { useOperationalInputter } from "@/hooks/useOperationalInputter";
+import { displayOperationalInputter } from "@/lib/operationalInputter";
 import {
   actualClient,
   getActualDataErrorMessage,
-  manualSourceKey,
   normalizedName,
   toFiniteNumber,
   toNullableText,
@@ -80,6 +83,8 @@ interface SupplierItemRow {
   item_name_raw: string;
   brand_raw: string | null;
   size_raw: string | null;
+  price_raw: string | null;
+  inputter_name: string | null;
   reference_price: number | string | null;
   financial_class: string | null;
   is_active: boolean;
@@ -109,6 +114,8 @@ interface SupplierDatabaseRow {
   source_references: string | null;
   is_active: boolean;
   deleted_at: string | null;
+  inputter_name: string | null;
+  updated_at: string;
   supplier_items: SupplierItemRow[] | null;
   purchase_invoices: SupplierInvoiceRow[] | null;
 }
@@ -128,6 +135,7 @@ interface SupplierFormValue {
   sourceType: string;
   sourceReferences: string;
   isActive: boolean;
+  items: Array<{ id?: string; productName: string; brandName: string; productSize: string; unitPriceText: string; inputterName?: string | null }>;
 }
 
 const EMPTY_SUPPLIER_FORM: SupplierFormValue = {
@@ -139,6 +147,7 @@ const EMPTY_SUPPLIER_FORM: SupplierFormValue = {
   sourceType: "manual_web_entry",
   sourceReferences: "",
   isActive: true,
+  items: [{ productName: "", brandName: "", productSize: "", unitPriceText: "" }],
 };
 
 export const Route = createFileRoute("/_authenticated/supplier")({
@@ -161,6 +170,8 @@ function SupplierPage() {
   const [detail, setDetail] = useState<SupplierRecord | null>(null);
   const [form, setForm] = useState<SupplierFormValue>(EMPTY_SUPPLIER_FORM);
   const [confirmAction, setConfirmAction] = useState<ConfirmActionState | null>(null);
+  const { outlet } = useBusinessStructure();
+  const supplierInputter = useOperationalInputter(outlet?.id ?? null, "suppliers");
 
   const suppliersQuery = useQuery({
     queryKey: ["actual-suppliers", { q: query.trim(), status }],
@@ -172,9 +183,9 @@ function SupplierPage() {
         .select(
           [
             "id,supplier_key,supplier_name,normalized_name,phone,address,link,",
-            "contact_person,source_type,source_references,is_active,deleted_at,",
+            "contact_person,source_type,source_references,is_active,deleted_at,inputter_name,updated_at,",
             "supplier_items(id,supplier_item_key,catalog_no,item_name_raw,brand_raw,",
-            "size_raw,reference_price,financial_class,is_active,deleted_at),",
+            "size_raw,price_raw,reference_price,financial_class,is_active,deleted_at,inputter_name),",
             "purchase_invoices(id,status,deleted_at,purchase_items(amount,deleted_at))",
           ].join(""),
         )
@@ -188,7 +199,7 @@ function SupplierPage() {
         .filter((row) => matchesSupplierStatus(row, status))
         .filter((row) => {
           if (!normalizedQuery) return true;
-          return [row.supplier_name, row.contact_person ?? "", row.phone ?? "", row.address ?? ""]
+          return [row.supplier_name, row.contact_person ?? "", row.phone ?? "", row.address ?? "", ...(row.supplier_items ?? []).flatMap((item) => [item.item_name_raw, item.brand_raw ?? ""])]
             .join(" ")
             .toLocaleLowerCase("id-ID")
             .includes(normalizedQuery);
@@ -212,6 +223,8 @@ function SupplierPage() {
           throw new Error("Nama supplier minimal 2 karakter.");
         }
 
+        const items = form.items.map((item) => ({ id: item.id, product_name: item.productName.trim(), brand_name: item.brandName.trim() || null, product_size: item.productSize.trim() || null, unit_price_text: item.unitPriceText.trim() || null }));
+        if (items.some((item) => !item.product_name)) throw new Error("Nama Produk wajib diisi.");
         const payload: Record<string, unknown> = {
           supplier_name: supplierName,
           normalized_name: normalizedName(supplierName),
@@ -225,20 +238,8 @@ function SupplierPage() {
           updated_by: user?.id ?? null,
         };
 
-        if (editing) {
-          const { error } = await actualClient
-            .from("suppliers")
-            .update(payload)
-            .eq("id", editing.id);
-          if (error) throw error;
-          return;
-        }
-
-        const { error } = await actualClient.from("suppliers").insert({
-          ...payload,
-          supplier_key: manualSourceKey("SUP-MANUAL"),
-          created_by: user?.id ?? null,
-        });
+        const client = actualClient as unknown as { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ error: unknown }> };
+        const { error } = await client.rpc("save_supplier_with_items", { p_supplier: payload, p_items: items, p_supplier_id: editing?.id ?? null, p_outlet_id: outlet?.id ?? null });
         if (error) throw error;
         return;
       }
@@ -336,6 +337,10 @@ function SupplierPage() {
   };
 
   const openCreate = () => {
+    if (!supplierInputter.name) {
+      toast.error("Nama penginput Supplier belum diatur.");
+      return;
+    }
     setEditing(null);
     setForm(EMPTY_SUPPLIER_FORM);
     setFormOpen(true);
@@ -352,6 +357,7 @@ function SupplierPage() {
       sourceType: supplier.source_type ?? "",
       sourceReferences: supplier.source_references ?? "",
       isActive: supplier.is_active,
+      items: (supplier.supplier_items ?? []).filter((item) => !item.deleted_at).map((item) => ({ id: item.id, productName: item.item_name_raw, brandName: item.brand_raw ?? "", productSize: item.size_raw ?? "", unitPriceText: item.price_raw ?? "", inputterName: item.inputter_name })),
     });
     setFormOpen(true);
   };
@@ -419,6 +425,7 @@ function SupplierPage() {
           </div>
         }
       />
+      <OperationalInputterCard outletId={outlet?.id ?? null} section="suppliers" />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Hasil filter" value={String(summary.suppliers)} />
@@ -497,6 +504,7 @@ function SupplierPage() {
         }}
         onChange={setForm}
         onSave={() => mutation.mutate({ type: "save" })}
+        inputterName={editing?.inputter_name ?? supplierInputter.name}
       />
 
       <SupplierDetailDialog
@@ -569,10 +577,13 @@ function SupplierResults({
             <TableRow>
               <TableHead>Supplier</TableHead>
               <TableHead>Kontak</TableHead>
+              <TableHead>Alamat / Platform</TableHead>
               <TableHead className="text-right">Item</TableHead>
               <TableHead className="text-right">Invoice</TableHead>
               <TableHead className="text-right">Nilai</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Penginput</TableHead>
+              <TableHead>Update</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -589,6 +600,7 @@ function SupplierResults({
                     {supplier.phone || "Tanpa telepon"}
                   </p>
                 </TableCell>
+                <TableCell className="max-w-56 truncate">{supplier.address || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{supplier.itemCount}</TableCell>
                 <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
@@ -597,6 +609,8 @@ function SupplierResults({
                 <TableCell>
                   <SupplierStatusBadge supplier={supplier} />
                 </TableCell>
+                <TableCell>{displayOperationalInputter(supplier.inputter_name)}</TableCell>
+                <TableCell>{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(supplier.updated_at))}</TableCell>
                 <TableCell>
                   <SupplierActions
                     supplier={supplier}
@@ -675,6 +689,7 @@ function SupplierFormDialog({
   onOpenChange,
   onChange,
   onSave,
+  inputterName,
 }: {
   open: boolean;
   editing: SupplierRecord | null;
@@ -683,6 +698,7 @@ function SupplierFormDialog({
   onOpenChange: (open: boolean) => void;
   onChange: (form: SupplierFormValue) => void;
   onSave: () => void;
+  inputterName: string | null;
 }) {
   const update = <Key extends keyof SupplierFormValue>(key: Key, value: SupplierFormValue[Key]) =>
     onChange({ ...form, [key]: value });
@@ -696,8 +712,11 @@ function SupplierFormDialog({
             Isi data yang benar-benar diketahui. Kolom opsional boleh dibiarkan kosong.
           </DialogDescription>
         </DialogHeader>
+        <p className="text-sm text-muted-foreground">{editing ? "Penginput saat dibuat" : "Penginput"}: <span className="font-medium text-foreground">{displayOperationalInputter(inputterName)}</span></p>
+        <section className="space-y-3">
+          <h3 className="font-semibold">Informasi Supplier</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="supplier-name" label="Nama supplier">
+          <FormField id="supplier-name" label="Nama Toko / Supplier *">
             <Input
               id="supplier-name"
               value={form.supplierName}
@@ -705,14 +724,14 @@ function SupplierFormDialog({
               onChange={(event) => update("supplierName", event.target.value)}
             />
           </FormField>
-          <FormField id="supplier-contact" label="Nama kontak (opsional)">
+          <FormField id="supplier-contact" label="Nama Pelayan / Pemilik (opsional)">
             <Input
               id="supplier-contact"
               value={form.contactPerson}
               onChange={(event) => update("contactPerson", event.target.value)}
             />
           </FormField>
-          <FormField id="supplier-phone" label="Telepon (opsional)">
+          <FormField id="supplier-phone" label="No. WhatsApp / Telepon (opsional)">
             <Input
               id="supplier-phone"
               type="tel"
@@ -720,7 +739,7 @@ function SupplierFormDialog({
               onChange={(event) => update("phone", event.target.value)}
             />
           </FormField>
-          <FormField id="supplier-link" label="Tautan (opsional)">
+          <FormField id="supplier-link" label="Link Google Maps / Checkout (opsional)">
             <Input
               id="supplier-link"
               type="url"
@@ -742,7 +761,7 @@ function SupplierFormDialog({
               onChange={(event) => update("sourceReferences", event.target.value)}
             />
           </FormField>
-          <FormField id="supplier-address" label="Alamat (opsional)">
+          <FormField id="supplier-address" label="Alamat Toko / Platform Online (opsional)">
             <Textarea
               id="supplier-address"
               value={form.address}
@@ -764,6 +783,18 @@ function SupplierFormDialog({
             </Select>
           </FormField>
         </div>
+        </section>
+        <section className="space-y-3">
+          <div className="flex items-center justify-between"><h3 className="font-semibold">Katalog Barang Supplier</h3><Button type="button" size="sm" variant="outline" onClick={() => update("items", [...form.items, { productName: "", brandName: "", productSize: "", unitPriceText: "" }])}><Plus className="mr-2 h-4 w-4" />Tambah Barang</Button></div>
+          {form.items.map((item, index) => <Card key={item.id ?? index}><CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+            <FormField id={`supplier-item-${index}-name`} label="Nama Produk *"><Input id={`supplier-item-${index}-name`} maxLength={300} value={item.productName} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, productName: event.target.value } : row))} /></FormField>
+            <FormField id={`supplier-item-${index}-brand`} label="Merk Produk"><Input id={`supplier-item-${index}-brand`} value={item.brandName} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, brandName: event.target.value } : row))} /></FormField>
+            <FormField id={`supplier-item-${index}-size`} label="Ukuran Produk"><Input id={`supplier-item-${index}-size`} value={item.productSize} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, productSize: event.target.value } : row))} /></FormField>
+            <FormField id={`supplier-item-${index}-price`} label="Harga Satuan"><Input id={`supplier-item-${index}-price`} maxLength={500} value={item.unitPriceText} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, unitPriceText: event.target.value } : row))} /></FormField>
+            {item.inputterName ? <p className="text-xs text-muted-foreground">Penginput item: {item.inputterName}</p> : null}
+            <div className="flex justify-end sm:col-span-2"><Button type="button" size="sm" variant="destructive" disabled={form.items.length === 1} onClick={() => update("items", form.items.filter((_, rowIndex) => rowIndex !== index))}><Trash2 className="mr-2 h-4 w-4" />Hapus</Button></div>
+          </CardContent></Card>)}
+        </section>
         <DialogFooter>
           <Button
             type="button"
@@ -840,7 +871,8 @@ function SupplierDetailDialog({
                         <TableHead>Item</TableHead>
                         <TableHead>Brand / Ukuran</TableHead>
                         <TableHead>Klasifikasi</TableHead>
-                        <TableHead className="text-right">Harga referensi</TableHead>
+                        <TableHead>Harga satuan</TableHead>
+                        <TableHead>Penginput item</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -856,11 +888,8 @@ function SupplierDetailDialog({
                             {[item.brand_raw, item.size_raw].filter(Boolean).join(" · ") || "—"}
                           </TableCell>
                           <TableCell>{financialClassLabel(item.financial_class)}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {item.reference_price === null
-                              ? "Belum tersedia"
-                              : formatRupiah(item.reference_price)}
-                          </TableCell>
+                          <TableCell>{item.price_raw || "—"}</TableCell>
+                          <TableCell>{displayOperationalInputter(item.inputter_name)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

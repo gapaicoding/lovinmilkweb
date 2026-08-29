@@ -46,6 +46,7 @@ export interface ReportExportPayload {
   sourceRecordCount: number;
   filename: string;
   asOfDate?: string;
+  supplierUpdateLabel?: string;
 }
 
 export interface ReportExportRequest {
