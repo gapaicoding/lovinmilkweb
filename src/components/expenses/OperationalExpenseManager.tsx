@@ -1,7 +1,11 @@
 ﻿import { useMemo, useState } from "react";
 import { Archive, Loader2, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { OperationalInputterCard } from "@/components/OperationalInputterCard";
 import { useAuth } from "@/hooks/useAuth";
+import { useBusinessStructure } from "@/hooks/useBusinessStructure";
+import { useOperationalInputter } from "@/hooks/useOperationalInputter";
+import { displayOperationalInputter } from "@/lib/operationalInputter";
 import { type OperationalExpenseRow, useOperationalExpenses } from "@/hooks/useOperationalExpenses";
 import { jakartaToday } from "@/lib/businessPeriod";
 import {
@@ -66,6 +70,8 @@ const emptyForm = (): OperationalExpenseInput => ({
 
 export function OperationalExpenseManager() {
   const permissions = useAuth();
+  const { outlet } = useBusinessStructure();
+  const expenseInputter = useOperationalInputter(outlet?.id ?? null, "expenses");
   const { expenses, categories, mutation } = useOperationalExpenses(permissions.canViewDeletedData);
   const [editing, setEditing] = useState<OperationalExpenseRow | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -89,6 +95,7 @@ export function OperationalExpenseManager() {
           row.category_name_snapshot,
           row.receipt_reference,
           row.vendor_name,
+          row.inputter_name,
         ]
           .join(" ")
           .toLocaleLowerCase("id-ID");
@@ -105,6 +112,10 @@ export function OperationalExpenseManager() {
   const total = active.reduce((sum, row) => sum + Number(row.amount), 0);
 
   const beginCreate = () => {
+    if (!expenseInputter.name) {
+      toast.error("Atur nama penginput sebelum mencatat transaksi.");
+      return;
+    }
     setEditing(null);
     setForm(emptyForm());
     setTotalEdited(false);
@@ -173,7 +184,7 @@ export function OperationalExpenseManager() {
           <div className="flex gap-2">
             <ExpenseExportDialog rows={expenses.data ?? []} categories={categories.data ?? []} />
             {permissions.canCreateExpenses ? (
-              <Button onClick={beginCreate}>
+              <Button disabled={!expenseInputter.name} title={!expenseInputter.name ? "Atur nama penginput sebelum mencatat transaksi." : undefined} onClick={beginCreate}>
                 <Plus className="mr-2 h-4 w-4" />
                 Catat Pengeluaran
               </Button>
@@ -214,6 +225,7 @@ export function OperationalExpenseManager() {
           />
         </CardContent>
       </Card>
+      <OperationalInputterCard outletId={outlet?.id ?? null} section="expenses" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Jumlah Pencatatan", active.length.toLocaleString("id-ID")],
@@ -256,6 +268,7 @@ export function OperationalExpenseManager() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tanggal</TableHead>
+                    <TableHead>Penginput</TableHead>
                     <TableHead>Nama Barang</TableHead>
                     <TableHead>Kategori</TableHead>
                     <TableHead>Jumlah</TableHead>
@@ -270,6 +283,7 @@ export function OperationalExpenseManager() {
                   {filtered.map((row) => (
                     <TableRow key={row.id} className={row.deleted_at ? "opacity-60" : ""}>
                       <TableCell>{formatDate(row.expense_date)}</TableCell>
+                      <TableCell>{displayOperationalInputter(row.inputter_name)}</TableCell>
                       <TableCell className="min-w-40 font-medium">
                         {row.item_name ?? (
                           <span className="text-muted-foreground">Data historis</span>
@@ -341,6 +355,7 @@ export function OperationalExpenseManager() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Pengeluaran" : "Catat Pengeluaran"}</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground">{editing ? "Penginput saat dicatat" : "Penginput"}: <span className="font-medium text-foreground">{displayOperationalInputter(editing?.inputter_name ?? expenseInputter.name)}</span></p>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Tanggal *" id="expense-date">
               <Input

@@ -161,6 +161,11 @@ export function SalesTransactionDetail({
         </div>
       ) : null}
 
+      <div className="rounded-lg border p-4">
+        <p className="text-sm text-muted-foreground">Penginput saat dicatat</p>
+        <p className="mt-1 font-medium">{transaction.inputterName ?? "—"}</p>
+      </div>
+
       <div className="space-y-3 rounded-lg border p-4">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />

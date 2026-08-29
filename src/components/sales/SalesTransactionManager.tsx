@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 
 import { SalesTransactionDetail } from "@/components/sales/SalesTransactionDetail";
+import { OperationalInputterCard } from "@/components/OperationalInputterCard";
 import { Route } from "@/routes/_authenticated/penjualan";
 import {
   SalesTransactionForm,
@@ -63,6 +64,8 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
 import { useSalesTransactions } from "@/hooks/useSalesTransactions";
+import { useOperationalInputter } from "@/hooks/useOperationalInputter";
+import { displayOperationalInputter } from "@/lib/operationalInputter";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import {
   calculateTotalQuantity,
@@ -111,6 +114,7 @@ export function SalesTransactionManager() {
 
     refresh,
   } = useSalesTransactions();
+  const salesInputter = useOperationalInputter(outlet?.id ?? null, "sales");
 
   // ==========================================================
   // FILTER STATE
@@ -145,11 +149,11 @@ export function SalesTransactionManager() {
   }>({ visitId: routeSearch.visitId ?? null, date: routeSearch.date ?? null });
 
   useEffect(() => {
-    if (!routeSearch.visitId || !canCreateSales) return;
+    if (!routeSearch.visitId || !canCreateSales || !salesInputter.name) return;
     setPrefilledVisit({ visitId: routeSearch.visitId, date: routeSearch.date ?? null });
     setCreateOpen(true);
     void navigate({ search: {}, replace: true });
-  }, [canCreateSales, navigate, routeSearch.date, routeSearch.visitId]);
+  }, [canCreateSales, navigate, routeSearch.date, routeSearch.visitId, salesInputter.name]);
 
   const [detailTransaction, setDetailTransaction] = useState<SalesTransaction | null>(null);
 
@@ -253,6 +257,7 @@ export function SalesTransactionManager() {
       if (normalizedSearch) {
         const haystack = [
           transaction.transactionNumber,
+          transaction.inputterName ?? "",
 
           transaction.notes ?? "",
 
@@ -534,7 +539,8 @@ export function SalesTransactionManager() {
           {canCreateSales ? (
             <Button
               type="button"
-              disabled={isLoading || isMutating}
+              disabled={isLoading || isMutating || !salesInputter.name}
+              title={!salesInputter.name ? "Atur nama penginput sebelum mencatat transaksi." : undefined}
               onClick={() => {
                 setActionError(null);
 
@@ -547,6 +553,8 @@ export function SalesTransactionManager() {
           ) : null}
         </div>
       </div>
+
+      <OperationalInputterCard outletId={outlet?.id ?? null} section="sales" />
 
       {/* =====================================================
           FEEDBACK
@@ -807,6 +815,7 @@ export function SalesTransactionManager() {
                   <TableHead className="min-w-44">Transaksi</TableHead>
 
                   <TableHead className="min-w-32">Tanggal</TableHead>
+                  <TableHead className="min-w-36">Penginput</TableHead>
 
                   <TableHead className="min-w-48">Subunit</TableHead>
 
@@ -860,6 +869,7 @@ export function SalesTransactionManager() {
                       {/* DATE */}
 
                       <TableCell>{formatDate(transaction.transactionDate)}</TableCell>
+                      <TableCell>{displayOperationalInputter(transaction.inputterName)}</TableCell>
 
                       {/* SUBUNIT */}
 
@@ -1099,6 +1109,8 @@ export function SalesTransactionManager() {
             </DialogDescription>
           </DialogHeader>
 
+          <p className="text-sm text-muted-foreground">Penginput: <span className="font-medium text-foreground">{displayOperationalInputter(salesInputter.name)}</span></p>
+
           <SalesTransactionForm
             mode="create"
             outletId={outlet?.id ?? null}
@@ -1143,15 +1155,18 @@ export function SalesTransactionManager() {
           </DialogHeader>
 
           {editTransaction ? (
-            <SalesTransactionForm
-              mode="edit"
-              outletId={outlet?.id ?? null}
-              products={products}
-              transaction={editTransaction}
-              isSubmitting={isMutating}
-              onCancel={() => setEditTransaction(null)}
-              onSubmit={handleFormSubmit}
-            />
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Penginput saat dicatat: <span className="font-medium text-foreground">{displayOperationalInputter(editTransaction.inputterName)}</span></p>
+              <SalesTransactionForm
+                mode="edit"
+                outletId={outlet?.id ?? null}
+                products={products}
+                transaction={editTransaction}
+                isSubmitting={isMutating}
+                onCancel={() => setEditTransaction(null)}
+                onSubmit={handleFormSubmit}
+              />
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

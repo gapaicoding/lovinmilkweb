@@ -1031,6 +1031,8 @@ function mapSalesTransaction(
     totalAmount:
       row.total_amount,
 
+    inputterName: row.inputter_name,
+
     notes:
       row.notes,
 

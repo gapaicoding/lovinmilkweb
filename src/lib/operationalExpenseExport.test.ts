@@ -15,6 +15,7 @@ describe("operational expense export", () => {
       receipt_reference: "N-1",
       vendor_name: "Toko",
       notes: null,
+      inputter_name: "Andi",
     };
     const payload = buildOperationalExpenseExport(
       [
@@ -26,6 +27,7 @@ describe("operational expense export", () => {
     );
     expect(payload.sheets[0].columns.map((column) => column.label)).toEqual([
       "Tanggal",
+      "Penginput",
       "Nama Barang",
       "Jumlah / Ukuran",
       "Satuan Ukuran",
@@ -36,6 +38,7 @@ describe("operational expense export", () => {
       "TOKO",
       "Catatan",
     ]);
+    expect(payload.sheets[0].rows[0].Penginput).toBe("Andi");
     expect(payload.sheets[1].rows[0]["Total Belanja"]).toBe(22000);
     expect(payload.sheets[2].rows[0]["Jumlah Pencatatan"]).toBe(2);
     expect(payload.filename).toBe("Pengeluaran_LovinMilk_2026-08-10.xlsx");

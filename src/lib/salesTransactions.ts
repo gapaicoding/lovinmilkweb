@@ -94,6 +94,7 @@ export interface SalesTransaction {
   transactionNumber: string;
   transactionDate: string;
   totalAmount: number;
+  inputterName?: string | null;
 
   notes: string | null;
   entrySource: SalesEntrySource;
