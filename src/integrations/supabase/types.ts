@@ -1675,6 +1675,12 @@ export type Database = {
           },
         ]
       }
+      operational_inputter_settings: {
+        Row: { id: string; outlet_id: string; section: string; inputter_name: string; created_at: string; created_by: string | null; updated_at: string; updated_by: string | null }
+        Insert: { id?: string; outlet_id: string; section: string; inputter_name: string; created_at?: string; created_by?: string | null; updated_at?: string; updated_by?: string | null }
+        Update: { id?: string; outlet_id?: string; section?: string; inputter_name?: string; created_at?: string; created_by?: string | null; updated_at?: string; updated_by?: string | null }
+        Relationships: []
+      }
       operational_expenses: {
         Row: {
           amount: number
@@ -1686,6 +1692,7 @@ export type Database = {
           deleted_by: string | null
           expense_date: string
           id: string
+          inputter_name: string | null
           item_name: string | null
           notes: string | null
           outlet_id: string
@@ -1711,6 +1718,7 @@ export type Database = {
           deleted_by?: string | null
           expense_date: string
           id?: string
+          inputter_name?: string | null
           item_name?: string | null
           notes?: string | null
           outlet_id: string
@@ -1736,6 +1744,7 @@ export type Database = {
           deleted_by?: string | null
           expense_date?: string
           id?: string
+          inputter_name?: string | null
           item_name?: string | null
           notes?: string | null
           outlet_id?: string
@@ -2991,6 +3000,7 @@ export type Database = {
           deleted_by: string | null
           entry_source: string
           id: string
+          inputter_name: string | null
           notes: string | null
           outlet_id: string
           total_amount: number
@@ -3007,6 +3017,7 @@ export type Database = {
           deleted_by?: string | null
           entry_source?: string
           id?: string
+          inputter_name?: string | null
           notes?: string | null
           outlet_id: string
           total_amount?: number
@@ -3023,6 +3034,7 @@ export type Database = {
           deleted_by?: string | null
           entry_source?: string
           id?: string
+          inputter_name?: string | null
           notes?: string | null
           outlet_id?: string
           total_amount?: number
@@ -4088,6 +4100,14 @@ export type Database = {
       generate_asset_depreciation: {
         Args: { p_asset_id: string; p_through_period: string }
         Returns: number
+      }
+      get_operational_inputter: {
+        Args: { p_section: string; p_outlet_id?: string }
+        Returns: { outlet_id: string; section: string; inputter_name: string | null }[]
+      }
+      set_operational_inputter: {
+        Args: { p_section: string; p_inputter_name: string; p_outlet_id?: string }
+        Returns: { outlet_id: string; section: string; inputter_name: string }[]
       }
       get_asset_book_values: {
         Args: { p_as_of_period: string }

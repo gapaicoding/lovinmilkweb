@@ -163,6 +163,7 @@ interface OperationalSalesDetailRow extends Record<string, unknown> {
   itemId: string;
   date: Date;
   transactionNumber: string;
+  inputter: string | null;
   product: string;
   sku: string | null;
   category: string;
@@ -217,6 +218,7 @@ export function buildOperationalSalesExportPayload(
         itemId: item.id,
         date: parseReportDate(transaction.transactionDate),
         transactionNumber: transaction.transactionNumber,
+        inputter: transaction.inputterName ?? null,
         product: item.productNameSnapshot,
         sku: item.productSkuSnapshot,
         category: item.categoryNameSnapshot,
@@ -407,6 +409,7 @@ export function buildOperationalSalesExportPayload(
     .map((row) => ({
       Tanggal: row.date,
       "No. Transaksi": row.transactionNumber,
+      Penginput: row.inputter,
       Produk: row.product,
       SKU: row.sku,
       Kategori: row.category,
@@ -488,6 +491,7 @@ export function buildOperationalSalesExportPayload(
             [
               col("Tanggal", "date", 15),
               col("No. Transaksi", "text", 20),
+              col("Penginput", "text", 22),
               col("Produk", "text", 32),
               col("SKU", "text", 18),
               col("Kategori", "text", 24),

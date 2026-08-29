@@ -26,6 +26,7 @@ export function buildOperationalExpenseExport(
         name: "Detail Pengeluaran",
         columns: [
           column("Tanggal", "date", 15),
+          column("Penginput", "text", 22),
           column("Nama Barang", "text", 28),
           column("Jumlah / Ukuran", "decimal", 16),
           column("Satuan Ukuran", "text", 16),
@@ -38,6 +39,7 @@ export function buildOperationalExpenseExport(
         ],
         rows: active.map((row) => ({
           Tanggal: parseReportDate(row.expense_date),
+          Penginput: row.inputter_name,
           "Nama Barang": row.item_name ?? "Data historis",
           "Jumlah / Ukuran": row.quantity,
           "Satuan Ukuran": row.unit,
