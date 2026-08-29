@@ -19,6 +19,13 @@ export interface AppPermissions {
   canArchiveExpenses: boolean;
   canManageVisitorVisits: boolean;
 
+  canAccessSuppliers: boolean;
+  canCreateSuppliers: boolean;
+  canEditSuppliers: boolean;
+  canExportSuppliers: boolean;
+  canArchiveSuppliers: boolean;
+  canManageSupplierInputter: boolean;
+
   canAccessMasterData: boolean;
   canManageVisitors: boolean;
 
@@ -50,6 +57,13 @@ const NO_PERMISSIONS: AppPermissions = {
   canArchiveExpenses: false,
   canManageVisitorVisits: false,
 
+  canAccessSuppliers: false,
+  canCreateSuppliers: false,
+  canEditSuppliers: false,
+  canExportSuppliers: false,
+  canArchiveSuppliers: false,
+  canManageSupplierInputter: false,
+
   canAccessMasterData: false,
   canManageVisitors: false,
 
@@ -69,6 +83,9 @@ const NO_PERMISSIONS: AppPermissions = {
  * - Tidak ada permission berdasarkan Subunit Bisnis.
  * - Staff dapat melihat seluruh Subunit melalui fitur operasional
  *   yang memang diperbolehkan untuk Staff.
+ * - Supplier merupakan direktori operasional khusus: Staff boleh
+ *   melihat, menambah, mengedit, mengatur penginput, dan export.
+ * - Lifecycle Supplier (arsip/pulihkan) tetap Admin/Super Admin.
  * - Master Data tetap Admin/Super Admin.
  * - Kontrol Data / Rekonsiliasi hanya Admin/Super Admin.
  */
@@ -84,6 +101,7 @@ const ROUTE_CAPABILITIES = {
   "/asset-peralatan": "canViewOperationalData",
   "/pengeluaran": "canViewOperationalData",
   "/kunjungan": "canViewOperationalData",
+  "/supplier": "canAccessSuppliers",
 
   "/pengunjung": "canManageVisitors",
 
@@ -95,7 +113,6 @@ const ROUTE_CAPABILITIES = {
   "/produk": "canAccessMasterData",
 
   "/laporan-keuangan": "canAccessFinancialData",
-  "/supplier": "canAccessFinancialData",
 
   "/pengguna": "canManageUsers",
 
@@ -140,6 +157,13 @@ export function getRolePermissions(role: AppRole | null | undefined): AppPermiss
     canArchiveExpenses: isAdmin,
 
     canManageVisitorVisits: true,
+
+    canAccessSuppliers: true,
+    canCreateSuppliers: true,
+    canEditSuppliers: true,
+    canExportSuppliers: true,
+    canArchiveSuppliers: isAdmin,
+    canManageSupplierInputter: true,
 
     canAccessMasterData: isAdmin,
     canManageVisitors: isAdmin,

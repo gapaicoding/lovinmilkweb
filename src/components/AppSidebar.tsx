@@ -41,6 +41,7 @@ export function AppSidebar() {
     canAccessDashboard,
     canAccessAnalytics,
     canAccessFinancialData,
+    canAccessSuppliers,
     canAccessMasterData,
     canManageUsers,
     signOut,
@@ -202,6 +203,23 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {canAccessSuppliers ? (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={active("/supplier")}
+                  >
+                    <Link to="/supplier">
+                      <Building2 />
+
+                      <span>
+                        Supplier
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -224,21 +242,6 @@ export function AppSidebar() {
 
                       <span>
                         Laporan Keuangan
-                      </span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={active("/supplier")}
-                  >
-                    <Link to="/supplier">
-                      <Building2 />
-
-                      <span>
-                        Supplier
                       </span>
                     </Link>
                   </SidebarMenuButton>
