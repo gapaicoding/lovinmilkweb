@@ -85,8 +85,8 @@ interface SupplierItemRow {
   size_raw: string | null;
   price_raw: string | null;
   inputter_name: string | null;
-  reference_price: number | string | null;
-  financial_class: string | null;
+  reference_price?: number | string | null;
+  financial_class?: string | null;
   is_active: boolean;
   deleted_at: string | null;
 }
@@ -117,7 +117,7 @@ interface SupplierDatabaseRow {
   inputter_name: string | null;
   updated_at: string;
   supplier_items: SupplierItemRow[] | null;
-  purchase_invoices: SupplierInvoiceRow[] | null;
+  purchase_invoices?: SupplierInvoiceRow[] | null;
 }
 
 interface SupplierRecord extends SupplierDatabaseRow {
@@ -159,12 +159,23 @@ export const Route = createFileRoute("/_authenticated/supplier")({
 });
 
 function SupplierPage() {
-  const { isAdmin, isSuperAdmin, loading: authLoading, user } = useAuth();
+  const {
+    isAdmin,
+    isSuperAdmin,
+    canAccessSuppliers,
+    canCreateSuppliers,
+    canEditSuppliers,
+    canExportSuppliers,
+    canArchiveSuppliers,
+    canManageSupplierInputter,
+    loading: authLoading,
+    user,
+  } = useAuth();
   const queryClient = useQueryClient();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const query = search.q ?? "";
-  const status = search.status ?? "active";
+  const status = isAdmin ? (search.status ?? "active") : "active";
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<SupplierRecord | null>(null);
   const [detail, setDetail] = useState<SupplierRecord | null>(null);
@@ -174,21 +185,23 @@ function SupplierPage() {
   const supplierInputter = useOperationalInputter(outlet?.id ?? null, "suppliers");
 
   const suppliersQuery = useQuery({
-    queryKey: ["actual-suppliers", { q: query.trim(), status }],
-    enabled: isAdmin,
+    queryKey: ["actual-suppliers", { q: query.trim(), status, includeFinancial: isAdmin }],
+    enabled: canAccessSuppliers,
     staleTime: 30_000,
     queryFn: async (): Promise<SupplierRecord[]> => {
+      const supplierItemsSelect = isAdmin
+        ? "supplier_items(id,supplier_item_key,catalog_no,item_name_raw,brand_raw,size_raw,price_raw,reference_price,financial_class,is_active,deleted_at,inputter_name)"
+        : "supplier_items(id,supplier_item_key,catalog_no,item_name_raw,brand_raw,size_raw,price_raw,is_active,deleted_at,inputter_name)";
+      const supplierSelect = [
+        "id,supplier_key,supplier_name,normalized_name,phone,address,link,",
+        "contact_person,source_type,source_references,is_active,deleted_at,inputter_name,updated_at,",
+        supplierItemsSelect,
+        isAdmin ? ",purchase_invoices(id,status,deleted_at,purchase_items(amount,deleted_at))" : "",
+      ].join("");
+
       const { data, error } = await actualClient
         .from<SupplierDatabaseRow>("suppliers")
-        .select(
-          [
-            "id,supplier_key,supplier_name,normalized_name,phone,address,link,",
-            "contact_person,source_type,source_references,is_active,deleted_at,inputter_name,updated_at,",
-            "supplier_items(id,supplier_item_key,catalog_no,item_name_raw,brand_raw,",
-            "size_raw,price_raw,reference_price,financial_class,is_active,deleted_at,inputter_name),",
-            "purchase_invoices(id,status,deleted_at,purchase_items(amount,deleted_at))",
-          ].join(""),
-        )
+        .select(supplierSelect)
         .order("supplier_name", { ascending: true });
 
       if (error) throw error;
@@ -217,6 +230,10 @@ function SupplierPage() {
       supplier?: SupplierRecord;
     }) => {
       if (type === "save") {
+        if (editing ? !canEditSuppliers : !canCreateSuppliers) {
+          throw new Error("Anda tidak memiliki izin untuk menyimpan Supplier.");
+        }
+
         const supplierName = form.supplierName.trim().replace(/\s+/g, " ");
 
         if (supplierName.length < 2) {
@@ -234,7 +251,7 @@ function SupplierPage() {
           contact_person: toNullableText(form.contactPerson),
           source_type: toNullableText(form.sourceType),
           source_references: toNullableText(form.sourceReferences),
-          is_active: form.isActive,
+          is_active: isAdmin ? form.isActive : true,
           updated_by: user?.id ?? null,
         };
 
@@ -247,6 +264,10 @@ function SupplierPage() {
       if (!supplier) throw new Error("Supplier tidak ditemukan.");
 
       if (type === "soft-delete") {
+        if (!canArchiveSuppliers) {
+          throw new Error("Hanya Admin atau Super Admin yang dapat mengarsipkan Supplier.");
+        }
+
         const { error } = await actualClient
           .from("suppliers")
           .update({
@@ -261,6 +282,10 @@ function SupplierPage() {
       }
 
       if (type === "restore") {
+        if (!canArchiveSuppliers) {
+          throw new Error("Hanya Admin atau Super Admin yang dapat memulihkan Supplier.");
+        }
+
         const { error } = await actualClient
           .from("suppliers")
           .update({
@@ -321,6 +346,7 @@ function SupplierPage() {
     return {
       suppliers: rows.length,
       active: rows.filter((row) => row.is_active && !row.deleted_at).length,
+      items: rows.reduce((total, row) => total + row.itemCount, 0),
       invoices: rows.reduce((total, row) => total + row.invoiceCount, 0),
       value: rows.reduce((total, row) => total + row.invoiceValue, 0),
     };
@@ -337,6 +363,11 @@ function SupplierPage() {
   };
 
   const openCreate = () => {
+    if (!canCreateSuppliers) {
+      toast.error("Anda tidak memiliki izin untuk menambah Supplier.");
+      return;
+    }
+
     if (!supplierInputter.name) {
       toast.error("Nama penginput Supplier belum diatur.");
       return;
@@ -347,6 +378,11 @@ function SupplierPage() {
   };
 
   const openEdit = (supplier: SupplierRecord) => {
+    if (!canEditSuppliers) {
+      toast.error("Anda tidak memiliki izin untuk mengedit Supplier.");
+      return;
+    }
+
     setEditing(supplier);
     setForm({
       supplierName: supplier.supplier_name,
@@ -398,13 +434,13 @@ function SupplierPage() {
     return <ModuleInitialLoading label="Memeriksa akses modul supplier" />;
   }
 
-  if (!isAdmin) {
+  if (!canAccessSuppliers) {
     return (
       <Alert variant="destructive">
         <AlertTitle>Akses ditolak</AlertTitle>
         <AlertDescription>
-          Modul supplier hanya tersedia untuk Admin dan Super Admin. Kebijakan RLS tetap menjadi
-          sumber otorisasi utama.
+          Anda tidak memiliki izin untuk mengakses Supplier. Kebijakan RLS tetap menjadi sumber
+          otorisasi utama.
         </AlertDescription>
       </Alert>
     );
@@ -414,28 +450,50 @@ function SupplierPage() {
     <div className="space-y-5">
       <PageHeader
         title="Supplier"
-        description="Direktori supplier aktual, katalog item, dan nilai pembelian terkait."
+        description={
+          isAdmin
+            ? "Direktori supplier aktual, katalog item, dan nilai pembelian terkait."
+            : "Direktori supplier aktual dan katalog barang untuk kebutuhan operasional."
+        }
         actions={
           <div className="flex flex-wrap gap-2">
-            <ExportExcelDialog reportType="suppliers" filters={{ status }} />
-            <Button type="button" onClick={openCreate}>
-              <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
-              Tambah Supplier
-            </Button>
+            {canExportSuppliers ? (
+              <ExportExcelDialog reportType="suppliers" filters={{ status }} />
+            ) : null}
+            {canCreateSuppliers ? (
+              <Button type="button" onClick={openCreate}>
+                <Plus aria-hidden="true" className="mr-2 h-4 w-4" />
+                Tambah Supplier
+              </Button>
+            ) : null}
           </div>
         }
       />
-      <OperationalInputterCard outletId={outlet?.id ?? null} section="suppliers" />
+      {canManageSupplierInputter ? (
+        <OperationalInputterCard outletId={outlet?.id ?? null} section="suppliers" />
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard label="Hasil filter" value={String(summary.suppliers)} />
         <SummaryCard label="Supplier aktif" value={String(summary.active)} />
-        <SummaryCard label="Invoice tercatat" value={String(summary.invoices)} />
-        <SummaryCard label="Nilai invoice" value={formatRupiah(summary.value)} />
+        {isAdmin ? (
+          <>
+            <SummaryCard label="Invoice tercatat" value={String(summary.invoices)} />
+            <SummaryCard label="Nilai invoice" value={formatRupiah(summary.value)} />
+          </>
+        ) : (
+          <SummaryCard label="Total item aktif" value={String(summary.items)} />
+        )}
       </div>
 
       <Card>
-        <CardContent className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_14rem_auto] md:items-end">
+        <CardContent
+          className={
+            isAdmin
+              ? "grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_14rem_auto] md:items-end"
+              : "grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+          }
+        >
           <FormField id="supplier-search" label="Cari supplier">
             <div className="relative">
               <Search
@@ -451,21 +509,23 @@ function SupplierPage() {
               />
             </div>
           </FormField>
-          <FormField id="supplier-status" label="Status">
-            <Select
-              value={status}
-              onValueChange={(value) => updateSearch({ status: parseSupplierStatus(value) })}
-            >
-              <SelectTrigger id="supplier-status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="archived">Diarsipkan</SelectItem>
-                <SelectItem value="all">Semua</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
+          {isAdmin ? (
+            <FormField id="supplier-status" label="Status">
+              <Select
+                value={status}
+                onValueChange={(value) => updateSearch({ status: parseSupplierStatus(value) })}
+              >
+                <SelectTrigger id="supplier-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="archived">Diarsipkan</SelectItem>
+                  <SelectItem value="all">Semua</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormField>
+          ) : null}
           <BackgroundRefresh active={suppliersQuery.isFetching && !suppliersQuery.isPending} />
         </CardContent>
       </Card>
@@ -481,6 +541,9 @@ function SupplierPage() {
       ) : suppliersQuery.data?.length ? (
         <SupplierResults
           suppliers={suppliersQuery.data}
+          showFinancial={isAdmin}
+          canEdit={canEditSuppliers}
+          canArchive={canArchiveSuppliers}
           isSuperAdmin={isSuperAdmin}
           onDetail={setDetail}
           onEdit={openEdit}
@@ -505,10 +568,13 @@ function SupplierPage() {
         onChange={setForm}
         onSave={() => mutation.mutate({ type: "save" })}
         inputterName={editing?.inputter_name ?? supplierInputter.name}
+        canManageStatus={isAdmin}
       />
 
       <SupplierDetailDialog
         supplier={detail}
+        showFinancial={isAdmin}
+        canEdit={canEditSuppliers}
         onClose={() => setDetail(null)}
         onEdit={(supplier) => {
           setDetail(null);
@@ -527,12 +593,18 @@ function SupplierPage() {
 
 function SupplierResults({
   suppliers,
+  showFinancial,
+  canEdit,
+  canArchive,
   isSuperAdmin,
   onDetail,
   onEdit,
   onAction,
 }: {
   suppliers: SupplierRecord[];
+  showFinancial: boolean;
+  canEdit: boolean;
+  canArchive: boolean;
   isSuperAdmin: boolean;
   onDetail: (supplier: SupplierRecord) => void;
   onEdit: (supplier: SupplierRecord) => void;
@@ -552,15 +624,21 @@ function SupplierResults({
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <Metric label="Item" value={String(supplier.itemCount)} />
-                <Metric label="Invoice" value={String(supplier.invoiceCount)} />
-                <Metric
-                  className="col-span-2"
-                  label="Nilai pembelian"
-                  value={formatRupiah(supplier.invoiceValue)}
-                />
+                {showFinancial ? (
+                  <>
+                    <Metric label="Invoice" value={String(supplier.invoiceCount)} />
+                    <Metric
+                      className="col-span-2"
+                      label="Nilai pembelian"
+                      value={formatRupiah(supplier.invoiceValue)}
+                    />
+                  </>
+                ) : null}
               </div>
               <SupplierActions
                 supplier={supplier}
+                canEdit={canEdit}
+                canArchive={canArchive}
                 isSuperAdmin={isSuperAdmin}
                 onDetail={onDetail}
                 onEdit={onEdit}
@@ -579,8 +657,12 @@ function SupplierResults({
               <TableHead>Kontak</TableHead>
               <TableHead>Alamat / Platform</TableHead>
               <TableHead className="text-right">Item</TableHead>
-              <TableHead className="text-right">Invoice</TableHead>
-              <TableHead className="text-right">Nilai</TableHead>
+              {showFinancial ? (
+                <>
+                  <TableHead className="text-right">Invoice</TableHead>
+                  <TableHead className="text-right">Nilai</TableHead>
+                </>
+              ) : null}
               <TableHead>Status</TableHead>
               <TableHead>Penginput</TableHead>
               <TableHead>Update</TableHead>
@@ -602,18 +684,28 @@ function SupplierResults({
                 </TableCell>
                 <TableCell className="max-w-56 truncate">{supplier.address || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{supplier.itemCount}</TableCell>
-                <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
-                <TableCell className="text-right font-medium tabular-nums">
-                  {formatRupiah(supplier.invoiceValue)}
-                </TableCell>
+                {showFinancial ? (
+                  <>
+                    <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {formatRupiah(supplier.invoiceValue)}
+                    </TableCell>
+                  </>
+                ) : null}
                 <TableCell>
                   <SupplierStatusBadge supplier={supplier} />
                 </TableCell>
                 <TableCell>{displayOperationalInputter(supplier.inputter_name)}</TableCell>
-                <TableCell>{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(supplier.updated_at))}</TableCell>
+                <TableCell>
+                  {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(
+                    new Date(supplier.updated_at),
+                  )}
+                </TableCell>
                 <TableCell>
                   <SupplierActions
                     supplier={supplier}
+                    canEdit={canEdit}
+                    canArchive={canArchive}
                     isSuperAdmin={isSuperAdmin}
                     onDetail={onDetail}
                     onEdit={onEdit}
@@ -631,12 +723,16 @@ function SupplierResults({
 
 function SupplierActions({
   supplier,
+  canEdit,
+  canArchive,
   isSuperAdmin,
   onDetail,
   onEdit,
   onAction,
 }: {
   supplier: SupplierRecord;
+  canEdit: boolean;
+  canArchive: boolean;
   isSuperAdmin: boolean;
   onDetail: (supplier: SupplierRecord) => void;
   onEdit: (supplier: SupplierRecord) => void;
@@ -650,23 +746,29 @@ function SupplierActions({
         onClick={() => onDetail(supplier)}
       />
       {supplier.deleted_at ? (
-        <IconAction
-          label={`Pulihkan ${supplier.supplier_name}`}
-          icon={RotateCcw}
-          onClick={() => onAction("restore", supplier)}
-        />
+        canArchive ? (
+          <IconAction
+            label={`Pulihkan ${supplier.supplier_name}`}
+            icon={RotateCcw}
+            onClick={() => onAction("restore", supplier)}
+          />
+        ) : null
       ) : (
         <>
-          <IconAction
-            label={`Edit ${supplier.supplier_name}`}
-            icon={Pencil}
-            onClick={() => onEdit(supplier)}
-          />
-          <IconAction
-            label={`Arsipkan ${supplier.supplier_name}`}
-            icon={Archive}
-            onClick={() => onAction("soft-delete", supplier)}
-          />
+          {canEdit ? (
+            <IconAction
+              label={`Edit ${supplier.supplier_name}`}
+              icon={Pencil}
+              onClick={() => onEdit(supplier)}
+            />
+          ) : null}
+          {canArchive ? (
+            <IconAction
+              label={`Arsipkan ${supplier.supplier_name}`}
+              icon={Archive}
+              onClick={() => onAction("soft-delete", supplier)}
+            />
+          ) : null}
         </>
       )}
       {isSuperAdmin ? (
@@ -690,6 +792,7 @@ function SupplierFormDialog({
   onChange,
   onSave,
   inputterName,
+  canManageStatus,
 }: {
   open: boolean;
   editing: SupplierRecord | null;
@@ -699,6 +802,7 @@ function SupplierFormDialog({
   onChange: (form: SupplierFormValue) => void;
   onSave: () => void;
   inputterName: string | null;
+  canManageStatus: boolean;
 }) {
   const update = <Key extends keyof SupplierFormValue>(key: Key, value: SupplierFormValue[Key]) =>
     onChange({ ...form, [key]: value });
@@ -769,18 +873,22 @@ function SupplierFormDialog({
             />
           </FormField>
           <FormField id="supplier-active" label="Status">
-            <Select
-              value={form.isActive ? "active" : "inactive"}
-              onValueChange={(value) => update("isActive", value === "active")}
-            >
-              <SelectTrigger id="supplier-active">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Aktif</SelectItem>
-                <SelectItem value="inactive">Nonaktif</SelectItem>
-              </SelectContent>
-            </Select>
+            {canManageStatus ? (
+              <Select
+                value={form.isActive ? "active" : "inactive"}
+                onValueChange={(value) => update("isActive", value === "active")}
+              >
+                <SelectTrigger id="supplier-active">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Aktif</SelectItem>
+                  <SelectItem value="inactive">Nonaktif</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input id="supplier-active" value="Aktif" disabled />
+            )}
           </FormField>
         </div>
         </section>
@@ -816,10 +924,14 @@ function SupplierFormDialog({
 
 function SupplierDetailDialog({
   supplier,
+  showFinancial,
+  canEdit,
   onClose,
   onEdit,
 }: {
   supplier: SupplierRecord | null;
+  showFinancial: boolean;
+  canEdit: boolean;
   onClose: () => void;
   onEdit: (supplier: SupplierRecord) => void;
 }) {
@@ -837,8 +949,13 @@ function SupplierDetailDialog({
         <DialogHeader>
           <DialogTitle>{supplier?.supplier_name}</DialogTitle>
           <DialogDescription>
-            {supplier?.supplier_key} · {supplier?.invoiceCount ?? 0} invoice ·{" "}
-            {formatRupiah(supplier?.invoiceValue ?? 0)}
+            {supplier
+              ? showFinancial
+                ? `${supplier.supplier_key} · ${supplier.invoiceCount} invoice · ${formatRupiah(
+                    supplier.invoiceValue,
+                  )}`
+                : supplier.supplier_key
+              : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -870,7 +987,7 @@ function SupplierDetailDialog({
                       <TableRow>
                         <TableHead>Item</TableHead>
                         <TableHead>Brand / Ukuran</TableHead>
-                        <TableHead>Klasifikasi</TableHead>
+                        {showFinancial ? <TableHead>Klasifikasi</TableHead> : null}
                         <TableHead>Harga satuan</TableHead>
                         <TableHead>Penginput item</TableHead>
                       </TableRow>
@@ -887,7 +1004,9 @@ function SupplierDetailDialog({
                           <TableCell>
                             {[item.brand_raw, item.size_raw].filter(Boolean).join(" · ") || "—"}
                           </TableCell>
-                          <TableCell>{financialClassLabel(item.financial_class)}</TableCell>
+                          {showFinancial ? (
+                            <TableCell>{financialClassLabel(item.financial_class ?? null)}</TableCell>
+                          ) : null}
                           <TableCell>{item.price_raw || "—"}</TableCell>
                           <TableCell>{displayOperationalInputter(item.inputter_name)}</TableCell>
                         </TableRow>
@@ -909,7 +1028,7 @@ function SupplierDetailDialog({
           <Button type="button" variant="outline" onClick={onClose}>
             Tutup
           </Button>
-          {supplier && !supplier.deleted_at ? (
+          {supplier && !supplier.deleted_at && canEdit ? (
             <Button type="button" onClick={() => onEdit(supplier)}>
               <Pencil aria-hidden="true" className="mr-2 h-4 w-4" />
               Edit Supplier

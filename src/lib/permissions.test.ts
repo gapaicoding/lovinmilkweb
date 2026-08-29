@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { canAccessAuthenticatedRoute, getRolePermissions, type AppRole } from "@/lib/permissions";
 
-const FINANCIAL_ROUTES = ["/laporan-keuangan", "/supplier"];
+const FINANCIAL_ROUTES = ["/laporan-keuangan"];
 
 describe("role permissions", () => {
-  it("memberi Staff akses dashboard agregat dan operasional saja", () => {
+  it("memberi Staff akses operasional Supplier tanpa membuka finance atau lifecycle destruktif", () => {
     const permissions = getRolePermissions("staff");
 
     expect(permissions.canAccessDashboard).toBe(true);
@@ -22,10 +22,18 @@ describe("role permissions", () => {
     expect(permissions.canCreateExpenses).toBe(true);
     expect(permissions.canEditExpenses).toBe(true);
     expect(permissions.canArchiveExpenses).toBe(false);
+
+    expect(permissions.canAccessSuppliers).toBe(true);
+    expect(permissions.canCreateSuppliers).toBe(true);
+    expect(permissions.canEditSuppliers).toBe(true);
+    expect(permissions.canExportSuppliers).toBe(true);
+    expect(permissions.canManageSupplierInputter).toBe(true);
+    expect(permissions.canArchiveSuppliers).toBe(false);
+
     expect(permissions.canHardDelete).toBe(false);
   });
 
-  it("memberi Admin akses finance dan master tanpa hard delete", () => {
+  it("memberi Admin akses finance, master, dan lifecycle Supplier tanpa hard delete", () => {
     const permissions = getRolePermissions("admin");
 
     expect(permissions.canAccessDashboard).toBe(true);
@@ -39,6 +47,14 @@ describe("role permissions", () => {
     expect(permissions.canCreateExpenses).toBe(true);
     expect(permissions.canEditExpenses).toBe(true);
     expect(permissions.canArchiveExpenses).toBe(true);
+
+    expect(permissions.canAccessSuppliers).toBe(true);
+    expect(permissions.canCreateSuppliers).toBe(true);
+    expect(permissions.canEditSuppliers).toBe(true);
+    expect(permissions.canExportSuppliers).toBe(true);
+    expect(permissions.canManageSupplierInputter).toBe(true);
+    expect(permissions.canArchiveSuppliers).toBe(true);
+
     expect(permissions.canHardDelete).toBe(false);
   });
 
@@ -54,6 +70,13 @@ describe("role permissions", () => {
     expect(permissions.canCreateExpenses).toBe(true);
     expect(permissions.canEditExpenses).toBe(true);
     expect(permissions.canArchiveExpenses).toBe(true);
+
+    expect(permissions.canAccessSuppliers).toBe(true);
+    expect(permissions.canCreateSuppliers).toBe(true);
+    expect(permissions.canEditSuppliers).toBe(true);
+    expect(permissions.canExportSuppliers).toBe(true);
+    expect(permissions.canManageSupplierInputter).toBe(true);
+    expect(permissions.canArchiveSuppliers).toBe(true);
   });
 
   it("gagal tertutup untuk role yang tidak tersedia", () => {
@@ -68,6 +91,12 @@ describe("role permissions", () => {
         canCreateExpenses: false,
         canEditExpenses: false,
         canArchiveExpenses: false,
+        canAccessSuppliers: false,
+        canCreateSuppliers: false,
+        canEditSuppliers: false,
+        canExportSuppliers: false,
+        canArchiveSuppliers: false,
+        canManageSupplierInputter: false,
         canHardDelete: false,
       }),
     );
@@ -77,13 +106,14 @@ describe("role permissions", () => {
 });
 
 describe("authenticated route permissions", () => {
-  it("mengizinkan Staff membuka dashboard dan route operasional", () => {
+  it("mengizinkan Staff membuka dashboard, route operasional, dan Supplier", () => {
     expect(canAccessAuthenticatedRoute("staff", "/dashboard")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/penjualan")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/data-pembelian")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/asset-peralatan")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/pengeluaran")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/kunjungan")).toBe(true);
+    expect(canAccessAuthenticatedRoute("staff", "/supplier")).toBe(true);
     expect(canAccessAuthenticatedRoute("staff", "/profil")).toBe(true);
   });
 
@@ -96,13 +126,19 @@ describe("authenticated route permissions", () => {
     expect(canAccessAuthenticatedRoute("super_admin", pathname)).toBe(true);
   });
 
+  it("mengizinkan Admin dan Super Admin membuka Supplier", () => {
+    expect(canAccessAuthenticatedRoute("admin", "/supplier")).toBe(true);
+    expect(canAccessAuthenticatedRoute("super_admin", "/supplier")).toBe(true);
+  });
+
   it("menolak Staff dari tax, distribution, dan route yang tidak dikenal", () => {
     expect(canAccessAuthenticatedRoute("staff", "/tax")).toBe(false);
     expect(canAccessAuthenticatedRoute("staff", "/owner-distributions")).toBe(false);
     expect(canAccessAuthenticatedRoute("super_admin", "/tidak-dikenal")).toBe(false);
   });
 
-  it("menerima trailing slash pada route yang terdaftar", () => {
+  it("menerima trailing slash pada route Supplier", () => {
+    expect(canAccessAuthenticatedRoute("staff", "/supplier/")).toBe(true);
     expect(canAccessAuthenticatedRoute("admin", "/supplier/")).toBe(true);
   });
 });
