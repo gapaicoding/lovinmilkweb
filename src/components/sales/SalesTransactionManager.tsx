@@ -391,7 +391,8 @@ export function SalesTransactionManager() {
 
     try {
       if ("transactionId" in input) {
-        await updateSalesTransaction(input);
+        const session = input.visit?.mode === "new" ? await salesInputter.ensureValidSession() : null;
+        await updateSalesTransaction(input, session?.sessionId ?? null);
 
         setEditTransaction(null);
 

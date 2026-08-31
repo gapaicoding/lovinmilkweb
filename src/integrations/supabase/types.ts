@@ -4043,7 +4043,6 @@ export type Database = {
               p_cost_category_id: string
               p_expense_date: string
               p_item_name: string
-              p_inputter_session_id?: string
               p_notes?: string
               p_quantity: number
               p_receipt_reference?: string
@@ -4119,7 +4118,6 @@ export type Database = {
         Args: {
           p_entry_source?: string
           p_existing_visit_id?: string
-          p_inputter_session_id?: string
           p_items: Json
           p_new_visit?: Json
           p_notes?: string
@@ -4156,7 +4154,7 @@ export type Database = {
         Returns: { inputter_name:string; section:string; started_at:string; last_used_at:string|null }[]
       }
       create_or_append_visitor_daily_recap: {
-        Args: { p_business_date:string; p_outlet_id:string; p_recorder_name?:string|null; p_entries?:Json; p_inputter_session_id?:string }
+        Args: { p_business_date:string; p_outlet_id:string; p_recorder_name?:string|null; p_entries?:Json }
         Returns: Json
       }
       set_operational_inputter: {
@@ -4164,8 +4162,24 @@ export type Database = {
         Returns: { outlet_id: string; section: string; inputter_name: string }[]
       }
       save_supplier_with_items: {
-        Args: { p_supplier: Json; p_items: Json; p_supplier_id?: string; p_outlet_id?: string; p_inputter_session_id?: string | null }
+        Args: { p_supplier: Json; p_items: Json; p_supplier_id?: string; p_outlet_id?: string }
         Returns: string
+      }
+      create_operational_expense_v3: {
+        Args: { p_expense_date:string; p_item_name:string; p_quantity:number; p_unit:string; p_unit_price:number; p_amount:number; p_cost_category_id:string; p_inputter_session_id:string; p_receipt_reference?:string; p_vendor_name?:string; p_notes?:string }
+        Returns: Database["public"]["Tables"]["operational_expenses"]["Row"]
+      }
+      save_supplier_with_items_v3: {
+        Args: { p_supplier:Json; p_items:Json; p_inputter_session_id?:string|null; p_supplier_id?:string; p_outlet_id?:string }
+        Returns: string
+      }
+      create_sales_transaction_with_visit_v3: {
+        Args: { p_transaction_date:string; p_items:Json; p_inputter_session_id:string; p_notes?:string; p_entry_source?:string; p_outlet_id?:string; p_existing_visit_id?:string; p_new_visit?:Json }
+        Returns: Json
+      }
+      create_or_append_visitor_daily_recap_v3: {
+        Args: { p_business_date:string; p_outlet_id:string; p_inputter_session_id:string; p_recorder_name?:string|null; p_entries?:Json }
+        Returns: Json
       }
       get_asset_book_values: {
         Args: { p_as_of_period: string }
@@ -4842,6 +4856,10 @@ export type Database = {
           p_transaction_date: string
           p_transaction_id: string
         }
+        Returns: Json
+      }
+      update_sales_transaction_with_visit_v3: {
+        Args: { p_transaction_id:string; p_transaction_date:string; p_items:Json; p_notes?:string; p_existing_visit_id?:string; p_new_visit?:Json; p_inputter_session_id?:string }
         Returns: Json
       }
       update_visitor_identity: {

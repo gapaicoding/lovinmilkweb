@@ -9,6 +9,7 @@ describe("supplier route regressions", () => {
     expect(source).toContain('price: item.price_raw || "—"');
     expect(source).toContain("{line.price}");
     expect(source).toContain('label="Nilai pembelian"');
+    expect(source).not.toContain("<TableHead className=\"text-right\">Nilai</TableHead>");
   });
   it("filters inactive or deleted catalog items", () => {
     expect(source).toContain("item.is_active && !item.deleted_at");

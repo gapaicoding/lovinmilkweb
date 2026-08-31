@@ -63,11 +63,13 @@ export function useOperationalExpenses(showArchived: boolean) {
           p_receipt_reference: request.input.receiptReference?.trim() || undefined,
           p_vendor_name: request.input.vendorName?.trim() || undefined,
           p_notes: request.input.notes || undefined,
-          ...(request.action === "create" ? { p_inputter_session_id: request.inputterSessionId } : {}),
         };
         const result =
           request.action === "create"
-            ? await supabase.rpc("create_operational_expense", args)
+            ? await supabase.rpc("create_operational_expense_v3", {
+                ...args,
+                p_inputter_session_id: request.inputterSessionId,
+              })
             : await supabase.rpc("update_operational_expense", { p_id: request.id, ...args });
         if (result.error) throw result.error;
         return;

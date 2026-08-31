@@ -260,7 +260,7 @@ function SupplierPage() {
         };
 
         const client = actualClient as unknown as { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ error: unknown }> };
-        const { error } = await client.rpc("save_supplier_with_items", { p_supplier: payload, p_items: items, p_supplier_id: editing?.id ?? null, p_outlet_id: outlet?.id ?? null, p_inputter_session_id: inputterSession?.sessionId ?? null });
+        const { error } = await client.rpc("save_supplier_with_items_v3", { p_supplier: payload, p_items: items, p_supplier_id: editing?.id ?? null, p_outlet_id: outlet?.id ?? null, p_inputter_session_id: inputterSession?.sessionId ?? null });
         if (error) throw error;
         return;
       }
@@ -674,10 +674,7 @@ function SupplierResults({
               <TableHead>Alamat / Platform</TableHead>
               <TableHead className="text-right">Item</TableHead>
               {showFinancial ? (
-                <>
-                  <TableHead className="text-right">Invoice</TableHead>
-                  <TableHead className="text-right">Nilai</TableHead>
-                </>
+                <TableHead className="text-right">Invoice</TableHead>
               ) : null}
               <TableHead>Status</TableHead>
               <TableHead>Penginput</TableHead>
@@ -718,12 +715,7 @@ function SupplierResults({
                 <TableCell className="max-w-56 truncate">{supplier.address || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{supplier.itemCount}</TableCell>
                 {showFinancial ? (
-                  <>
-                    <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatRupiah(supplier.invoiceValue)}
-                    </TableCell>
-                  </>
+                  <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
                 ) : null}
                 <TableCell>
                   <SupplierStatusBadge supplier={supplier} />
