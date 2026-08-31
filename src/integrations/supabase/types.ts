@@ -1681,6 +1681,12 @@ export type Database = {
         Update: { id?: string; outlet_id?: string; section?: string; inputter_name?: string; created_at?: string; created_by?: string | null; updated_at?: string; updated_by?: string | null }
         Relationships: []
       }
+      operational_inputter_sessions: {
+        Row: { id:string; outlet_id:string; section:string; inputter_name:string; actor_id:string; started_at:string; last_used_at:string|null; superseded_at:string|null }
+        Insert: { id?:string; outlet_id:string; section:string; inputter_name:string; actor_id:string; started_at?:string; last_used_at?:string|null; superseded_at?:string|null }
+        Update: { id?:string; outlet_id?:string; section?:string; inputter_name?:string; actor_id?:string; started_at?:string; last_used_at?:string|null; superseded_at?:string|null }
+        Relationships: []
+      }
       operational_expenses: {
         Row: {
           amount: number
@@ -1693,6 +1699,7 @@ export type Database = {
           expense_date: string
           id: string
           inputter_name: string | null
+          inputter_session_id: string | null
           item_name: string | null
           notes: string | null
           outlet_id: string
@@ -1719,6 +1726,7 @@ export type Database = {
           expense_date: string
           id?: string
           inputter_name?: string | null
+          inputter_session_id?: string | null
           item_name?: string | null
           notes?: string | null
           outlet_id: string
@@ -1745,6 +1753,7 @@ export type Database = {
           expense_date?: string
           id?: string
           inputter_name?: string | null
+          inputter_session_id?: string | null
           item_name?: string | null
           notes?: string | null
           outlet_id?: string
@@ -3001,6 +3010,7 @@ export type Database = {
           entry_source: string
           id: string
           inputter_name: string | null
+          inputter_session_id: string | null
           notes: string | null
           outlet_id: string
           total_amount: number
@@ -3018,6 +3028,7 @@ export type Database = {
           entry_source?: string
           id?: string
           inputter_name?: string | null
+          inputter_session_id?: string | null
           notes?: string | null
           outlet_id: string
           total_amount?: number
@@ -3035,6 +3046,7 @@ export type Database = {
           entry_source?: string
           id?: string
           inputter_name?: string | null
+          inputter_session_id?: string | null
           notes?: string | null
           outlet_id?: string
           total_amount?: number
@@ -3223,6 +3235,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           inputter_name: string | null
+          inputter_session_id: string | null
           is_active: boolean
           item_name_normalized: string
           item_name_raw: string
@@ -3251,6 +3264,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           inputter_name?: string | null
+          inputter_session_id?: string | null
           is_active?: boolean
           item_name_normalized: string
           item_name_raw: string
@@ -3279,6 +3293,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           inputter_name?: string | null
+          inputter_session_id?: string | null
           is_active?: boolean
           item_name_normalized?: string
           item_name_raw?: string
@@ -3344,6 +3359,7 @@ export type Database = {
           id: string
           import_batch_id: string | null
           inputter_name: string | null
+          inputter_session_id: string | null
           is_active: boolean
           link: string | null
           normalized_name: string
@@ -3366,6 +3382,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           inputter_name?: string | null
+          inputter_session_id?: string | null
           is_active?: boolean
           link?: string | null
           normalized_name: string
@@ -3388,6 +3405,7 @@ export type Database = {
           id?: string
           import_batch_id?: string | null
           inputter_name?: string | null
+          inputter_session_id?: string | null
           is_active?: boolean
           link?: string | null
           normalized_name?: string
@@ -3531,6 +3549,8 @@ export type Database = {
           deleted_at: string | null
           deleted_by: string | null
           id: string
+          inputter_name: string | null
+          inputter_session_id: string | null
           notes: string | null
           outlet_id: string | null
           record_source: string
@@ -3549,6 +3569,8 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
+          inputter_name?: string | null
+          inputter_session_id?: string | null
           notes?: string | null
           outlet_id?: string | null
           record_source?: string
@@ -3567,6 +3589,8 @@ export type Database = {
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
+          inputter_name?: string | null
+          inputter_session_id?: string | null
           notes?: string | null
           outlet_id?: string | null
           record_source?: string
@@ -4019,6 +4043,7 @@ export type Database = {
               p_cost_category_id: string
               p_expense_date: string
               p_item_name: string
+              p_inputter_session_id?: string
               p_notes?: string
               p_quantity: number
               p_receipt_reference?: string
@@ -4094,6 +4119,7 @@ export type Database = {
         Args: {
           p_entry_source?: string
           p_existing_visit_id?: string
+          p_inputter_session_id?: string
           p_items: Json
           p_new_visit?: Json
           p_notes?: string
@@ -4117,12 +4143,28 @@ export type Database = {
         Args: { p_section: string; p_outlet_id?: string }
         Returns: { outlet_id: string; section: string; inputter_name: string | null }[]
       }
+      start_operational_inputter_session: {
+        Args: { p_section:string; p_inputter_name:string; p_outlet_id?:string }
+        Returns: { session_id:string; outlet_id:string; section:string; inputter_name:string; started_at:string }[]
+      }
+      validate_operational_inputter_session: {
+        Args: { p_session_id:string; p_section:string; p_outlet_id?:string }
+        Returns: { session_id:string; outlet_id:string; section:string; inputter_name:string; started_at:string }[]
+      }
+      get_operational_inputter_history: {
+        Args: { p_section:string; p_outlet_id?:string; p_limit?:number }
+        Returns: { inputter_name:string; section:string; started_at:string; last_used_at:string|null }[]
+      }
+      create_or_append_visitor_daily_recap: {
+        Args: { p_business_date:string; p_outlet_id:string; p_recorder_name?:string|null; p_entries?:Json; p_inputter_session_id?:string }
+        Returns: Json
+      }
       set_operational_inputter: {
         Args: { p_section: string; p_inputter_name: string; p_outlet_id?: string }
         Returns: { outlet_id: string; section: string; inputter_name: string }[]
       }
       save_supplier_with_items: {
-        Args: { p_supplier: Json; p_items: Json; p_supplier_id?: string; p_outlet_id?: string }
+        Args: { p_supplier: Json; p_items: Json; p_supplier_id?: string; p_outlet_id?: string; p_inputter_session_id?: string | null }
         Returns: string
       }
       get_asset_book_values: {

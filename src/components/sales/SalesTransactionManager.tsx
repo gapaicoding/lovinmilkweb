@@ -400,11 +400,8 @@ export function SalesTransactionManager() {
         return;
       }
 
-      if (!salesInputter.name) {
-        throw new Error("Nama penginput sales wajib diatur sebelum mencatat transaksi baru.");
-      }
-
-      await createSalesTransaction(input);
+      const session = await salesInputter.ensureValidSession();
+      await createSalesTransaction(input, session.sessionId);
 
       setCreateOpen(false);
       setPrefilledVisit({ visitId: null, date: null });

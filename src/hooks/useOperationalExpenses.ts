@@ -7,7 +7,7 @@ import type { OperationalExpenseInput } from "@/lib/operationalExpenses";
 export type OperationalExpenseRow = Tables<"operational_expenses">;
 
 type ExpenseMutation =
-  | { action: "create"; input: OperationalExpenseInput }
+  | { action: "create"; input: OperationalExpenseInput; inputterSessionId: string }
   | { action: "update"; id: string; input: OperationalExpenseInput }
   | { action: "archive" | "restore" | "delete"; id: string };
 
@@ -63,6 +63,7 @@ export function useOperationalExpenses(showArchived: boolean) {
           p_receipt_reference: request.input.receiptReference?.trim() || undefined,
           p_vendor_name: request.input.vendorName?.trim() || undefined,
           p_notes: request.input.notes || undefined,
+          ...(request.action === "create" ? { p_inputter_session_id: request.inputterSessionId } : {}),
         };
         const result =
           request.action === "create"

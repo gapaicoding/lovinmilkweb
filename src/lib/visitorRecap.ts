@@ -9,7 +9,7 @@ export const VISITOR_ARRIVAL_SLOTS = Array.from({ length: 30 }, (_, index) => {
 export const MAX_VISITOR_RECAP_BATCH = 100;
 
 export interface VisitorRecapEntryInput { arrival_time: string; adult_count: number; child_count: number; notes: string | null }
-export interface VisitorRecapEntry extends VisitorRecapEntryInput { id: string; check_in_at: string; created_at: string; updated_at: string }
+export interface VisitorRecapEntry extends VisitorRecapEntryInput { id: string; inputter_name: string | null; inputter_session_id: string | null; check_in_at: string; created_at: string; updated_at: string }
 export interface VisitorDailyRecap { id: string; outlet_id: string; business_date: string; recorder_name: string; entries: VisitorRecapEntry[] }
 export interface VisitorRecapPeriodRow { business_date: string; recorder_name: string | null; arrival_time: string | null; adult_count: number; child_count: number }
 export interface VisitorHourlySlot { arrival_time: string; adult_count: number; child_count: number; total_visitors: number }
@@ -58,7 +58,7 @@ export function parseDailyRecap(value: Json | null): VisitorDailyRecap | null {
     entries: entries.flatMap((value) => {
       if (!value || typeof value !== "object" || Array.isArray(value)) return [];
       const item = value as Record<string, Json>;
-      return [{ id: String(item.id), arrival_time: String(item.arrival_time), adult_count: Number(item.adult_count), child_count: Number(item.child_count), notes: typeof item.notes === "string" ? item.notes : null, check_in_at: String(item.check_in_at), created_at: String(item.created_at), updated_at: String(item.updated_at) }];
+      return [{ id: String(item.id), arrival_time: String(item.arrival_time), adult_count: Number(item.adult_count), child_count: Number(item.child_count), notes: typeof item.notes === "string" ? item.notes : null, inputter_name: typeof item.inputter_name === "string" ? item.inputter_name : null, inputter_session_id: typeof item.inputter_session_id === "string" ? item.inputter_session_id : null, check_in_at: String(item.check_in_at), created_at: String(item.created_at), updated_at: String(item.updated_at) }];
     }),
   };
 }

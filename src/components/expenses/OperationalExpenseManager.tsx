@@ -148,15 +148,12 @@ export function OperationalExpenseManager() {
   const save = async () => {
     const error = validateOperationalExpense(form);
     if (error) return toast.error(error);
-    if (!editing && !expenseInputter.name) {
-      toast.error("Nama penginput pengeluaran wajib diatur sebelum mencatat data baru.");
-      return;
-    }
     try {
+      const session = editing ? null : await expenseInputter.ensureValidSession();
       await mutation.mutateAsync(
         editing
           ? { action: "update", id: editing.id, input: form }
-          : { action: "create", input: form },
+          : { action: "create", input: form, inputterSessionId: session!.sessionId },
       );
       toast.success(editing ? "Pengeluaran diperbarui." : "Pengeluaran dicatat.");
       setOpen(false);
