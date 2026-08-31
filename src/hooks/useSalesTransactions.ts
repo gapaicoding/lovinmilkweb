@@ -590,8 +590,10 @@ export function useSalesTransactions() {
   // ==========================================================
 
   const createMutation = useMutation({
-    mutationFn: async (
-      input: CreateSalesTransactionInput,
+    mutationFn: async ({ input, inputterSessionId }: {
+      input: CreateSalesTransactionInput;
+      inputterSessionId: string;
+    },
     ): Promise<string> => {
       const payload =
         buildCreateTransactionPayload({
@@ -628,8 +630,9 @@ export function useSalesTransactions() {
       };
 
       const { data, error } =
-        await supabase.rpc("create_sales_transaction_with_visit", {
+        await supabase.rpc("create_sales_transaction_with_visit_v3", {
           ...rpcArgs,
+          p_inputter_session_id: inputterSessionId,
           ...(payload.p_existing_visit_id
             ? { p_existing_visit_id: payload.p_existing_visit_id }
             : {}),
@@ -667,9 +670,10 @@ export function useSalesTransactions() {
   // ==========================================================
 
   const updateMutation = useMutation({
-    mutationFn: async (
-      input: UpdateSalesTransactionInput,
-    ): Promise<boolean> => {
+    mutationFn: async ({ input, inputterSessionId }: {
+      input: UpdateSalesTransactionInput;
+      inputterSessionId: string | null;
+    }): Promise<boolean> => {
       const payload =
         buildUpdateTransactionPayload(
           input,
@@ -694,8 +698,9 @@ export function useSalesTransactions() {
       };
 
       const { data, error } =
-        await supabase.rpc("update_sales_transaction_with_visit", {
+        await supabase.rpc("update_sales_transaction_with_visit_v3", {
           ...rpcArgs,
+          ...(inputterSessionId ? { p_inputter_session_id: inputterSessionId } : {}),
           ...(payload.p_existing_visit_id
             ? { p_existing_visit_id: payload.p_existing_visit_id }
             : {}),
@@ -912,11 +917,11 @@ export function useSalesTransactions() {
     restoreMutation,
     hardDeleteMutation,
 
-    createSalesTransaction:
-      createMutation.mutateAsync,
+    createSalesTransaction: (input: CreateSalesTransactionInput, inputterSessionId: string) =>
+      createMutation.mutateAsync({ input, inputterSessionId }),
 
-    updateSalesTransaction:
-      updateMutation.mutateAsync,
+    updateSalesTransaction: (input: UpdateSalesTransactionInput, inputterSessionId: string | null = null) =>
+      updateMutation.mutateAsync({ input, inputterSessionId }),
 
     softDeleteSalesTransaction:
       softDeleteMutation.mutateAsync,

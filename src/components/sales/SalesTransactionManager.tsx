@@ -391,7 +391,8 @@ export function SalesTransactionManager() {
 
     try {
       if ("transactionId" in input) {
-        await updateSalesTransaction(input);
+        const session = input.visit?.mode === "new" ? await salesInputter.ensureValidSession() : null;
+        await updateSalesTransaction(input, session?.sessionId ?? null);
 
         setEditTransaction(null);
 
@@ -400,11 +401,8 @@ export function SalesTransactionManager() {
         return;
       }
 
-      if (!salesInputter.name) {
-        throw new Error("Nama penginput sales wajib diatur sebelum mencatat transaksi baru.");
-      }
-
-      await createSalesTransaction(input);
+      const session = await salesInputter.ensureValidSession();
+      await createSalesTransaction(input, session.sessionId);
 
       setCreateOpen(false);
       setPrefilledVisit({ visitId: null, date: null });

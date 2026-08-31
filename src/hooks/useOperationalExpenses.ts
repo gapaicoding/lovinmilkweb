@@ -7,7 +7,7 @@ import type { OperationalExpenseInput } from "@/lib/operationalExpenses";
 export type OperationalExpenseRow = Tables<"operational_expenses">;
 
 type ExpenseMutation =
-  | { action: "create"; input: OperationalExpenseInput }
+  | { action: "create"; input: OperationalExpenseInput; inputterSessionId: string }
   | { action: "update"; id: string; input: OperationalExpenseInput }
   | { action: "archive" | "restore" | "delete"; id: string };
 
@@ -66,7 +66,10 @@ export function useOperationalExpenses(showArchived: boolean) {
         };
         const result =
           request.action === "create"
-            ? await supabase.rpc("create_operational_expense", args)
+            ? await supabase.rpc("create_operational_expense_v3", {
+                ...args,
+                p_inputter_session_id: request.inputterSessionId,
+              })
             : await supabase.rpc("update_operational_expense", { p_id: request.id, ...args });
         if (result.error) throw result.error;
         return;

@@ -234,9 +234,9 @@ function SupplierPage() {
         if (editing ? !canEditSuppliers : !canCreateSuppliers) {
           throw new Error("Anda tidak memiliki izin untuk menyimpan Supplier.");
         }
-        if (!editing && !supplierInputter.name) {
-          throw new Error("Nama penginput supplier wajib diatur sebelum menambah Supplier.");
-        }
+        const existingItemIds = new Set((editing?.supplier_items ?? []).filter((item) => !item.deleted_at).map((item) => item.id));
+        const createsOperationalData = !editing || form.items.some((item) => !item.id || !existingItemIds.has(item.id));
+        const inputterSession = createsOperationalData ? await supplierInputter.ensureValidSession() : null;
 
         const supplierName = form.supplierName.trim().replace(/\s+/g, " ");
 
@@ -260,7 +260,7 @@ function SupplierPage() {
         };
 
         const client = actualClient as unknown as { rpc(name: string, args: Record<string, unknown>): PromiseLike<{ error: unknown }> };
-        const { error } = await client.rpc("save_supplier_with_items", { p_supplier: payload, p_items: items, p_supplier_id: editing?.id ?? null, p_outlet_id: outlet?.id ?? null });
+        const { error } = await client.rpc("save_supplier_with_items_v3", { p_supplier: payload, p_items: items, p_supplier_id: editing?.id ?? null, p_outlet_id: outlet?.id ?? null, p_inputter_session_id: inputterSession?.sessionId ?? null });
         if (error) throw error;
         return;
       }
@@ -631,6 +631,7 @@ function SupplierResults({
                     <div key={line.key} className="space-y-0.5">
                       <p className="font-medium leading-snug">{line.title}</p>
                       <p className="text-xs text-muted-foreground">{line.subtitle}</p>
+                      <p className="text-sm font-semibold">{line.price}</p>
                     </div>
                   ))}
                 </div>
@@ -668,14 +669,12 @@ function SupplierResults({
             <TableRow>
               <TableHead>Supplier</TableHead>
               <TableHead>Katalog produk</TableHead>
+              <TableHead>Harga Produk</TableHead>
               <TableHead>Kontak</TableHead>
               <TableHead>Alamat / Platform</TableHead>
               <TableHead className="text-right">Item</TableHead>
               {showFinancial ? (
-                <>
-                  <TableHead className="text-right">Invoice</TableHead>
-                  <TableHead className="text-right">Nilai</TableHead>
-                </>
+                <TableHead className="text-right">Invoice</TableHead>
               ) : null}
               <TableHead>Status</TableHead>
               <TableHead>Penginput</TableHead>
@@ -700,6 +699,13 @@ function SupplierResults({
                     ))}
                   </div>
                 </TableCell>
+                <TableCell className="max-w-[18rem] align-top">
+                  <div className="space-y-2">
+                    {renderSupplierItemSummaries(supplier).map((line) => (
+                      <p key={line.key} className="font-medium leading-snug">{line.price}</p>
+                    ))}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <p>{supplier.contact_person || "—"}</p>
                   <p className="text-xs text-muted-foreground">
@@ -709,12 +715,7 @@ function SupplierResults({
                 <TableCell className="max-w-56 truncate">{supplier.address || "—"}</TableCell>
                 <TableCell className="text-right tabular-nums">{supplier.itemCount}</TableCell>
                 {showFinancial ? (
-                  <>
-                    <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatRupiah(supplier.invoiceValue)}
-                    </TableCell>
-                  </>
+                  <TableCell className="text-right tabular-nums">{supplier.invoiceCount}</TableCell>
                 ) : null}
                 <TableCell>
                   <SupplierStatusBadge supplier={supplier} />
@@ -1199,6 +1200,7 @@ function renderSupplierItemSummaries(supplier: SupplierRecord): Array<{
   key: string;
   title: string;
   subtitle: string;
+  price: string;
 }> {
   const activeItems = (supplier.supplier_items ?? []).filter((item) => item.is_active && !item.deleted_at);
 
@@ -1208,17 +1210,17 @@ function renderSupplierItemSummaries(supplier: SupplierRecord): Array<{
         key: `${supplier.id}-empty`,
         title: "Belum ada item aktif",
         subtitle: "Tidak ada katalog aktif yang terhubung ke supplier ini.",
+        price: "—",
       },
     ];
   }
 
   return activeItems.map((item) => {
-    const details = [item.brand_raw, item.size_raw, item.price_raw].filter(Boolean).join(" · ");
-
     return {
       key: item.id,
       title: item.item_name_raw,
-      subtitle: details || "Belum ada detail tambahan",
+      subtitle: [item.brand_raw, item.size_raw].filter(Boolean).join(" · ") || "Belum ada merk / ukuran",
+      price: item.price_raw || "—",
     };
   });
 }
