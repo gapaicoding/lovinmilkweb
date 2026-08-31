@@ -400,6 +400,10 @@ export function SalesTransactionManager() {
         return;
       }
 
+      if (!salesInputter.name) {
+        throw new Error("Nama penginput sales wajib diatur sebelum mencatat transaksi baru.");
+      }
+
       await createSalesTransaction(input);
 
       setCreateOpen(false);

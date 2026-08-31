@@ -132,10 +132,14 @@ interface SupplierFormValue {
   address: string;
   link: string;
   contactPerson: string;
-  sourceType: string;
-  sourceReferences: string;
-  isActive: boolean;
-  items: Array<{ id?: string; productName: string; brandName: string; productSize: string; unitPriceText: string; inputterName?: string | null }>;
+  items: Array<{
+    id?: string;
+    productName: string;
+    brandName: string;
+    productSize: string;
+    unitPriceText: string;
+    inputterName?: string | null;
+  }>;
 }
 
 const EMPTY_SUPPLIER_FORM: SupplierFormValue = {
@@ -144,9 +148,6 @@ const EMPTY_SUPPLIER_FORM: SupplierFormValue = {
   address: "",
   link: "",
   contactPerson: "",
-  sourceType: "manual_web_entry",
-  sourceReferences: "",
-  isActive: true,
   items: [{ productName: "", brandName: "", productSize: "", unitPriceText: "" }],
 };
 
@@ -233,6 +234,9 @@ function SupplierPage() {
         if (editing ? !canEditSuppliers : !canCreateSuppliers) {
           throw new Error("Anda tidak memiliki izin untuk menyimpan Supplier.");
         }
+        if (!editing && !supplierInputter.name) {
+          throw new Error("Nama penginput supplier wajib diatur sebelum menambah Supplier.");
+        }
 
         const supplierName = form.supplierName.trim().replace(/\s+/g, " ");
 
@@ -249,9 +253,9 @@ function SupplierPage() {
           address: toNullableText(form.address),
           link: toNullableText(form.link),
           contact_person: toNullableText(form.contactPerson),
-          source_type: toNullableText(form.sourceType),
-          source_references: toNullableText(form.sourceReferences),
-          is_active: isAdmin ? form.isActive : true,
+          source_type: editing?.source_type ?? "manual_web_entry",
+          source_references: editing?.source_references ?? null,
+          is_active: editing?.is_active ?? true,
           updated_by: user?.id ?? null,
         };
 
@@ -390,9 +394,6 @@ function SupplierPage() {
       address: supplier.address ?? "",
       link: supplier.link ?? "",
       contactPerson: supplier.contact_person ?? "",
-      sourceType: supplier.source_type ?? "",
-      sourceReferences: supplier.source_references ?? "",
-      isActive: supplier.is_active,
       items: (supplier.supplier_items ?? []).filter((item) => !item.deleted_at).map((item) => ({ id: item.id, productName: item.item_name_raw, brandName: item.brand_raw ?? "", productSize: item.size_raw ?? "", unitPriceText: item.price_raw ?? "", inputterName: item.inputter_name })),
     });
     setFormOpen(true);
@@ -568,7 +569,6 @@ function SupplierPage() {
         onChange={setForm}
         onSave={() => mutation.mutate({ type: "save" })}
         inputterName={editing?.inputter_name ?? supplierInputter.name}
-        canManageStatus={isAdmin}
       />
 
       <SupplierDetailDialog
@@ -622,6 +622,19 @@ function SupplierResults({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="rounded-lg border bg-muted/20 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Katalog produk
+                </p>
+                <div className="mt-2 space-y-2">
+                  {renderSupplierItemSummaries(supplier).map((line) => (
+                    <div key={line.key} className="space-y-0.5">
+                      <p className="font-medium leading-snug">{line.title}</p>
+                      <p className="text-xs text-muted-foreground">{line.subtitle}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <Metric label="Item" value={String(supplier.itemCount)} />
                 {showFinancial ? (
@@ -654,6 +667,7 @@ function SupplierResults({
           <TableHeader>
             <TableRow>
               <TableHead>Supplier</TableHead>
+              <TableHead>Katalog produk</TableHead>
               <TableHead>Kontak</TableHead>
               <TableHead>Alamat / Platform</TableHead>
               <TableHead className="text-right">Item</TableHead>
@@ -675,6 +689,16 @@ function SupplierResults({
                 <TableCell>
                   <p className="font-medium">{supplier.supplier_name}</p>
                   <p className="text-xs text-muted-foreground">{supplier.supplier_key}</p>
+                </TableCell>
+                <TableCell className="max-w-[26rem] align-top">
+                  <div className="space-y-2">
+                    {renderSupplierItemSummaries(supplier).map((line) => (
+                      <div key={line.key} className="space-y-0.5">
+                        <p className="font-medium leading-snug">{line.title}</p>
+                        <p className="text-xs text-muted-foreground">{line.subtitle}</p>
+                      </div>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <p>{supplier.contact_person || "—"}</p>
@@ -792,7 +816,6 @@ function SupplierFormDialog({
   onChange,
   onSave,
   inputterName,
-  canManageStatus,
 }: {
   open: boolean;
   editing: SupplierRecord | null;
@@ -802,7 +825,6 @@ function SupplierFormDialog({
   onChange: (form: SupplierFormValue) => void;
   onSave: () => void;
   inputterName: string | null;
-  canManageStatus: boolean;
 }) {
   const update = <Key extends keyof SupplierFormValue>(key: Key, value: SupplierFormValue[Key]) =>
     onChange({ ...form, [key]: value });
@@ -818,90 +840,152 @@ function SupplierFormDialog({
         </DialogHeader>
         <p className="text-sm text-muted-foreground">{editing ? "Penginput saat dibuat" : "Penginput"}: <span className="font-medium text-foreground">{displayOperationalInputter(inputterName)}</span></p>
         <section className="space-y-3">
-          <h3 className="font-semibold">Informasi Supplier</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="supplier-name" label="Nama Toko / Supplier *">
-            <Input
-              id="supplier-name"
-              value={form.supplierName}
-              autoFocus
-              onChange={(event) => update("supplierName", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-contact" label="Nama Pelayan / Pemilik (opsional)">
-            <Input
-              id="supplier-contact"
-              value={form.contactPerson}
-              onChange={(event) => update("contactPerson", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-phone" label="No. WhatsApp / Telepon (opsional)">
-            <Input
-              id="supplier-phone"
-              type="tel"
-              value={form.phone}
-              onChange={(event) => update("phone", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-link" label="Link Google Maps / Checkout (opsional)">
-            <Input
-              id="supplier-link"
-              type="url"
-              value={form.link}
-              onChange={(event) => update("link", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-source-type" label="Jenis sumber">
-            <Input
-              id="supplier-source-type"
-              value={form.sourceType}
-              onChange={(event) => update("sourceType", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-source-ref" label="Referensi sumber (opsional)">
-            <Input
-              id="supplier-source-ref"
-              value={form.sourceReferences}
-              onChange={(event) => update("sourceReferences", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-address" label="Alamat Toko / Platform Online (opsional)">
-            <Textarea
-              id="supplier-address"
-              value={form.address}
-              onChange={(event) => update("address", event.target.value)}
-            />
-          </FormField>
-          <FormField id="supplier-active" label="Status">
-            {canManageStatus ? (
-              <Select
-                value={form.isActive ? "active" : "inactive"}
-                onValueChange={(value) => update("isActive", value === "active")}
-              >
-                <SelectTrigger id="supplier-active">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Aktif</SelectItem>
-                  <SelectItem value="inactive">Nonaktif</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input id="supplier-active" value="Aktif" disabled />
-            )}
-          </FormField>
-        </div>
+          <h3 className="font-semibold">KATALOG PRODUK</h3>
+          <div className="space-y-3">
+            {form.items.map((item, index) => (
+              <Card key={item.id ?? index}>
+                <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      No. {index + 1}
+                    </p>
+                  </div>
+                  <FormField id={`supplier-item-${index}-name`} label="Nama produk *">
+                    <Input
+                      id={`supplier-item-${index}-name`}
+                      maxLength={300}
+                      value={item.productName}
+                      onChange={(event) =>
+                        update(
+                          "items",
+                          form.items.map((row, rowIndex) =>
+                            rowIndex === index ? { ...row, productName: event.target.value } : row,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <FormField id={`supplier-item-${index}-brand`} label="Merk produk">
+                    <Input
+                      id={`supplier-item-${index}-brand`}
+                      value={item.brandName}
+                      onChange={(event) =>
+                        update(
+                          "items",
+                          form.items.map((row, rowIndex) =>
+                            rowIndex === index ? { ...row, brandName: event.target.value } : row,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <FormField id={`supplier-item-${index}-size`} label="Ukuran produk">
+                    <Input
+                      id={`supplier-item-${index}-size`}
+                      value={item.productSize}
+                      onChange={(event) =>
+                        update(
+                          "items",
+                          form.items.map((row, rowIndex) =>
+                            rowIndex === index ? { ...row, productSize: event.target.value } : row,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <FormField id={`supplier-item-${index}-price`} label="Harga satuan">
+                    <Input
+                      id={`supplier-item-${index}-price`}
+                      maxLength={500}
+                      value={item.unitPriceText}
+                      onChange={(event) =>
+                        update(
+                          "items",
+                          form.items.map((row, rowIndex) =>
+                            rowIndex === index ? { ...row, unitPriceText: event.target.value } : row,
+                          ),
+                        )
+                      }
+                    />
+                  </FormField>
+                  <div className="flex justify-end sm:col-span-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={form.items.length === 1}
+                      onClick={() =>
+                        update(
+                          "items",
+                          form.items.filter((_, rowIndex) => rowIndex !== index),
+                        )
+                      }
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Hapus
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              update("items", [
+                ...form.items,
+                { productName: "", brandName: "", productSize: "", unitPriceText: "" },
+              ])
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Tambah Produk
+          </Button>
         </section>
         <section className="space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-semibold">Katalog Barang Supplier</h3><Button type="button" size="sm" variant="outline" onClick={() => update("items", [...form.items, { productName: "", brandName: "", productSize: "", unitPriceText: "" }])}><Plus className="mr-2 h-4 w-4" />Tambah Barang</Button></div>
-          {form.items.map((item, index) => <Card key={item.id ?? index}><CardContent className="grid gap-3 p-4 sm:grid-cols-2">
-            <FormField id={`supplier-item-${index}-name`} label="Nama Produk *"><Input id={`supplier-item-${index}-name`} maxLength={300} value={item.productName} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, productName: event.target.value } : row))} /></FormField>
-            <FormField id={`supplier-item-${index}-brand`} label="Merk Produk"><Input id={`supplier-item-${index}-brand`} value={item.brandName} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, brandName: event.target.value } : row))} /></FormField>
-            <FormField id={`supplier-item-${index}-size`} label="Ukuran Produk"><Input id={`supplier-item-${index}-size`} value={item.productSize} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, productSize: event.target.value } : row))} /></FormField>
-            <FormField id={`supplier-item-${index}-price`} label="Harga Satuan"><Input id={`supplier-item-${index}-price`} maxLength={500} value={item.unitPriceText} onChange={(event) => update("items", form.items.map((row, rowIndex) => rowIndex === index ? { ...row, unitPriceText: event.target.value } : row))} /></FormField>
-            {item.inputterName ? <p className="text-xs text-muted-foreground">Penginput item: {item.inputterName}</p> : null}
-            <div className="flex justify-end sm:col-span-2"><Button type="button" size="sm" variant="destructive" disabled={form.items.length === 1} onClick={() => update("items", form.items.filter((_, rowIndex) => rowIndex !== index))}><Trash2 className="mr-2 h-4 w-4" />Hapus</Button></div>
-          </CardContent></Card>)}
+          <h3 className="font-semibold">INFORMASI TOKO</h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField id="supplier-name" label="Nama Toko *">
+              <Input
+                id="supplier-name"
+                value={form.supplierName}
+                autoFocus
+                onChange={(event) => update("supplierName", event.target.value)}
+              />
+            </FormField>
+            <FormField id="supplier-address" label="Alamat Toko / Platform Online">
+              <Textarea
+                id="supplier-address"
+                value={form.address}
+                onChange={(event) => update("address", event.target.value)}
+              />
+            </FormField>
+            <FormField id="supplier-link" label="Link Google Maps / Checkout">
+              <Input
+                id="supplier-link"
+                type="url"
+                value={form.link}
+                onChange={(event) => update("link", event.target.value)}
+              />
+            </FormField>
+            <FormField id="supplier-contact" label="Nama Pelayan / Pemilik">
+              <Input
+                id="supplier-contact"
+                value={form.contactPerson}
+                onChange={(event) => update("contactPerson", event.target.value)}
+              />
+            </FormField>
+            <FormField id="supplier-phone" label="No. WhatsApp / Telepon">
+              <Input
+                id="supplier-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(event) => update("phone", event.target.value)}
+              />
+            </FormField>
+          </div>
         </section>
         <DialogFooter>
           <Button
@@ -1109,4 +1193,32 @@ function financialClassLabel(value: string | null): string {
   if (value === "asset") return "Aset";
   if (value === "other") return "Lainnya";
   return "Belum diklasifikasi";
+}
+
+function renderSupplierItemSummaries(supplier: SupplierRecord): Array<{
+  key: string;
+  title: string;
+  subtitle: string;
+}> {
+  const activeItems = (supplier.supplier_items ?? []).filter((item) => item.is_active && !item.deleted_at);
+
+  if (activeItems.length === 0) {
+    return [
+      {
+        key: `${supplier.id}-empty`,
+        title: "Belum ada item aktif",
+        subtitle: "Tidak ada katalog aktif yang terhubung ke supplier ini.",
+      },
+    ];
+  }
+
+  return activeItems.map((item) => {
+    const details = [item.brand_raw, item.size_raw, item.price_raw].filter(Boolean).join(" · ");
+
+    return {
+      key: item.id,
+      title: item.item_name_raw,
+      subtitle: details || "Belum ada detail tambahan",
+    };
+  });
 }
