@@ -253,9 +253,9 @@ function SupplierPage() {
           address: toNullableText(form.address),
           link: toNullableText(form.link),
           contact_person: toNullableText(form.contactPerson),
-          source_type: editing ? supplier?.source_type ?? "manual_web_entry" : "manual_web_entry",
-          source_references: editing ? supplier?.source_references ?? null : null,
-          is_active: editing ? supplier?.is_active ?? true : true,
+          source_type: editing?.source_type ?? "manual_web_entry",
+          source_references: editing?.source_references ?? null,
+          is_active: editing?.is_active ?? true,
           updated_by: user?.id ?? null,
         };
 
