@@ -56,6 +56,7 @@ export interface SalesProductOption {
   categoryName: string;
 
   subunitId: string;
+  subunitCode: string;
   subunitName: string;
 
   outletId: string;

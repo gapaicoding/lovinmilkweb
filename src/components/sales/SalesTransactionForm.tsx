@@ -54,6 +54,14 @@ import {
   type SalesVisitSelection,
   type UpdateSalesTransactionInput,
 } from "@/lib/salesTransactions";
+import {
+  buildProductPickerOptions,
+  inferPricingMode,
+  productPickerLabel,
+  selectProductPickerOption,
+  type PricingMode,
+  type SalesProductPickerOption,
+} from "@/lib/freeProductOption";
 
 export type SalesTransactionFormMode =
   | "create"
@@ -89,6 +97,7 @@ interface DraftSalesItem {
   key: string;
 
   productId: string;
+  pricingMode: PricingMode;
 
   quantityText: string;
   unitPriceText: string;
@@ -131,12 +140,14 @@ export function SalesTransactionForm({
         transaction,
         preselectedVisitId,
         initialTransactionDate,
+        products,
       ),
     [
       mode,
       transaction,
       preselectedVisitId,
       initialTransactionDate,
+      products,
     ],
   );
 
@@ -310,16 +321,10 @@ export function SalesTransactionForm({
 
   const handleProductChange = (
     itemKey: string,
-    productId: string,
+    option: SalesProductPickerOption,
   ) => {
-    const product =
-      productMap.get(
-        productId,
-      );
-
-    if (!product) {
-      return;
-    }
+    const selection = selectProductPickerOption(option);
+    const product = option.product;
 
     setFormError(null);
 
@@ -332,10 +337,11 @@ export function SalesTransactionForm({
               productId:
                 product.productId,
 
+              pricingMode:
+                selection.pricingMode,
+
               unitPriceText:
-                String(
-                  product.sellingPrice,
-                ),
+                selection.unitPriceText,
 
               fallbackProductName:
                 null,
@@ -952,13 +958,14 @@ export function SalesTransactionForm({
                       products={products}
                       selectedProduct={selectedProduct ?? null}
                       selectedProductId={item.productId}
+                      selectedPricingMode={item.pricingMode}
                       fallbackLabel={fallbackProductLabel}
                       productUnavailable={productUnavailable}
                       disabled={isBusy || products.length === 0}
-                      onSelect={(productId) =>
+                      onSelect={(option) =>
                         handleProductChange(
                           item.key,
-                          productId,
+                          option,
                         )
                       }
                     />
@@ -1058,7 +1065,10 @@ export function SalesTransactionForm({
                         value={
                           item.unitPriceText
                         }
-                        disabled={isBusy}
+                        disabled={
+                          isBusy || item.pricingMode === "free"
+                        }
+                        readOnly={item.pricingMode === "free"}
                         onChange={(event) =>
                           handleUnitPriceChange(
                             item.key,
@@ -1068,7 +1078,11 @@ export function SalesTransactionForm({
                       />
                     </div>
 
-                    {selectedProduct ? (
+                    {item.pricingMode === "free" ? (
+                      <p className="text-xs text-muted-foreground">
+                        FREE Product · harga dikunci Rp0
+                      </p>
+                    ) : selectedProduct ? (
                       <p className="text-xs text-muted-foreground">
                         Harga master:{" "}
                         {formatRupiah(
@@ -1243,6 +1257,7 @@ function createInitialFormState(
   transaction: SalesTransaction | null,
   preselectedVisitId: string | null,
   initialTransactionDate: string | null,
+  products: readonly SalesProductOption[],
 ): InitialFormState {
   if (
     mode === "edit" &&
@@ -1257,6 +1272,12 @@ function createInitialFormState(
 
               productId:
                 item.productId,
+
+              pricingMode:
+                inferPricingMode(
+                  products.find((product) => product.productId === item.productId),
+                  item.unitPrice,
+                ),
 
               quantityText:
                 String(
@@ -1390,16 +1411,18 @@ interface ProductSearchPickerProps {
   products: readonly SalesProductOption[];
   selectedProduct: SalesProductOption | null;
   selectedProductId: string;
+  selectedPricingMode: PricingMode;
   fallbackLabel: string;
   productUnavailable: boolean;
   disabled: boolean;
-  onSelect: (productId: string) => void;
+  onSelect: (option: SalesProductPickerOption) => void;
 }
 
 function ProductSearchPicker({
   products,
   selectedProduct,
   selectedProductId,
+  selectedPricingMode,
   fallbackLabel,
   productUnavailable,
   disabled,
@@ -1408,33 +1431,15 @@ function ProductSearchPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const normalizedQuery = query
-    .trim()
-    .toLocaleLowerCase("id-ID");
-
-  const filteredProducts = useMemo(() => {
-    const ranked = products.filter((product) => {
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const haystack = [
-        product.productName,
-        product.productSku ?? "",
-        product.categoryName,
-        product.subunitName,
-      ]
-        .join(" ")
-        .toLocaleLowerCase("id-ID");
-
-      return haystack.includes(normalizedQuery);
-    });
-
-    return ranked.slice(0, 30);
-  }, [normalizedQuery, products]);
+  const filteredProducts = useMemo(
+    () => buildProductPickerOptions(products, query),
+    [products, query],
+  );
 
   const selectedLabel = selectedProduct
-    ? selectedProduct.productName
+    ? selectedPricingMode === "free"
+      ? `FREE · ${selectedProduct.productName}`
+      : selectedProduct.productName
     : productUnavailable && selectedProductId
       ? fallbackLabel
       : "Belum ada Product dipilih";
@@ -1451,8 +1456,8 @@ function ProductSearchPicker({
       ? "Product lama / tidak aktif"
       : "Cari berdasarkan nama, SKU, Category, atau Subunit.";
 
-  const handleSelect = (productId: string) => {
-    onSelect(productId);
+  const handleSelect = (option: SalesProductPickerOption) => {
+    onSelect(option);
     setQuery("");
     setOpen(false);
   };
@@ -1505,7 +1510,7 @@ function ProductSearchPicker({
                   filteredProducts.length === 1
                 ) {
                   event.preventDefault();
-                  handleSelect(filteredProducts[0].productId);
+                  handleSelect(filteredProducts[0]);
                 }
               }}
             />
@@ -1516,27 +1521,28 @@ function ProductSearchPicker({
               <div className="space-y-1">
                 {filteredProducts.map((product) => (
                   <button
-                    key={product.productId}
+                    key={product.optionId}
                     type="button"
                     className={[
                       "flex w-full items-center justify-between gap-4 rounded-md px-3 py-2 text-left transition-colors hover:bg-muted",
-                      product.productId === selectedProductId
+                      product.product.productId === selectedProductId &&
+                      product.pricingMode === selectedPricingMode
                         ? "bg-muted/60"
                         : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}
-                    onClick={() => handleSelect(product.productId)}
+                    onClick={() => handleSelect(product)}
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium">
-                        {product.productName}
+                        {productPickerLabel(product)}
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                         {[
-                          product.productSku,
-                          product.categoryName,
-                          product.subunitName,
+                          product.product.productSku,
+                          product.product.categoryName,
+                          product.product.subunitName,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
@@ -1544,7 +1550,9 @@ function ProductSearchPicker({
                     </span>
 
                     <span className="shrink-0 text-sm font-semibold">
-                      {formatRupiah(product.sellingPrice)}
+                      {product.pricingMode === "free"
+                        ? "Rp 0"
+                        : formatRupiah(product.product.sellingPrice)}
                     </span>
                   </button>
                 ))}
@@ -1556,7 +1564,7 @@ function ProductSearchPicker({
             )}
           </div>
 
-          {products.length > 30 && !normalizedQuery ? (
+          {products.length > 30 && !query.trim() ? (
             <p className="mt-2 px-2 text-xs text-muted-foreground">
               Menampilkan 30 Product pertama. Ketik kata kunci untuk mempersempit pencarian.
             </p>
@@ -1579,6 +1587,9 @@ function createEmptyDraftItem(
 
     productId:
       "",
+
+    pricingMode:
+      "normal",
 
     quantityText:
       "1",
