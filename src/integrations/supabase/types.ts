@@ -4141,6 +4141,18 @@ export type Database = {
         Args: { p_section: string; p_outlet_id?: string }
         Returns: { outlet_id: string; section: string; inputter_name: string | null }[]
       }
+      create_customer_interview: {
+        Args: { p_interview_date:string; p_visit_time:string; p_answers:Json; p_inputter_session_id:string; p_outlet_id?:string|null }
+        Returns: string
+      }
+      update_customer_interview: {
+        Args: { p_interview_id:string; p_interview_date:string; p_visit_time:string; p_answers:Json }
+        Returns: string
+      }
+      publish_customer_interview_form_version: {
+        Args: { p_questions:Json; p_outlet_id?:string|null }
+        Returns: { form_version_id:string; version_number:number }[]
+      }
       start_operational_inputter_session: {
         Args: { p_section:string; p_inputter_name:string; p_outlet_id?:string }
         Returns: { session_id:string; outlet_id:string; section:string; inputter_name:string; started_at:string }[]

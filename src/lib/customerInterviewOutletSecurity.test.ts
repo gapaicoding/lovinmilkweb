@@ -1,0 +1,24 @@
+import {readFileSync} from "node:fs";import {describe,expect,it} from "vitest";
+const sql=readFileSync("supabase/migrations/20260901190000_customer_parent_interviews.sql","utf8").toLowerCase();
+const between=(start:string,end:string)=>sql.slice(sql.indexOf(start),sql.indexOf(end));
+const update=between("create function public.update_customer_interview","-- extend v3");
+const publish=between("create function public.publish_customer_interview_form_version","create function public.create_customer_interview");
+const create=between("create function public.create_customer_interview","create function public.update_customer_interview");
+describe("parent interview outlet security",()=>{
+ it.each(["staff","admin","super_admin"])("%s may update under canonical role rules",role=>expect(update).toContain(`'${role}'`));
+ it("locks and resolves both outlet and historical form version",()=>expect(update).toContain("select outlet_id,form_version_id into v_interview_outlet,v_version"));
+ it("rejects cross-outlet update",()=>{expect(update).toContain("v_interview_outlet<>v_outlet");expect(update).toContain("wawancara tidak tersedia pada outlet ini.");});
+ it("resolves the canonical default outlet without frontend state",()=>expect(update).toContain("lm_resolve_sales_outlet(null)"));
+ it("scopes form-version reads by outlet",()=>expect(sql).toContain("interview_versions_read_staff on public.customer_interview_form_versions for select to authenticated using(public.lm_is_active_staff_or_above() and outlet_id=public.lm_resolve_sales_outlet(null))"));
+ it("scopes interview reads by outlet",()=>expect(sql).toContain("interviews_read_staff on public.customer_interviews for select to authenticated using(public.lm_is_active_staff_or_above() and outlet_id=public.lm_resolve_sales_outlet(null))"));
+ it("scopes question reads through form-version ownership",()=>expect(sql).toContain("f.id=form_version_id and f.outlet_id=public.lm_resolve_sales_outlet(null)"));
+ it("scopes answer reads through interview ownership",()=>expect(sql).toContain("i.id=interview_id and i.outlet_id=public.lm_resolve_sales_outlet(null)"));
+ it("keeps current-outlet reads available",()=>expect(sql.match(/outlet_id=public\.lm_resolve_sales_outlet\(null\)/g)?.length).toBeGreaterThanOrEqual(4));
+ it("preserves immutable interview attribution on update",()=>{for(const column of ["form_version_id=","inputter_name=","inputter_session_id=","created_by="])expect(update).not.toContain(column);});
+ it("keeps cross-version answer validation",()=>expect(sql).toContain("v_interview_version<>v_question_version"));
+ it("keeps question publication available to all Staff+ roles",()=>{for(const role of ["staff","admin","super_admin"])expect(publish).toContain(`'${role}'`);});
+ it("binds publication to the canonical outlet",()=>{expect(publish).toContain("lm_resolve_sales_outlet(null)");expect(publish).toContain("p_outlet_id<>v_outlet");});
+ it("binds creation and its Interview inputter session to the canonical outlet",()=>{expect(create).toContain("lm_resolve_sales_outlet(null)");expect(create).toContain("lm_require_operational_inputter_session(p_inputter_session_id,'interviews',v_outlet)");});
+ it("preserves every pre-existing V3 section plus Interviews",()=>{const helper=between("create or replace function public.lm_require_operational_inputter_session","-- existing v3 rpc bodies");for(const section of ["sales","expenses","suppliers","visitors","interviews"])expect(helper).toContain(`'${section}'`);});
+ it("preserves V3 actor, outlet, section, supersession, name and last-used checks",()=>{const helper=between("create or replace function public.lm_require_operational_inputter_session","-- existing v3 rpc bodies");for(const rule of ["v_row.actor_id<>v_actor","v_row.outlet_id<>v_outlet","v_row.section<>p_section","v_row.superseded_at is not null","btrim(v_row.inputter_name)=''","last_used_at=clock_timestamp()"] )expect(helper).toContain(rule);});
+});

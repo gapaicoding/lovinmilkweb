@@ -18,6 +18,7 @@ import {
   Wrench,
   ShieldCheck,
   Boxes,
+  MessagesSquare,
 } from "lucide-react";
 
 import {
@@ -144,6 +145,12 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={active("/wawancara-orang-tua")}>
+                  <Link to="/wawancara-orang-tua"><MessagesSquare /><span>Wawancara Orang Tua</span></Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild

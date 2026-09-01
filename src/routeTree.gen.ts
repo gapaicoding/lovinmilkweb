@@ -32,6 +32,7 @@ import { Route as AuthenticatedProdukRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedProfilRouteImport } from './routes/_authenticated/profil'
 import { Route as AuthenticatedSubunitBisnisRouteImport } from './routes/_authenticated/subunit-bisnis'
 import { Route as AuthenticatedSupplierRouteImport } from './routes/_authenticated/supplier'
+import { Route as AuthenticatedWawancaraOrangTuaRouteImport } from './routes/_authenticated/wawancara-orang-tua'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -158,6 +159,12 @@ const AuthenticatedSupplierRoute = AuthenticatedSupplierRouteImport.update({
   path: '/supplier',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWawancaraOrangTuaRoute =
+  AuthenticatedWawancaraOrangTuaRouteImport.update({
+    id: '/wawancara-orang-tua',
+    path: '/wawancara-orang-tua',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/profil': typeof AuthenticatedProfilRoute
   '/subunit-bisnis': typeof AuthenticatedSubunitBisnisRoute
   '/supplier': typeof AuthenticatedSupplierRoute
+  '/wawancara-orang-tua': typeof AuthenticatedWawancaraOrangTuaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/profil': typeof AuthenticatedProfilRoute
   '/subunit-bisnis': typeof AuthenticatedSubunitBisnisRoute
   '/supplier': typeof AuthenticatedSupplierRoute
+  '/wawancara-orang-tua': typeof AuthenticatedWawancaraOrangTuaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -232,6 +241,7 @@ export interface FileRoutesById {
   '/_authenticated/profil': typeof AuthenticatedProfilRoute
   '/_authenticated/subunit-bisnis': typeof AuthenticatedSubunitBisnisRoute
   '/_authenticated/supplier': typeof AuthenticatedSupplierRoute
+  '/_authenticated/wawancara-orang-tua': typeof AuthenticatedWawancaraOrangTuaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/subunit-bisnis'
     | '/supplier'
+    | '/wawancara-orang-tua'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/profil'
     | '/subunit-bisnis'
     | '/supplier'
+    | '/wawancara-orang-tua'
   id:
     | '__root__'
     | '/'
@@ -307,6 +319,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profil'
     | '/_authenticated/subunit-bisnis'
     | '/_authenticated/supplier'
+    | '/_authenticated/wawancara-orang-tua'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -478,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSupplierRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/wawancara-orang-tua': {
+      id: '/_authenticated/wawancara-orang-tua'
+      path: '/wawancara-orang-tua'
+      fullPath: '/wawancara-orang-tua'
+      preLoaderRoute: typeof AuthenticatedWawancaraOrangTuaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -502,6 +522,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProfilRoute: typeof AuthenticatedProfilRoute
   AuthenticatedSubunitBisnisRoute: typeof AuthenticatedSubunitBisnisRoute
   AuthenticatedSupplierRoute: typeof AuthenticatedSupplierRoute
+  AuthenticatedWawancaraOrangTuaRoute: typeof AuthenticatedWawancaraOrangTuaRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -525,6 +546,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProfilRoute: AuthenticatedProfilRoute,
   AuthenticatedSubunitBisnisRoute: AuthenticatedSubunitBisnisRoute,
   AuthenticatedSupplierRoute: AuthenticatedSupplierRoute,
+  AuthenticatedWawancaraOrangTuaRoute: AuthenticatedWawancaraOrangTuaRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

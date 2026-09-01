@@ -37,6 +37,7 @@ const labels: Record<OperationalInputterSection, string> = {
   expenses: "Pengeluaran",
   suppliers: "Supplier",
   visitors: "Kunjungan Pengunjung",
+  interviews: "Wawancara Orang Tua",
 };
 
 export function OperationalInputterCard({
