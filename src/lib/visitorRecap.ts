@@ -13,6 +13,8 @@ export interface VisitorRecapEntry extends VisitorRecapEntryInput { id: string; 
 export interface VisitorDailyRecap { id: string; outlet_id: string; business_date: string; recorder_name: string; entries: VisitorRecapEntry[] }
 export interface VisitorRecapPeriodRow { business_date: string; recorder_name: string | null; arrival_time: string | null; adult_count: number; child_count: number }
 export interface VisitorHourlySlot { arrival_time: string; adult_count: number; child_count: number; total_visitors: number }
+export const visitorDailyRecapQueryKey = (outletId: string | null | undefined, businessDate: string) =>
+  ["visitor-daily-recap", outletId ?? null, businessDate] as const;
 
 export function aggregateVisitorRecapBySlot(
   entries: ReadonlyArray<Pick<VisitorRecapEntryInput, "arrival_time" | "adult_count" | "child_count">>,

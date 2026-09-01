@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,7 +7,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { useBusinessStructure } from "@/hooks/useBusinessStructure";
 import { useAuth } from "@/hooks/useAuth";
 import { jakartaToday } from "@/lib/visitor";
-import { MAX_VISITOR_RECAP_BATCH, VISITOR_ARRIVAL_SLOTS, canArchiveVisitorRecapEntry, parseDailyRecap, validateVisitorRecapEntries, type VisitorRecapEntry, type VisitorRecapEntryInput, type VisitorRecapPeriodRow } from "@/lib/visitorRecap";
+import { MAX_VISITOR_RECAP_BATCH, VISITOR_ARRIVAL_SLOTS, canArchiveVisitorRecapEntry, parseDailyRecap, validateVisitorRecapEntries, visitorDailyRecapQueryKey, type VisitorRecapEntry, type VisitorRecapEntryInput, type VisitorRecapPeriodRow } from "@/lib/visitorRecap";
 import { exportVisitorRecapWorkbook } from "@/lib/visitorRecapWorkbook";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,43 +21,467 @@ import { OperationalInputterCard } from "@/components/OperationalInputterCard";
 import { useOperationalInputter } from "@/hooks/useOperationalInputter";
 import { displayOperationalInputter } from "@/lib/operationalInputter";
 
-type Draft = { key:number; arrival_time:string; adult:string; child:string; notes:string };
-type Period = "today"|"yesterday"|"week"|"last7"|"month"|"previous"|"pick_month"|"custom";
-const newDraft=(key=Date.now()):Draft=>({key,arrival_time:"",adult:"1",child:"0",notes:""});
-const db=supabase as unknown as {rpc(name:string,args:Record<string,unknown>):PromiseLike<{data:Json|null;error:{message:string}|null}>};
+type Draft = { key: number; arrival_time: string; adult: string; child: string; notes: string };
+type Period = "today" | "yesterday" | "week" | "last7" | "month" | "previous" | "pick_month" | "custom";
+const newDraft = (key = Date.now()): Draft => ({ key, arrival_time: "", adult: "1", child: "0", notes: "" });
+const db = supabase as unknown as {
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<{ data: Json | null; error: { message: string } | null }>;
+};
 
 export function VisitorDailyRecapPanel() {
- const {outlet}=useBusinessStructure(); const {role}=useAuth(); const qc=useQueryClient();
- const today=jakartaToday();
- const visitorInputter=useOperationalInputter(outlet?.id??null,"visitors");
- const [date,setDate]=useState(today),[rows,setRows]=useState([newDraft()]);
- const [period,setPeriod]=useState<Period>("today"),[month,setMonth]=useState(jakartaToday().slice(0,7)),[from,setFrom]=useState(jakartaToday()),[to,setTo]=useState(jakartaToday());
- const [editing,setEditing]=useState<VisitorRecapEntry|null>(null),[editDraft,setEditDraft]=useState<Draft|null>(null),[archiving,setArchiving]=useState<VisitorRecapEntry|null>(null);
- const recap=useQuery({queryKey:["visitor-daily-recap",outlet?.id,date],enabled:Boolean(outlet?.id),queryFn:async()=>{const {data,error}=await db.rpc("get_visitor_daily_recap",{p_outlet_id:outlet!.id,p_business_date:date});if(error)throw new Error(error.message);return parseDailyRecap(data);}});
- const todayRecap=useQuery({queryKey:["visitor-daily-recap",outlet?.id,today],enabled:Boolean(outlet?.id),queryFn:async()=>{const {data,error}=await db.rpc("get_visitor_daily_recap",{p_outlet_id:outlet!.id,p_business_date:today});if(error)throw new Error(error.message);return parseDailyRecap(data);}});
- const save=useMutation({mutationFn:async()=>{if(!outlet?.id)throw new Error("Outlet aktif tidak ditemukan.");const session=await visitorInputter.ensureValidSession();const entries:VisitorRecapEntryInput[]=rows.map(r=>({arrival_time:r.arrival_time,adult_count:Number(r.adult),child_count:Number(r.child),notes:r.notes.trim()||null}));const invalid=validateVisitorRecapEntries(entries);if(invalid)throw new Error(invalid);const {error}=await db.rpc("create_or_append_visitor_daily_recap_v3",{p_business_date:date,p_outlet_id:outlet.id,p_recorder_name:null,p_entries:entries,p_inputter_session_id:session.sessionId});if(error)throw new Error(error.message);},onSuccess:async()=>{toast.success("Semua data kedatangan berhasil disimpan.");setRows([newDraft()]);await qc.invalidateQueries({queryKey:["visitor-daily-recap"]});},onError:(e:Error)=>toast.error("Rekap gagal disimpan.",{description:e.message})});
- const download=useMutation({mutationFn:async()=>{if(!outlet?.id)throw new Error("Outlet aktif tidak ditemukan.");const range=rangeFor(period,month,from,to);const {data,error}=await db.rpc("get_visitor_daily_recap_period",{p_outlet_id:outlet.id,p_start_date:range.from,p_end_date:range.to});if(error)throw new Error(error.message);await exportVisitorRecapWorkbook((data??[]) as unknown as VisitorRecapPeriodRow[],range.from,range.to);},onError:(e:Error)=>toast.error("Excel gagal dibuat.",{description:e.message})});
- const refresh=async()=>{await Promise.all([qc.invalidateQueries({queryKey:["visitor-daily-recap"]}),qc.invalidateQueries({queryKey:["visitor-visits"]}),qc.invalidateQueries({queryKey:["dashboard"]}),qc.invalidateQueries({queryKey:["sales-recap"]})])};
- const updateEntry=useMutation({mutationFn:async()=>{if(!editing||!editDraft)throw new Error("Entry rekap tidak ditemukan.");const entry={arrival_time:editDraft.arrival_time,adult_count:Number(editDraft.adult),child_count:Number(editDraft.child),notes:editDraft.notes.trim()||null};const invalid=validateVisitorRecapEntries([entry]);if(invalid)throw new Error(invalid);const {error}=await db.rpc("update_visitor_recap_entry",{p_visit_id:editing.id,p_arrival_time:entry.arrival_time,p_adult_count:entry.adult_count,p_child_count:entry.child_count,p_notes:entry.notes});if(error)throw new Error(error.message)},onSuccess:async()=>{toast.success("Entry rekap berhasil diperbarui.");setEditing(null);setEditDraft(null);await refresh()},onError:(e:Error)=>toast.error("Entry gagal diperbarui.",{description:e.message})});
- const archiveEntry=useMutation({mutationFn:async()=>{if(!archiving)throw new Error("Entry rekap tidak ditemukan.");const {error}=await db.rpc("archive_visitor_recap_entry",{p_visit_id:archiving.id});if(error)throw new Error(error.message)},onSuccess:async()=>{toast.success("Entry dihapus dari rekap aktif.");setArchiving(null);await refresh()},onError:(e:Error)=>toast.error("Entry gagal diarsipkan.",{description:e.message})});
- const saved=recap.data?.entries??[],todayEntries=todayRecap.data?.entries??[],adults=todayEntries.reduce((n,r)=>n+r.adult_count,0),children=todayEntries.reduce((n,r)=>n+r.child_count,0),da=rows.reduce((n,r)=>n+(Number(r.adult)||0),0),dc=rows.reduce((n,r)=>n+(Number(r.child)||0),0);
- return <div className="space-y-4">
-  <OperationalInputterCard outletId={outlet?.id??null} section="visitors" />
-  <div className="grid gap-3 sm:grid-cols-3"><Summary title="Pengunjung Hari Ini" value={adults+children}/><Summary title="Dewasa Hari Ini" value={adults}/><Summary title="Anak Hari Ini" value={children}/></div>
-  <Card><CardHeader><CardTitle>Rekap Harian</CardTitle></CardHeader><CardContent className="space-y-5">
-   <div className="grid gap-4 sm:grid-cols-2"><Field label="Tanggal Rekap"><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></Field>{recap.data?<Field label="Perekap awal"><div className="rounded-md border bg-muted/30 px-3 py-2 font-medium">{recap.data.recorder_name}</div></Field>:null}</div>
-   {!recap.isLoading&&!recap.data?<p className="text-sm text-muted-foreground">Belum ada rekap kunjungan untuk tanggal ini.</p>:null}
-   {saved.length?<div className="overflow-auto rounded-md border"><Table><TableHeader><TableRow><TableHead>Jam</TableHead><TableHead>Dewasa</TableHead><TableHead>Anak</TableHead><TableHead>Total</TableHead><TableHead>Penginput</TableHead><TableHead>Catatan</TableHead><TableHead className="text-right">Aksi</TableHead></TableRow></TableHeader><TableBody>{saved.map(r=><TableRow key={r.id}><TableCell>{r.arrival_time}</TableCell><TableCell>{r.adult_count}</TableCell><TableCell>{r.child_count}</TableCell><TableCell>{r.adult_count+r.child_count}</TableCell><TableCell>{displayOperationalInputter(r.inputter_name)}</TableCell><TableCell>{r.notes||"—"}</TableCell><TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" onClick={()=>{setEditing(r);setEditDraft({key:Date.now(),arrival_time:r.arrival_time,adult:String(r.adult_count),child:String(r.child_count),notes:r.notes??""})}}><Pencil className="mr-1 h-3.5 w-3.5"/>Edit</Button>{canArchiveVisitorRecapEntry(role)?<Button size="sm" variant="destructive" onClick={()=>setArchiving(r)}>Hapus dari Rekap</Button>:null}</div></TableCell></TableRow>)}</TableBody></Table></div>:null}
-   <h3 className="font-semibold">Data Kedatangan Baru</h3>{rows.map((row,index)=><div key={row.key} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[140px_90px_90px_1fr_auto]"><Field label="Jam Kedatangan"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={row.arrival_time} onChange={e=>change(setRows,row.key,"arrival_time",e.target.value)}><option value="">Pilih jam</option>{VISITOR_ARRIVAL_SLOTS.map(slot=><option key={slot}>{slot}</option>)}</select></Field><Field label="Dewasa"><Input type="number" min="0" step="1" value={row.adult} onChange={e=>change(setRows,row.key,"adult",e.target.value)}/></Field><Field label="Anak"><Input type="number" min="0" step="1" value={row.child} onChange={e=>change(setRows,row.key,"child",e.target.value)}/></Field><Field label="Catatan"><Input maxLength={500} value={row.notes} onChange={e=>change(setRows,row.key,"notes",e.target.value)}/></Field><Button className="self-end" variant="ghost" size="icon" disabled={rows.length===1} aria-label={`Hapus baris ${index+1}`} onClick={()=>setRows(all=>all.filter(x=>x.key!==row.key))}><Trash2 className="h-4 w-4"/></Button></div>)}
-   <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><Button variant="outline" disabled={rows.length>=MAX_VISITOR_RECAP_BATCH||!visitorInputter.name} title={!visitorInputter.name?"Atur nama penginput terlebih dahulu.":undefined} onClick={()=>setRows(all=>[...all,newDraft(Date.now()+all.length)])}><Plus className="mr-2 h-4 w-4"/>Tambah Baris</Button><p className="text-sm">Total Dewasa: <b>{da}</b> · Total Anak: <b>{dc}</b> · Total Pengunjung: <b>{da+dc}</b></p><Button disabled={save.isPending||!visitorInputter.name} title={!visitorInputter.name?"Atur nama penginput terlebih dahulu.":undefined} onClick={()=>save.mutate()}><Save className="mr-2 h-4 w-4"/>Simpan Semua</Button></div>
-  </CardContent></Card>
-  <VisitorHourlyTodaySummary today={today} recap={todayRecap.data} isLoading={todayRecap.isLoading} error={todayRecap.error instanceof Error ? todayRecap.error : null}/>
-  <Card><CardHeader><CardTitle>Export Excel Rekap Pengunjung</CardTitle></CardHeader><CardContent className="flex flex-wrap items-end gap-3"><Field label="Periode"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={period} onChange={e=>setPeriod(e.target.value as Period)}>{[["today","Hari Ini"],["yesterday","Kemarin"],["week","Minggu Ini"],["last7","7 Hari Terakhir"],["month","Bulan Ini"],["previous","Bulan Sebelumnya"],["pick_month","Pilih Bulan"],["custom","Custom Range"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></Field>{period==="pick_month"?<Field label="Bulan"><Input type="month" value={month} onChange={e=>setMonth(e.target.value)}/></Field>:null}{period==="custom"?<><Field label="Tanggal Awal"><Input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></Field><Field label="Tanggal Akhir"><Input type="date" value={to} onChange={e=>setTo(e.target.value)}/></Field></>:null}<Button disabled={download.isPending||(period==="custom"&&from>to)} onClick={()=>download.mutate()}><Download className="mr-2 h-4 w-4"/>Unduh Excel</Button></CardContent></Card>
-  <Dialog open={Boolean(editing)} onOpenChange={open=>{if(!open&&!updateEntry.isPending){setEditing(null);setEditDraft(null)}}}><DialogContent><DialogHeader><DialogTitle>Edit Entry Rekap</DialogTitle><DialogDescription>Koreksi jam kedatangan dan jumlah pengunjung.</DialogDescription></DialogHeader>{editDraft?<div className="grid gap-3 sm:grid-cols-2"><Field label="Jam Kedatangan"><select className="h-9 rounded-md border bg-background px-3 text-sm" value={editDraft.arrival_time} onChange={e=>setEditDraft({...editDraft,arrival_time:e.target.value})}>{VISITOR_ARRIVAL_SLOTS.map(slot=><option key={slot}>{slot}</option>)}</select></Field><Field label="Dewasa"><Input type="number" min="0" step="1" value={editDraft.adult} onChange={e=>setEditDraft({...editDraft,adult:e.target.value})}/></Field><Field label="Anak"><Input type="number" min="0" step="1" value={editDraft.child} onChange={e=>setEditDraft({...editDraft,child:e.target.value})}/></Field><Field label="Catatan"><Input maxLength={500} value={editDraft.notes} onChange={e=>setEditDraft({...editDraft,notes:e.target.value})}/></Field></div>:null}<DialogFooter><Button variant="outline" disabled={updateEntry.isPending} onClick={()=>{setEditing(null);setEditDraft(null)}}>Batal</Button><Button disabled={updateEntry.isPending} onClick={()=>updateEntry.mutate()}>Simpan Perubahan</Button></DialogFooter></DialogContent></Dialog>
-  <AlertDialog open={Boolean(archiving)} onOpenChange={open=>{if(!open&&!archiveEntry.isPending)setArchiving(null)}}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Hapus entry dari rekap aktif?</AlertDialogTitle><AlertDialogDescription>Entry {archiving?.arrival_time} akan dikeluarkan dari total rekap aktif, tetapi tetap disimpan sebagai data historis dan audit.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={archiveEntry.isPending}>Batal</AlertDialogCancel><AlertDialogAction disabled={archiveEntry.isPending} onClick={event=>{event.preventDefault();archiveEntry.mutate()}}>Hapus dari Rekap</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
- </div>;
+  const { outlet } = useBusinessStructure();
+  const { role } = useAuth();
+  const qc = useQueryClient();
+  const today = jakartaToday();
+  const visitorInputter = useOperationalInputter(outlet?.id ?? null, "visitors");
+  const saveRequestIdRef = useRef<string | null>(null);
+  const [date, setDate] = useState(today);
+  const [rows, setRows] = useState([newDraft()]);
+  const [period, setPeriod] = useState<Period>("today");
+  const [month, setMonth] = useState(jakartaToday().slice(0, 7));
+  const [from, setFrom] = useState(jakartaToday());
+  const [to, setTo] = useState(jakartaToday());
+  const [editing, setEditing] = useState<VisitorRecapEntry | null>(null);
+  const [editDraft, setEditDraft] = useState<Draft | null>(null);
+  const [archiving, setArchiving] = useState<VisitorRecapEntry | null>(null);
+
+  useEffect(() => {
+    saveRequestIdRef.current = null;
+  }, [date, outlet?.id, rows]);
+
+  const recap = useQuery({
+    queryKey: visitorDailyRecapQueryKey(outlet?.id, date),
+    enabled: Boolean(outlet?.id),
+    queryFn: async () => {
+      const { data, error } = await db.rpc("get_visitor_daily_recap", { p_outlet_id: outlet!.id, p_business_date: date });
+      if (error) throw new Error(error.message);
+      return parseDailyRecap(data);
+    },
+  });
+
+  const todayRecap = useQuery({
+    queryKey: visitorDailyRecapQueryKey(outlet?.id, today),
+    enabled: Boolean(outlet?.id),
+    queryFn: async () => {
+      const { data, error } = await db.rpc("get_visitor_daily_recap", { p_outlet_id: outlet!.id, p_business_date: today });
+      if (error) throw new Error(error.message);
+      return parseDailyRecap(data);
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!outlet?.id) throw new Error("Outlet aktif tidak ditemukan.");
+      const session = await visitorInputter.ensureValidSession();
+      const entries: VisitorRecapEntryInput[] = rows.map((r) => ({
+        arrival_time: r.arrival_time,
+        adult_count: Number(r.adult),
+        child_count: Number(r.child),
+        notes: r.notes.trim() || null,
+      }));
+      const invalid = validateVisitorRecapEntries(entries);
+      if (invalid) throw new Error(invalid);
+
+      const requestId = saveRequestIdRef.current ?? crypto.randomUUID();
+      saveRequestIdRef.current = requestId;
+      const { data, error } = await db.rpc("create_or_append_visitor_daily_recap_v3", {
+        p_business_date: date,
+        p_outlet_id: outlet.id,
+        p_recorder_name: null,
+        p_entries: entries,
+        p_inputter_session_id: session.sessionId,
+        p_request_id: requestId,
+      });
+      if (error) throw new Error(error.message);
+
+      return parseDailyRecap(data) ?? (await refetchSavedRecap(outlet.id, date));
+    },
+    onSuccess: async (savedRecap) => {
+      if (!outlet?.id) return;
+      qc.setQueryData(visitorDailyRecapQueryKey(outlet.id, date), savedRecap);
+      if (date === today) {
+        qc.setQueryData(visitorDailyRecapQueryKey(outlet.id, today), savedRecap);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["visitor-daily-recap"] }),
+        qc.invalidateQueries({ queryKey: ["visitor-visits"] }),
+        qc.invalidateQueries({ queryKey: ["dashboard"] }),
+        qc.invalidateQueries({ queryKey: ["sales-recap"] }),
+      ]);
+      setRows([newDraft()]);
+      saveRequestIdRef.current = null;
+      toast.success("Semua data kedatangan berhasil disimpan.");
+    },
+    onError: (e: Error) => toast.error("Rekap gagal disimpan.", { description: e.message }),
+  });
+
+  const download = useMutation({
+    mutationFn: async () => {
+      if (!outlet?.id) throw new Error("Outlet aktif tidak ditemukan.");
+      const range = rangeFor(period, month, from, to);
+      const { data, error } = await db.rpc("get_visitor_daily_recap_period", { p_outlet_id: outlet.id, p_start_date: range.from, p_end_date: range.to });
+      if (error) throw new Error(error.message);
+      await exportVisitorRecapWorkbook((data ?? []) as unknown as VisitorRecapPeriodRow[], range.from, range.to);
+    },
+    onError: (e: Error) => toast.error("Excel gagal dibuat.", { description: e.message }),
+  });
+
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["visitor-daily-recap"] }),
+      qc.invalidateQueries({ queryKey: ["visitor-visits"] }),
+      qc.invalidateQueries({ queryKey: ["dashboard"] }),
+      qc.invalidateQueries({ queryKey: ["sales-recap"] }),
+    ]);
+  };
+
+  const updateEntry = useMutation({
+    mutationFn: async () => {
+      if (!editing || !editDraft) throw new Error("Entry rekap tidak ditemukan.");
+      const entry = {
+        arrival_time: editDraft.arrival_time,
+        adult_count: Number(editDraft.adult),
+        child_count: Number(editDraft.child),
+        notes: editDraft.notes.trim() || null,
+      };
+      const invalid = validateVisitorRecapEntries([entry]);
+      if (invalid) throw new Error(invalid);
+      const { error } = await db.rpc("update_visitor_recap_entry", {
+        p_visit_id: editing.id,
+        p_arrival_time: entry.arrival_time,
+        p_adult_count: entry.adult_count,
+        p_child_count: entry.child_count,
+        p_notes: entry.notes,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: async () => {
+      toast.success("Entry rekap berhasil diperbarui.");
+      setEditing(null);
+      setEditDraft(null);
+      await refresh();
+    },
+    onError: (e: Error) => toast.error("Entry gagal diperbarui.", { description: e.message }),
+  });
+
+  const archiveEntry = useMutation({
+    mutationFn: async () => {
+      if (!archiving) throw new Error("Entry rekap tidak ditemukan.");
+      const { error } = await db.rpc("archive_visitor_recap_entry", { p_visit_id: archiving.id });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: async () => {
+      toast.success("Entry dihapus dari rekap aktif.");
+      setArchiving(null);
+      await refresh();
+    },
+    onError: (e: Error) => toast.error("Entry gagal diarsipkan.", { description: e.message }),
+  });
+
+  const saved = recap.data?.entries ?? [];
+  const todayEntries = todayRecap.data?.entries ?? [];
+  const adults = todayEntries.reduce((n, r) => n + r.adult_count, 0);
+  const children = todayEntries.reduce((n, r) => n + r.child_count, 0);
+  const da = rows.reduce((n, r) => n + (Number(r.adult) || 0), 0);
+  const dc = rows.reduce((n, r) => n + (Number(r.child) || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      <OperationalInputterCard outletId={outlet?.id ?? null} section="visitors" />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Summary title="Pengunjung Hari Ini" value={adults + children} />
+        <Summary title="Dewasa Hari Ini" value={adults} />
+        <Summary title="Anak Hari Ini" value={children} />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Rekap Harian</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Tanggal Rekap">
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </Field>
+            {recap.data ? (
+              <Field label="Perekap awal">
+                <div className="rounded-md border bg-muted/30 px-3 py-2 font-medium">{recap.data.recorder_name}</div>
+              </Field>
+            ) : null}
+          </div>
+          {!recap.isLoading && !recap.data ? (
+            <p className="text-sm text-muted-foreground">Belum ada rekap kunjungan untuk tanggal ini.</p>
+          ) : null}
+          {saved.length ? (
+            <div className="overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Jam</TableHead>
+                    <TableHead>Dewasa</TableHead>
+                    <TableHead>Anak</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Penginput</TableHead>
+                    <TableHead>Catatan</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {saved.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>{r.arrival_time}</TableCell>
+                      <TableCell>{r.adult_count}</TableCell>
+                      <TableCell>{r.child_count}</TableCell>
+                      <TableCell>{r.adult_count + r.child_count}</TableCell>
+                      <TableCell>{displayOperationalInputter(r.inputter_name)}</TableCell>
+                      <TableCell>{r.notes || "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditing(r);
+                              setEditDraft({
+                                key: Date.now(),
+                                arrival_time: r.arrival_time,
+                                adult: String(r.adult_count),
+                                child: String(r.child_count),
+                                notes: r.notes ?? "",
+                              });
+                            }}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          {canArchiveVisitorRecapEntry(role) ? (
+                            <Button size="sm" variant="destructive" onClick={() => setArchiving(r)}>
+                              Hapus dari Rekap
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : null}
+          <h3 className="font-semibold">Data Kedatangan Baru</h3>
+          {rows.map((row, index) => (
+            <div key={row.key} className="grid gap-2 rounded-md border p-3 sm:grid-cols-[140px_90px_90px_1fr_auto]">
+              <Field label="Jam Kedatangan">
+                <select className="h-9 rounded-md border bg-background px-3 text-sm" value={row.arrival_time} onChange={(e) => change(setRows, row.key, "arrival_time", e.target.value)}>
+                  <option value="">Pilih jam</option>
+                  {VISITOR_ARRIVAL_SLOTS.map((slot) => (
+                    <option key={slot}>{slot}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Dewasa">
+                <Input type="number" min="0" step="1" value={row.adult} onChange={(e) => change(setRows, row.key, "adult", e.target.value)} />
+              </Field>
+              <Field label="Anak">
+                <Input type="number" min="0" step="1" value={row.child} onChange={(e) => change(setRows, row.key, "child", e.target.value)} />
+              </Field>
+              <Field label="Catatan">
+                <Input maxLength={500} value={row.notes} onChange={(e) => change(setRows, row.key, "notes", e.target.value)} />
+              </Field>
+              <Button className="self-end" variant="ghost" size="icon" disabled={rows.length === 1 || save.isPending} aria-label={`Hapus baris ${index + 1}`} onClick={() => setRows((all) => all.filter((x) => x.key !== row.key))}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <Button
+              variant="outline"
+              disabled={rows.length >= MAX_VISITOR_RECAP_BATCH || !visitorInputter.name || save.isPending}
+              title={!visitorInputter.name ? "Atur nama penginput terlebih dahulu." : undefined}
+              onClick={() => setRows((all) => [...all, newDraft(Date.now() + all.length)])}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Tambah Baris
+            </Button>
+            <p className="text-sm">
+              Total Dewasa: <b>{da}</b> · Total Anak: <b>{dc}</b> · Total Pengunjung: <b>{da + dc}</b>
+            </p>
+            <Button disabled={save.isPending || !visitorInputter.name} title={!visitorInputter.name ? "Atur nama penginput terlebih dahulu." : undefined} onClick={() => save.mutate()}>
+              <Save className="mr-2 h-4 w-4" />
+              Simpan Semua
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <VisitorHourlyTodaySummary today={today} recap={todayRecap.data} isLoading={todayRecap.isLoading} error={todayRecap.error instanceof Error ? todayRecap.error : null} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Export Excel Rekap Pengunjung</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-end gap-3">
+          <Field label="Periode">
+            <select className="h-9 rounded-md border bg-background px-3 text-sm" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+              {[
+                ["today", "Hari Ini"],
+                ["yesterday", "Kemarin"],
+                ["week", "Minggu Ini"],
+                ["last7", "7 Hari Terakhir"],
+                ["month", "Bulan Ini"],
+                ["previous", "Bulan Sebelumnya"],
+                ["pick_month", "Pilih Bulan"],
+                ["custom", "Custom Range"],
+              ].map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {period === "pick_month" ? (
+            <Field label="Bulan">
+              <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+            </Field>
+          ) : null}
+          {period === "custom" ? (
+            <>
+              <Field label="Tanggal Awal">
+                <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              </Field>
+              <Field label="Tanggal Akhir">
+                <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+              </Field>
+            </>
+          ) : null}
+          <Button disabled={download.isPending || (period === "custom" && from > to)} onClick={() => download.mutate()}>
+            <Download className="mr-2 h-4 w-4" />
+            Unduh Excel
+          </Button>
+        </CardContent>
+      </Card>
+      <Dialog
+        open={Boolean(editing)}
+        onOpenChange={(open) => {
+          if (!open && !updateEntry.isPending) {
+            setEditing(null);
+            setEditDraft(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Entry Rekap</DialogTitle>
+            <DialogDescription>Koreksi jam kedatangan dan jumlah pengunjung.</DialogDescription>
+          </DialogHeader>
+          {editDraft ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Jam Kedatangan">
+                <select className="h-9 rounded-md border bg-background px-3 text-sm" value={editDraft.arrival_time} onChange={(e) => setEditDraft({ ...editDraft, arrival_time: e.target.value })}>
+                  {VISITOR_ARRIVAL_SLOTS.map((slot) => (
+                    <option key={slot}>{slot}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Dewasa">
+                <Input type="number" min="0" step="1" value={editDraft.adult} onChange={(e) => setEditDraft({ ...editDraft, adult: e.target.value })} />
+              </Field>
+              <Field label="Anak">
+                <Input type="number" min="0" step="1" value={editDraft.child} onChange={(e) => setEditDraft({ ...editDraft, child: e.target.value })} />
+              </Field>
+              <Field label="Catatan">
+                <Input maxLength={500} value={editDraft.notes} onChange={(e) => setEditDraft({ ...editDraft, notes: e.target.value })} />
+              </Field>
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" disabled={updateEntry.isPending} onClick={() => { setEditing(null); setEditDraft(null); }}>
+              Batal
+            </Button>
+            <Button disabled={updateEntry.isPending} onClick={() => updateEntry.mutate()}>
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={Boolean(archiving)}
+        onOpenChange={(open) => {
+          if (!open && !archiveEntry.isPending) setArchiving(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus entry dari rekap aktif?</AlertDialogTitle>
+            <AlertDialogDescription>Entry {archiving?.arrival_time} akan dikeluarkan dari total rekap aktif, tetapi tetap disimpan sebagai data historis dan audit.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={archiveEntry.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={archiveEntry.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                archiveEntry.mutate();
+              }}
+            >
+              Hapus dari Rekap
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
 }
-function change(set:React.Dispatch<React.SetStateAction<Draft[]>>,key:number,field:keyof Omit<Draft,"key">,value:string){set(all=>all.map(row=>row.key===key?{...row,[field]:value}:row))}
-function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>}
-function Summary({title,value}:{title:string;value:number}){return <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">{title}</p><p className="text-2xl font-bold">{value}</p></CardContent></Card>}
-function rangeFor(period:Period,month:string,from:string,to:string){const today=jakartaToday();const shift=(v:string,n:number)=>{const [y,m,d]=v.split("-").map(Number);return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10)};if(period==="yesterday"){const d=shift(today,-1);return{from:d,to:d}}if(period==="week"){const day=new Date(`${today}T00:00:00Z`).getUTCDay();return{from:shift(today,-((day+6)%7)),to:today}}if(period==="last7")return{from:shift(today,-6),to:today};if(period==="month")return{from:`${today.slice(0,7)}-01`,to:today};if(period==="previous"){const end=shift(`${today.slice(0,7)}-01`,-1);return{from:`${end.slice(0,7)}-01`,to:end}}if(period==="pick_month"){const [y,m]=month.split("-").map(Number);return{from:`${month}-01`,to:new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}}if(period==="custom")return{from,to};return{from:today,to:today}}
+
+async function refetchSavedRecap(outletId: string, businessDate: string) {
+  const { data, error } = await db.rpc("get_visitor_daily_recap", { p_outlet_id: outletId, p_business_date: businessDate });
+  if (error) throw new Error(error.message);
+  const parsed = parseDailyRecap(data);
+  if (!parsed) throw new Error("Rekap hasil simpan tidak valid.");
+  return parsed;
+}
+
+function change(set: React.Dispatch<React.SetStateAction<Draft[]>>, key: number, field: keyof Omit<Draft, "key">, value: string) {
+  set((all) => all.map((row) => (row.key === key ? { ...row, [field]: value } : row)));
+}
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+function Summary({ title, value }: { title: string; value: number }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <p className="text-sm text-muted-foreground">{title}</p>
+        <p className="text-2xl font-bold">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+function rangeFor(period: Period, month: string, from: string, to: string) {
+  const today = jakartaToday();
+  const shift = (v: string, n: number) => {
+    const [y, m, d] = v.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+  };
+  if (period === "yesterday") {
+    const d = shift(today, -1);
+    return { from: d, to: d };
+  }
+  if (period === "week") {
+    const day = new Date(`${today}T00:00:00Z`).getUTCDay();
+    return { from: shift(today, -((day + 6) % 7)), to: today };
+  }
+  if (period === "last7") return { from: shift(today, -6), to: today };
+  if (period === "month") return { from: `${today.slice(0, 7)}-01`, to: today };
+  if (period === "previous") {
+    const end = shift(`${today.slice(0, 7)}-01`, -1);
+    return { from: `${end.slice(0, 7)}-01`, to: end };
+  }
+  if (period === "pick_month") {
+    const [y, m] = month.split("-").map(Number);
+    return { from: `${month}-01`, to: new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10) };
+  }
+  if (period === "custom") return { from, to };
+  return { from: today, to: today };
+}

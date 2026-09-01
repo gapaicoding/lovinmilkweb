@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_VISITOR_RECAP_BATCH, VISITOR_ARRIVAL_SLOTS, aggregateVisitorRecapBySlot, canArchiveVisitorRecapEntry, validateVisitorRecapEntries } from "./visitorRecap";
+import { MAX_VISITOR_RECAP_BATCH, VISITOR_ARRIVAL_SLOTS, aggregateVisitorRecapBySlot, canArchiveVisitorRecapEntry, validateVisitorRecapEntries, visitorDailyRecapQueryKey } from "./visitorRecap";
 
 describe("visitor recap slots", () => {
   it("contains exactly the 30 half-hour arrival slots", () => {
@@ -23,6 +23,10 @@ describe("visitor recap slots", () => {
   it("validates corrected entry counts and changed slots", () => {
     expect(validateVisitorRecapEntries([{ arrival_time: "13:30", adult_count: 2, child_count: 1, notes: "koreksi" }])).toBeNull();
     expect(validateVisitorRecapEntries([{ arrival_time: "13:30", adult_count: -1, child_count: 2, notes: null }])).toContain("bilangan bulat");
+  });
+  it("builds exact recap cache keys for outlet and date", () => {
+    expect(visitorDailyRecapQueryKey("outlet-a", "2026-09-01")).toEqual(["visitor-daily-recap", "outlet-a", "2026-09-01"]);
+    expect(visitorDailyRecapQueryKey(undefined, "2026-09-01")).toEqual(["visitor-daily-recap", null, "2026-09-01"]);
   });
 });
 
