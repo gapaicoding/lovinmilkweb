@@ -24,10 +24,11 @@ const lovinProduct: SalesProductOption = {
   categoryId: "22222222-2222-4222-8222-222222222222",
   categoryName: "Milks Series",
   subunitId: "33333333-3333-4333-8333-333333333333",
+  subunitCode: "LOVIN_MILK",
   subunitName: "Lovin Milk",
   outletId: "44444444-4444-4444-8444-444444444444",
 };
-const arayyaProduct = { ...lovinProduct, productId: "55555555-5555-4555-8555-555555555555", productName: "Crispy Fries", subunitId: "66666666-6666-4666-8666-666666666666", subunitName: "Arayya" };
+const arayyaProduct = { ...lovinProduct, productId: "55555555-5555-4555-8555-555555555555", productName: "Crispy Fries", subunitId: "66666666-6666-4666-8666-666666666666", subunitCode: "ARAYYA", subunitName: "Arayya" };
 
 describe("virtual free product option", () => {
   it("parses free and gratis as mode tokens", () => {
@@ -42,6 +43,11 @@ describe("virtual free product option", () => {
     expect(options[0].optionId).toBe(`free:${lovinProduct.productId}`);
     expect(options[0].product.productId).toBe(lovinProduct.productId);
     expect(isLovinMilkProduct(arayyaProduct)).toBe(false);
+  });
+
+  it("uses the canonical code rather than the display name for eligibility", () => {
+    expect(isLovinMilkProduct({ ...lovinProduct, subunitName: "Renamed Milk" })).toBe(true);
+    expect(isLovinMilkProduct({ ...lovinProduct, subunitCode: "ARAYYA", subunitName: "Lovin Milk" })).toBe(false);
   });
 
   it("keeps normal and free variants on the same canonical product", () => {

@@ -465,6 +465,7 @@ export function useSalesTransactions() {
           categoryName: category.name,
 
           subunitId: subunit.id,
+          subunitCode: subunit.code,
           subunitName: subunit.name,
 
           outletId,

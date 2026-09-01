@@ -14,7 +14,7 @@ export interface ParsedProductSearch {
 }
 
 const FREE_KEYWORDS = new Set(["free", "gratis"]);
-const LOVIN_MILK_SUBUNIT = "lovin milk";
+const LOVIN_MILK_SUBUNIT_CODE = "LOVIN_MILK";
 
 export function parseProductSearch(query: string): ParsedProductSearch {
   const terms = query.trim().split(/\s+/).filter(Boolean);
@@ -29,7 +29,7 @@ export function parseProductSearch(query: string): ParsedProductSearch {
 }
 
 export function isLovinMilkProduct(product: SalesProductOption): boolean {
-  return product.subunitName.trim().toLocaleLowerCase("id-ID") === LOVIN_MILK_SUBUNIT;
+  return product.subunitCode === LOVIN_MILK_SUBUNIT_CODE;
 }
 
 export function buildProductPickerOptions(
