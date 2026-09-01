@@ -6,6 +6,7 @@ create table public.visitor_daily_recap_submissions (
   outlet_id uuid not null references public.outlets(id),
   business_date date not null,
   operation text not null check (operation = 'create_or_append_visitor_daily_recap_v3'),
+  request_fingerprint text not null,
   recap_id uuid references public.visitor_daily_recaps(id),
   response jsonb,
   created_at timestamptz not null default clock_timestamp(),
@@ -26,6 +27,7 @@ declare
   v record;
   v_header_name text;
   v_existing jsonb;
+  v_request_fingerprint text;
   v_submission public.visitor_daily_recap_submissions%rowtype;
 begin
   if p_request_id is null then
@@ -35,16 +37,28 @@ begin
   select s.* into v
   from public.lm_require_operational_inputter_session(p_inputter_session_id, 'visitors', p_outlet_id) s;
 
+  v_request_fingerprint := md5(jsonb_build_object(
+    'actor_id', auth.uid(),
+    'business_date', p_business_date,
+    'outlet_id', v.outlet_id,
+    'inputter_session_id', p_inputter_session_id,
+    'recorder_name', p_recorder_name,
+    'entries', coalesce(p_entries, '[]'::jsonb)
+  )::text);
+
   select * into v_submission
   from public.visitor_daily_recap_submissions
   where request_id = p_request_id
-    and actor_id = auth.uid()
-    and outlet_id = v.outlet_id
-    and business_date = p_business_date
-    and operation = 'create_or_append_visitor_daily_recap_v3'
   for update;
 
   if found then
+    if v_submission.actor_id <> auth.uid()
+      or v_submission.outlet_id <> v.outlet_id
+      or v_submission.business_date <> p_business_date
+      or v_submission.operation <> 'create_or_append_visitor_daily_recap_v3'
+      or v_submission.request_fingerprint <> v_request_fingerprint then
+      raise exception 'Kunci idempotensi sudah digunakan untuk permintaan lain.' using errcode='22023';
+    end if;
     if v_submission.response is null then
       raise exception 'Permintaan simpan masih diproses.' using errcode='55000';
     end if;
@@ -56,13 +70,15 @@ begin
     actor_id,
     outlet_id,
     business_date,
-    operation
+    operation,
+    request_fingerprint
   ) values (
     p_request_id,
     auth.uid(),
     v.outlet_id,
     p_business_date,
-    'create_or_append_visitor_daily_recap_v3'
+    'create_or_append_visitor_daily_recap_v3',
+    v_request_fingerprint
   );
 
   perform set_config('app.operational_inputter_session_id', p_inputter_session_id::text, true);
@@ -88,21 +104,27 @@ begin
 
   return v_existing;
 exception when unique_violation then
-  select response into v_existing
+  select * into v_submission
   from public.visitor_daily_recap_submissions
-  where request_id = p_request_id
-    and actor_id = auth.uid()
-    and outlet_id = v.outlet_id
-    and business_date = p_business_date
-    and operation = 'create_or_append_visitor_daily_recap_v3';
-  if v_existing is null then
+  where request_id = p_request_id;
+  if not found then
     raise exception 'Permintaan simpan sedang diproses ulang.' using errcode='40001';
   end if;
-  return v_existing;
+  if v_submission.actor_id <> auth.uid()
+    or v_submission.outlet_id <> v.outlet_id
+    or v_submission.business_date <> p_business_date
+    or v_submission.operation <> 'create_or_append_visitor_daily_recap_v3'
+    or v_submission.request_fingerprint <> v_request_fingerprint then
+    raise exception 'Kunci idempotensi sudah digunakan untuk permintaan lain.' using errcode='22023';
+  end if;
+  if v_submission.response is null then
+    raise exception 'Permintaan simpan masih diproses.' using errcode='55000';
+  end if;
+  return v_submission.response;
 end $$;
 
 revoke all on table public.visitor_daily_recap_submissions from public, anon, authenticated;
-grant select, insert, update on table public.visitor_daily_recap_submissions to authenticated;
+alter table public.visitor_daily_recap_submissions enable row level security;
 
 revoke all on function public.create_or_append_visitor_daily_recap_v3(date,uuid,uuid,text,jsonb,uuid) from public, anon, authenticated;
 grant execute on function public.create_or_append_visitor_daily_recap_v3(date,uuid,uuid,text,jsonb,uuid) to authenticated;

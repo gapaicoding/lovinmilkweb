@@ -22,6 +22,29 @@ describe("visitor recap idempotency migration", () => {
     expect(sql).toContain("permintaan simpan masih diproses");
   });
 
+  it("keeps the internal ledger inaccessible to browser roles", () => {
+    expect(sql).toContain(
+      "revoke all on table public.visitor_daily_recap_submissions from public, anon, authenticated",
+    );
+    expect(sql).not.toContain(
+      "grant select, insert, update on table public.visitor_daily_recap_submissions to authenticated",
+    );
+    expect(sql).toContain("enable row level security");
+    expect(sql).toContain(
+      "grant execute on function public.create_or_append_visitor_daily_recap_v3(date,uuid,uuid,text,jsonb,uuid) to authenticated",
+    );
+    expect(sql).toContain("security definer set search_path=public,pg_catalog");
+  });
+
+  it("binds a request id to its logical payload", () => {
+    expect(sql).toContain("request_fingerprint text not null");
+    expect(sql).toContain("v_request_fingerprint := md5(jsonb_build_object(");
+    expect(sql).toContain("kunci idempotensi sudah digunakan untuk permintaan lain");
+    expect(sql).toContain("v_submission.request_fingerprint <> v_request_fingerprint");
+    expect(sql).toContain("'entries', coalesce(p_entries, '[]'::jsonb)");
+    expect(sql).toContain("'inputter_session_id', p_inputter_session_id");
+  });
+
   it("keeps legitimate same-slot arrivals possible", () => {
     expect(sql).toContain("create or replace function public.create_or_append_visitor_daily_recap_v3");
     expect(sql).toContain("public.create_or_append_visitor_daily_recap(p_business_date");
