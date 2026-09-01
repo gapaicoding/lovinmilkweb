@@ -4178,7 +4178,7 @@ export type Database = {
         Returns: Json
       }
       create_or_append_visitor_daily_recap_v3: {
-        Args: { p_business_date:string; p_outlet_id:string; p_inputter_session_id:string; p_recorder_name?:string|null; p_entries?:Json }
+        Args: { p_business_date:string; p_outlet_id:string; p_inputter_session_id:string; p_recorder_name?:string|null; p_entries?:Json; p_request_id?:string }
         Returns: Json
       }
       get_asset_book_values: {
