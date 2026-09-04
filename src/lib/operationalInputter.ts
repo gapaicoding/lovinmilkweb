@@ -1,4 +1,5 @@
-export type OperationalInputterSection = "sales" | "expenses" | "suppliers" | "visitors" | "interviews";
+export type OperationalInputterSection =
+  "sales" | "expenses" | "suppliers" | "visitors" | "interviews" | "marketing";
 export interface OperationalInputterSession {
   sessionId: string;
   outletId: string;

@@ -24,6 +24,7 @@ import { Route as AuthenticatedKategoriPenjualanRouteImport } from './routes/_au
 import { Route as AuthenticatedKontrolDataRouteImport } from './routes/_authenticated/kontrol-data'
 import { Route as AuthenticatedKunjunganRouteImport } from './routes/_authenticated/kunjungan'
 import { Route as AuthenticatedLaporanKeuanganRouteImport } from './routes/_authenticated/laporan-keuangan'
+import { Route as AuthenticatedMarketingDevelopmentRouteImport } from './routes/_authenticated/marketing-development'
 import { Route as AuthenticatedPengeluaranRouteImport } from './routes/_authenticated/pengeluaran'
 import { Route as AuthenticatedPenggunaRouteImport } from './routes/_authenticated/pengguna'
 import { Route as AuthenticatedPengunjungRouteImport } from './routes/_authenticated/pengunjung'
@@ -117,6 +118,12 @@ const AuthenticatedLaporanKeuanganRoute =
     path: '/laporan-keuangan',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMarketingDevelopmentRoute =
+  AuthenticatedMarketingDevelopmentRouteImport.update({
+    id: '/marketing-development',
+    path: '/marketing-development',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPengeluaranRoute =
   AuthenticatedPengeluaranRouteImport.update({
     id: '/pengeluaran',
@@ -181,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
   '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
+  '/marketing-development': typeof AuthenticatedMarketingDevelopmentRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/pengguna': typeof AuthenticatedPenggunaRoute
   '/pengunjung': typeof AuthenticatedPengunjungRoute
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/kunjungan': typeof AuthenticatedKunjunganRoute
   '/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
+  '/marketing-development': typeof AuthenticatedMarketingDevelopmentRoute
   '/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/pengguna': typeof AuthenticatedPenggunaRoute
   '/pengunjung': typeof AuthenticatedPengunjungRoute
@@ -233,6 +242,7 @@ export interface FileRoutesById {
   '/_authenticated/kontrol-data': typeof AuthenticatedKontrolDataRoute
   '/_authenticated/kunjungan': typeof AuthenticatedKunjunganRoute
   '/_authenticated/laporan-keuangan': typeof AuthenticatedLaporanKeuanganRoute
+  '/_authenticated/marketing-development': typeof AuthenticatedMarketingDevelopmentRoute
   '/_authenticated/pengeluaran': typeof AuthenticatedPengeluaranRoute
   '/_authenticated/pengguna': typeof AuthenticatedPenggunaRoute
   '/_authenticated/pengunjung': typeof AuthenticatedPengunjungRoute
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/kontrol-data'
     | '/kunjungan'
     | '/laporan-keuangan'
+    | '/marketing-development'
     | '/pengeluaran'
     | '/pengguna'
     | '/pengunjung'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/kontrol-data'
     | '/kunjungan'
     | '/laporan-keuangan'
+    | '/marketing-development'
     | '/pengeluaran'
     | '/pengguna'
     | '/pengunjung'
@@ -311,6 +323,7 @@ export interface FileRouteTypes {
     | '/_authenticated/kontrol-data'
     | '/_authenticated/kunjungan'
     | '/_authenticated/laporan-keuangan'
+    | '/_authenticated/marketing-development'
     | '/_authenticated/pengeluaran'
     | '/_authenticated/pengguna'
     | '/_authenticated/pengunjung'
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLaporanKeuanganRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/marketing-development': {
+      id: '/_authenticated/marketing-development'
+      path: '/marketing-development'
+      fullPath: '/marketing-development'
+      preLoaderRoute: typeof AuthenticatedMarketingDevelopmentRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pengeluaran': {
       id: '/_authenticated/pengeluaran'
       path: '/pengeluaran'
@@ -514,6 +534,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedKontrolDataRoute: typeof AuthenticatedKontrolDataRoute
   AuthenticatedKunjunganRoute: typeof AuthenticatedKunjunganRoute
   AuthenticatedLaporanKeuanganRoute: typeof AuthenticatedLaporanKeuanganRoute
+  AuthenticatedMarketingDevelopmentRoute: typeof AuthenticatedMarketingDevelopmentRoute
   AuthenticatedPengeluaranRoute: typeof AuthenticatedPengeluaranRoute
   AuthenticatedPenggunaRoute: typeof AuthenticatedPenggunaRoute
   AuthenticatedPengunjungRoute: typeof AuthenticatedPengunjungRoute
@@ -538,6 +559,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedKontrolDataRoute: AuthenticatedKontrolDataRoute,
   AuthenticatedKunjunganRoute: AuthenticatedKunjunganRoute,
   AuthenticatedLaporanKeuanganRoute: AuthenticatedLaporanKeuanganRoute,
+  AuthenticatedMarketingDevelopmentRoute:
+    AuthenticatedMarketingDevelopmentRoute,
   AuthenticatedPengeluaranRoute: AuthenticatedPengeluaranRoute,
   AuthenticatedPenggunaRoute: AuthenticatedPenggunaRoute,
   AuthenticatedPengunjungRoute: AuthenticatedPengunjungRoute,

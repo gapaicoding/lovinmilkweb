@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Boxes,
   MessagesSquare,
+  Megaphone,
 } from "lucide-react";
 
 import {
@@ -145,6 +146,21 @@ export function AppSidebar() {
 
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={active("/marketing-development")}
+                >
+                  <Link to="/marketing-development">
+                    <Megaphone />
+
+                    <span>
+                      Marketing &amp; Development
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={active("/wawancara-orang-tua")}>
                   <Link to="/wawancara-orang-tua"><MessagesSquare /><span>Wawancara Orang Tua</span></Link>

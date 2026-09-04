@@ -103,6 +103,7 @@ const ROUTE_CAPABILITIES = {
   "/kunjungan": "canViewOperationalData",
   "/supplier": "canAccessSuppliers",
   "/wawancara-orang-tua": "canViewOperationalData",
+  "/marketing-development": "canViewOperationalData",
 
   "/pengunjung": "canManageVisitors",
 
