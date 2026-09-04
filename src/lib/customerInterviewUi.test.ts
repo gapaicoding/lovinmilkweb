@@ -12,6 +12,8 @@ describe("parent interview UI regression contract",()=>{
  it("supports reordering draft questions",()=>{expect(ui).toContain("move(i,-1)");expect(ui).toContain("move(i,1)");});
  it("publishes rather than directly updating questions",()=>{expect(domain).toContain('rpc("publish_customer_interview_form_version"');expect(domain).not.toContain('.from("customer_interview_questions").update');});
  it("allows Staff-visible configuration without client-only admin gate",()=>{expect(ui).toContain('<TabsTrigger value="questions">Atur Pertanyaan</TabsTrigger>');expect(ui).not.toContain("isAdmin");});
+ it("shows the blocking active-form state in both tabs with retry",()=>{expect(ui.match(/<ActiveFormUnavailable/g)).toHaveLength(2);expect(ui).toContain("Formulir wawancara aktif tidak ditemukan atau tidak dapat diakses.");expect(ui).toContain("Coba Lagi");expect(ui).toContain("form.refetch()");});
+ it("does not silently return null for an inaccessible active form",()=>{expect(domain).toContain('if(!data)throw new Error("Formulir wawancara aktif tidak ditemukan atau tidak dapat diakses.")');expect(domain).not.toContain("if(!data)return null");});
  it("retains history independently of the active form",()=>expect(domain).toContain("customer_interview_form_versions(version_number,customer_interview_questions"));
  it("uses a distinct browser-session inputter section",()=>expect(inputter).toContain('"interviews"'));
  it("does not integrate ordered menu with Sales",()=>{expect(ui.toLowerCase()).not.toContain("sales_transaction");expect(domain.toLowerCase()).not.toContain("sales_transaction");});

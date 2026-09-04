@@ -1,5 +1,6 @@
 import {readFileSync} from "node:fs";import {describe,expect,it} from "vitest";
 const sql=readFileSync("supabase/migrations/20260901190000_customer_parent_interviews.sql","utf8").toLowerCase();
+const hotfix=readFileSync("supabase/migrations/20260901210000_customer_interview_active_form_visibility_hotfix.sql","utf8").toLowerCase();
 const between=(start:string,end:string)=>sql.slice(sql.indexOf(start),sql.indexOf(end));
 const update=between("create function public.update_customer_interview","-- extend v3");
 const publish=between("create function public.publish_customer_interview_form_version","create function public.create_customer_interview");
@@ -9,11 +10,15 @@ describe("parent interview outlet security",()=>{
  it("locks and resolves both outlet and historical form version",()=>expect(update).toContain("select outlet_id,form_version_id into v_interview_outlet,v_version"));
  it("rejects cross-outlet update",()=>{expect(update).toContain("v_interview_outlet<>v_outlet");expect(update).toContain("wawancara tidak tersedia pada outlet ini.");});
  it("resolves the canonical default outlet without frontend state",()=>expect(update).toContain("lm_resolve_sales_outlet(null)"));
- it("scopes form-version reads by outlet",()=>expect(sql).toContain("interview_versions_read_staff on public.customer_interview_form_versions for select to authenticated using(public.lm_is_active_staff_or_above() and outlet_id=public.lm_resolve_sales_outlet(null))"));
- it("scopes interview reads by outlet",()=>expect(sql).toContain("interviews_read_staff on public.customer_interviews for select to authenticated using(public.lm_is_active_staff_or_above() and outlet_id=public.lm_resolve_sales_outlet(null))"));
- it("scopes question reads through form-version ownership",()=>expect(sql).toContain("f.id=form_version_id and f.outlet_id=public.lm_resolve_sales_outlet(null)"));
- it("scopes answer reads through interview ownership",()=>expect(sql).toContain("i.id=interview_id and i.outlet_id=public.lm_resolve_sales_outlet(null)"));
- it("keeps current-outlet reads available",()=>expect(sql.match(/outlet_id=public\.lm_resolve_sales_outlet\(null\)/g)?.length).toBeGreaterThanOrEqual(4));
+ it.each(["staff","admin","super_admin"])("restores authenticated %s reads through the Staff+ predicate",()=>expect(hotfix.match(/public\.lm_is_active_staff_or_above\(\)/g)).toHaveLength(4));
+ it("keeps the shared resolver private",()=>{expect(hotfix).not.toMatch(/grant execute on function public\.lm_resolve_sales_outlet/);expect(hotfix).toContain("lm_is_current_customer_interview_outlet");});
+ it("scopes form-version and interview reads by the current Outlet",()=>expect(hotfix.match(/lm_is_current_customer_interview_outlet\(outlet_id\)/g)).toHaveLength(2));
+ it("scopes question reads through form-version ownership",()=>{expect(hotfix).toContain("from public.customer_interview_form_versions f");expect(hotfix).toContain("lm_is_current_customer_interview_outlet(f.outlet_id)");});
+ it("scopes answer reads through interview ownership",()=>{expect(hotfix).toContain("from public.customer_interviews i");expect(hotfix).toContain("lm_is_current_customer_interview_outlet(i.outlet_id)");});
+ it("grants only the narrow read predicate to authenticated",()=>expect(hotfix).toContain("grant execute on function public.lm_is_current_customer_interview_outlet(uuid)\nto authenticated, service_role"));
+ it("does not grant Interview table writes",()=>expect(hotfix).not.toMatch(/grant (insert|update|delete|all) on/));
+ it("does not alter mutation RPC authorization",()=>expect(hotfix).not.toMatch(/(publish|create|update)_customer_interview/));
+ it("does not touch unrelated operational domains",()=>{for(const table of ["sales_transactions","operational_expenses","suppliers","visitors"])expect(hotfix).not.toContain(table);});
  it("preserves immutable interview attribution on update",()=>{for(const column of ["form_version_id=","inputter_name=","inputter_session_id=","created_by="])expect(update).not.toContain(column);});
  it("keeps cross-version answer validation",()=>expect(sql).toContain("v_interview_version<>v_question_version"));
  it("keeps question publication available to all Staff+ roles",()=>{for(const role of ["staff","admin","super_admin"])expect(publish).toContain(`'${role}'`);});
