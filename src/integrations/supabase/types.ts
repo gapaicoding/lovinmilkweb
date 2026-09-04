@@ -1675,6 +1675,24 @@ export type Database = {
           },
         ]
       }
+      marketing_daily_recaps: {
+        Row: { id: string; outlet_id: string; business_date: string; registered_membership_total: number | null; promo_claim_count: number; google_star_1_count: number; google_star_2_count: number; google_star_3_count: number; google_star_4_count: number; google_star_5_count: number; customer_engagement_count: number; inputter_name: string; inputter_session_id: string; created_at: string; created_by: string; updated_at: string; updated_by: string }
+        Insert: { id?: string; outlet_id: string; business_date: string; registered_membership_total?: number | null; promo_claim_count?: number; google_star_1_count?: number; google_star_2_count?: number; google_star_3_count?: number; google_star_4_count?: number; google_star_5_count?: number; customer_engagement_count?: number; inputter_name: string; inputter_session_id: string; created_at?: string; created_by: string; updated_at?: string; updated_by: string }
+        Update: { id?: string; outlet_id?: string; business_date?: string; registered_membership_total?: number | null; promo_claim_count?: number; google_star_1_count?: number; google_star_2_count?: number; google_star_3_count?: number; google_star_4_count?: number; google_star_5_count?: number; customer_engagement_count?: number; inputter_name?: string; inputter_session_id?: string; created_at?: string; created_by?: string; updated_at?: string; updated_by?: string }
+        Relationships: []
+      }
+      marketing_daily_membership_entries: {
+        Row: { id: string; recap_id: string; member_name: string; phone_number: string; sort_order: number; created_at: string }
+        Insert: { id?: string; recap_id: string; member_name: string; phone_number: string; sort_order: number; created_at?: string }
+        Update: { id?: string; recap_id?: string; member_name?: string; phone_number?: string; sort_order?: number; created_at?: string }
+        Relationships: []
+      }
+      marketing_daily_events: {
+        Row: { id: string; recap_id: string; event_name: string; registration_type: string; third_party: string | null; external_participant_count: number; sort_order: number; created_at: string }
+        Insert: { id?: string; recap_id: string; event_name: string; registration_type: string; third_party?: string | null; external_participant_count?: number; sort_order: number; created_at?: string }
+        Update: { id?: string; recap_id?: string; event_name?: string; registration_type?: string; third_party?: string | null; external_participant_count?: number; sort_order?: number; created_at?: string }
+        Relationships: []
+      }
       operational_inputter_settings: {
         Row: { id: string; outlet_id: string; section: string; inputter_name: string; created_at: string; created_by: string | null; updated_at: string; updated_by: string | null }
         Insert: { id?: string; outlet_id: string; section: string; inputter_name: string; created_at?: string; created_by?: string | null; updated_at?: string; updated_by?: string | null }
@@ -4164,6 +4182,10 @@ export type Database = {
       get_operational_inputter_history: {
         Args: { p_section:string; p_outlet_id?:string; p_limit?:number }
         Returns: { inputter_name:string; section:string; started_at:string; last_used_at:string|null }[]
+      }
+      save_marketing_daily_recap_v1: {
+        Args: { p_business_date: string; p_registered_membership_total: number | null; p_promo_claim_count: number; p_google_star_1_count: number; p_google_star_2_count: number; p_google_star_3_count: number; p_google_star_4_count: number; p_google_star_5_count: number; p_customer_engagement_count: number; p_membership_entries: Json; p_events: Json; p_inputter_session_id: string; p_outlet_id?: string | null }
+        Returns: string
       }
       create_or_append_visitor_daily_recap: {
         Args: { p_business_date:string; p_outlet_id:string; p_recorder_name?:string|null; p_entries?:Json }
