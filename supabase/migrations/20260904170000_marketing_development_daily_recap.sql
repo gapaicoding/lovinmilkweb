@@ -141,9 +141,50 @@ end $$;
 alter table public.marketing_daily_recaps enable row level security;
 alter table public.marketing_daily_membership_entries enable row level security;
 alter table public.marketing_daily_events enable row level security;
-create policy marketing_recaps_read_staff on public.marketing_daily_recaps for select to authenticated using(public.lm_is_active_staff_or_above() and outlet_id=public.lm_resolve_sales_outlet(null));
-create policy marketing_members_read_staff on public.marketing_daily_membership_entries for select to authenticated using(public.lm_is_active_staff_or_above() and exists(select 1 from public.marketing_daily_recaps r where r.id=recap_id and r.outlet_id=public.lm_resolve_sales_outlet(null)));
-create policy marketing_events_read_staff on public.marketing_daily_events for select to authenticated using(public.lm_is_active_staff_or_above() and exists(select 1 from public.marketing_daily_recaps r where r.id=recap_id and r.outlet_id=public.lm_resolve_sales_outlet(null)));
+
+-- Keep the shared resolver private. RLS receives only a boolean equality predicate,
+-- preventing authenticated callers from obtaining the canonical Outlet ID.
+create or replace function public.lm_is_current_marketing_outlet(p_outlet_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = pg_catalog, pg_temp
+as $$
+  select p_outlet_id is not null
+    and p_outlet_id = public.lm_resolve_sales_outlet(null);
+$$;
+
+revoke execute on function public.lm_resolve_sales_outlet(uuid)
+from public, anon, authenticated;
+revoke all on function public.lm_is_current_marketing_outlet(uuid)
+from public, anon, authenticated;
+grant execute on function public.lm_is_current_marketing_outlet(uuid)
+to authenticated, service_role;
+
+create policy marketing_recaps_read_staff on public.marketing_daily_recaps
+for select to authenticated using (
+  public.lm_is_active_staff_or_above()
+  and public.lm_is_current_marketing_outlet(outlet_id)
+);
+create policy marketing_members_read_staff on public.marketing_daily_membership_entries
+for select to authenticated using (
+  public.lm_is_active_staff_or_above()
+  and exists (
+    select 1 from public.marketing_daily_recaps r
+    where r.id = recap_id
+      and public.lm_is_current_marketing_outlet(r.outlet_id)
+  )
+);
+create policy marketing_events_read_staff on public.marketing_daily_events
+for select to authenticated using (
+  public.lm_is_active_staff_or_above()
+  and exists (
+    select 1 from public.marketing_daily_recaps r
+    where r.id = recap_id
+      and public.lm_is_current_marketing_outlet(r.outlet_id)
+  )
+);
 
 revoke all on public.marketing_daily_recaps,public.marketing_daily_membership_entries,public.marketing_daily_events from public,anon,authenticated;
 grant select on public.marketing_daily_recaps,public.marketing_daily_membership_entries,public.marketing_daily_events to authenticated;
