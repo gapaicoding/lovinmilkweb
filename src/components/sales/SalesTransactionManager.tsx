@@ -105,6 +105,7 @@ export function SalesTransactionManager() {
     isFetching,
     isMutating,
     error,
+    itemsLoadError,
 
     createSalesTransaction,
     updateSalesTransaction,
@@ -115,6 +116,7 @@ export function SalesTransactionManager() {
     refresh,
   } = useSalesTransactions();
   const salesInputter = useOperationalInputter(outlet?.id ?? null, "sales");
+  const itemDataUnavailable = Boolean(itemsLoadError);
 
   // ==========================================================
   // FILTER STATE
@@ -231,6 +233,7 @@ export function SalesTransactionManager() {
       // --------------------------------------------------
 
       if (
+        !itemDataUnavailable &&
         subunitFilter !== "all" &&
         !transaction.items.some((item) => item.subunitId === subunitFilter)
       ) {
@@ -242,6 +245,7 @@ export function SalesTransactionManager() {
       // --------------------------------------------------
 
       if (
+        !itemDataUnavailable &&
         categoryFilter !== "all" &&
         !transaction.items.some((item) => item.salesCategoryId === categoryFilter)
       ) {
@@ -285,6 +289,7 @@ export function SalesTransactionManager() {
     dateFrom,
     dateTo,
     deletedFilter,
+    itemDataUnavailable,
     searchQuery,
     subunitFilter,
     transactions,
@@ -301,16 +306,24 @@ export function SalesTransactionManager() {
 
   const filteredTotalQuantity = useMemo(
     () =>
-      filteredTransactions.reduce(
-        (total, transaction) => total + calculateTotalQuantity(transaction.items),
-        0,
-      ),
-    [filteredTransactions],
+      itemDataUnavailable
+        ? null
+        : filteredTransactions.reduce(
+            (total, transaction) => total + calculateTotalQuantity(transaction.items),
+            0,
+          ),
+    [filteredTransactions, itemDataUnavailable],
   );
 
   const filteredItemCount = useMemo(
-    () => filteredTransactions.reduce((total, transaction) => total + transaction.items.length, 0),
-    [filteredTransactions],
+    () =>
+      itemDataUnavailable
+        ? null
+        : filteredTransactions.reduce(
+            (total, transaction) => total + transaction.items.length,
+            0,
+          ),
+    [filteredTransactions, itemDataUnavailable],
   );
 
   // ==========================================================
@@ -483,6 +496,7 @@ export function SalesTransactionManager() {
   // ==========================================================
 
   const dataErrorMessage = error ? getErrorMessage(error) : null;
+  const itemDataErrorMessage = itemsLoadError ? getErrorMessage(itemsLoadError) : null;
 
   return (
     <div className="space-y-6">
@@ -580,7 +594,15 @@ export function SalesTransactionManager() {
         </div>
       ) : null}
 
-      {dataErrorMessage ? (
+      {itemDataErrorMessage ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          Gagal mengambil item transaksi: {itemDataErrorMessage}. Header transaksi tetap ditampilkan,
+          tetapi Item, Qty, Subunit, HPP, dan Gross Profit disembunyikan agar tidak dianggap bernilai 0.
+        </div>
+      ) : dataErrorMessage ? (
         <div
           role="alert"
           className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
@@ -611,15 +633,17 @@ export function SalesTransactionManager() {
         <SummaryCard
           icon={<Archive className="h-5 w-5" />}
           label="Baris item"
-          value={formatNumber(filteredItemCount)}
-          helper="Jumlah line transaksi"
+          value={filteredItemCount === null ? "—" : formatNumber(filteredItemCount)}
+          helper={itemDataUnavailable ? "Data item gagal dimuat" : "Jumlah line transaksi"}
         />
 
         <SummaryCard
           icon={<Store className="h-5 w-5" />}
           label="Total quantity"
-          value={formatNumber(filteredTotalQuantity, 2)}
-          helper="Akumulasi semua item"
+          value={
+            filteredTotalQuantity === null ? "—" : formatNumber(filteredTotalQuantity, 2)
+          }
+          helper={itemDataUnavailable ? "Data item gagal dimuat" : "Akumulasi semua item"}
         />
       </div>
 
@@ -668,7 +692,11 @@ export function SalesTransactionManager() {
           <div className="space-y-2">
             <Label>Subunit</Label>
 
-            <Select value={subunitFilter} onValueChange={handleSubunitFilterChange}>
+            <Select
+              value={subunitFilter}
+              onValueChange={handleSubunitFilterChange}
+              disabled={itemDataUnavailable}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -690,7 +718,11 @@ export function SalesTransactionManager() {
           <div className="space-y-2">
             <Label>Category</Label>
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select
+              value={categoryFilter}
+              onValueChange={setCategoryFilter}
+              disabled={itemDataUnavailable}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -841,9 +873,13 @@ export function SalesTransactionManager() {
                 {paginatedTransactions.map((transaction) => {
                   const isDeleted = Boolean(transaction.deletedAt);
 
-                  const totalQuantity = calculateTotalQuantity(transaction.items);
+                  const totalQuantity = itemDataUnavailable
+                    ? null
+                    : calculateTotalQuantity(transaction.items);
 
-                  const subunitSummary = summarizeSubunits(transaction.items);
+                  const subunitSummary = itemDataUnavailable
+                    ? null
+                    : summarizeSubunits(transaction.items);
 
                   return (
                     <TableRow
@@ -876,7 +912,7 @@ export function SalesTransactionManager() {
                       {/* SUBUNIT */}
 
                       <TableCell>
-                        <span className="text-sm">{subunitSummary}</span>
+                        <span className="text-sm">{subunitSummary ?? "—"}</span>
                       </TableCell>
 
                       <TableCell>
@@ -898,12 +934,14 @@ export function SalesTransactionManager() {
                       {/* ITEM COUNT */}
 
                       <TableCell className="text-right">
-                        {formatNumber(transaction.items.length)}
+                        {itemDataUnavailable ? "—" : formatNumber(transaction.items.length)}
                       </TableCell>
 
                       {/* QUANTITY */}
 
-                      <TableCell className="text-right">{formatNumber(totalQuantity, 2)}</TableCell>
+                      <TableCell className="text-right">
+                        {totalQuantity === null ? "—" : formatNumber(totalQuantity, 2)}
+                      </TableCell>
 
                       {/* TOTAL */}
 
@@ -1195,7 +1233,12 @@ export function SalesTransactionManager() {
             </DialogDescription>
           </DialogHeader>
 
-          {detailTransaction ? <SalesTransactionDetail transaction={detailTransaction} /> : null}
+          {detailTransaction ? (
+            <SalesTransactionDetail
+              transaction={detailTransaction}
+              itemsUnavailable={itemDataUnavailable}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 

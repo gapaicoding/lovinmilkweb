@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_SALES_TRANSACTION_ITEMS,
+  SALES_ITEM_FETCH_BATCH_SIZE,
   buildCreateTransactionPayload,
   buildUpdateTransactionPayload,
   calculateLineSubtotal,
   calculateTotalQuantity,
   calculateTransactionTotal,
+  chunkSalesTransactionIds,
   formatTransactionNumber,
   summarizeSubunits,
   type SalesTransactionFormItem,
@@ -293,6 +295,43 @@ describe("sales transaction payload", () => {
         ),
       }),
     ).toThrow(`Satu transaksi maksimal memiliki ${MAX_SALES_TRANSACTION_ITEMS} baris item.`);
+  });
+});
+
+
+describe("sales item fetch batching", () => {
+  it("memecah transaction ID besar menjadi batch aman dan mempertahankan urutan", () => {
+    const ids = Array.from({ length: SALES_ITEM_FETCH_BATCH_SIZE * 2 + 11 }, (_, index) =>
+      `transaction-${index + 1}`,
+    );
+
+    const batches = chunkSalesTransactionIds(ids);
+
+    expect(batches).toHaveLength(3);
+    expect(batches[0]).toHaveLength(SALES_ITEM_FETCH_BATCH_SIZE);
+    expect(batches[1]).toHaveLength(SALES_ITEM_FETCH_BATCH_SIZE);
+    expect(batches[2]).toHaveLength(11);
+    expect(batches.flat()).toEqual(ids);
+  });
+
+  it("mengembalikan array kosong untuk histori tanpa transaksi", () => {
+    expect(chunkSalesTransactionIds([])).toEqual([]);
+  });
+
+  it("mendukung ukuran batch eksplisit dan menolak ukuran batch tidak valid", () => {
+    expect(chunkSalesTransactionIds(["a", "b", "c", "d", "e"], 2)).toEqual([
+      ["a", "b"],
+      ["c", "d"],
+      ["e"],
+    ]);
+
+    expect(() => chunkSalesTransactionIds(["a"], 0)).toThrow(
+      "Ukuran batch sales_items harus berupa bilangan bulat lebih dari 0.",
+    );
+
+    expect(() => chunkSalesTransactionIds(["a"], 1.5)).toThrow(
+      "Ukuran batch sales_items harus berupa bilangan bulat lebih dari 0.",
+    );
   });
 });
 

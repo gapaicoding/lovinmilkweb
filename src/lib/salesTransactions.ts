@@ -182,6 +182,36 @@ export const MAX_SALES_TRANSACTION_NOTES_LENGTH = 500;
 export const MAX_SALES_TRANSACTION_QUANTITY = 999_999_999.99;
 export const MAX_SALES_TRANSACTION_UNIT_PRICE = 999_999_999_999.99;
 
+/**
+ * Batas aman jumlah transaction ID per request ketika mengambil sales_items.
+ *
+ * Supabase/PostgREST mengirim filter `.in(...)` melalui query string. Jika seluruh
+ * histori transaksi dimasukkan ke satu request, URL dapat menjadi terlalu panjang
+ * dan ditolak sebagai HTTP 400 Bad Request.
+ */
+export const SALES_ITEM_FETCH_BATCH_SIZE = 75;
+
+/**
+ * Memecah daftar transaction ID menjadi batch kecil tanpa mengubah urutan.
+ * Helper ini murni supaya strategi fetch dapat diuji tanpa Supabase runtime.
+ */
+export function chunkSalesTransactionIds(
+  transactionIds: readonly string[],
+  batchSize = SALES_ITEM_FETCH_BATCH_SIZE,
+): string[][] {
+  if (!Number.isInteger(batchSize) || batchSize <= 0) {
+    throw new Error("Ukuran batch sales_items harus berupa bilangan bulat lebih dari 0.");
+  }
+
+  const batches: string[][] = [];
+
+  for (let index = 0; index < transactionIds.length; index += batchSize) {
+    batches.push(transactionIds.slice(index, index + batchSize));
+  }
+
+  return batches;
+}
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

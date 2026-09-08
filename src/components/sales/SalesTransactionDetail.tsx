@@ -27,42 +27,53 @@ import {
 
 export interface SalesTransactionDetailProps {
   transaction: SalesTransaction;
+  itemsUnavailable?: boolean;
 }
 
 export function SalesTransactionDetail({
   transaction,
+  itemsUnavailable = false,
 }: SalesTransactionDetailProps) {
   const sortedItems = [...transaction.items].sort(
     (left, right) =>
       left.lineNo - right.lineNo,
   );
 
-  const totalQuantity =
-    calculateTotalQuantity(
-      sortedItems,
-    );
+  const totalQuantity = itemsUnavailable
+    ? null
+    : calculateTotalQuantity(
+        sortedItems,
+      );
 
-  const itemTotal =
-    calculateTransactionTotal(
-      sortedItems,
-    );
+  const itemTotal = itemsUnavailable
+    ? null
+    : calculateTransactionTotal(
+        sortedItems,
+      );
 
-  const totalHpp = sortedItems.reduce(
-    (total, item) => total + item.hppAmount,
-    0,
-  );
+  const totalHpp = itemsUnavailable
+    ? null
+    : sortedItems.reduce(
+        (total, item) => total + item.hppAmount,
+        0,
+      );
 
   const grossProfit =
-    transaction.totalAmount - totalHpp;
+    totalHpp === null
+      ? null
+      : transaction.totalAmount - totalHpp;
 
-  const hasProvisionalHpp = sortedItems.some(
-    (item) => item.hppStatus === "provisional",
-  );
-
-  const subunitSummary =
-    summarizeSubunits(
-      sortedItems,
+  const hasProvisionalHpp =
+    !itemsUnavailable &&
+    sortedItems.some(
+      (item) => item.hppStatus === "provisional",
     );
+
+  const subunitSummary = itemsUnavailable
+    ? "—"
+    : summarizeSubunits(
+        sortedItems,
+      );
 
   const isDeleted =
     Boolean(
@@ -70,6 +81,7 @@ export function SalesTransactionDetail({
     );
 
   const hasTotalMismatch =
+    itemTotal !== null &&
     Math.abs(
       transaction.totalAmount -
         itemTotal,
@@ -128,15 +140,11 @@ export function SalesTransactionDetail({
           </Badge>
 
           <Badge variant="outline">
-            {sortedItems.length} baris
+            {itemsUnavailable ? "Item tidak tersedia" : `${sortedItems.length} baris`}
           </Badge>
 
           <Badge variant="outline">
-            {formatNumber(
-              totalQuantity,
-              2,
-            )}{" "}
-            qty
+            {totalQuantity === null ? "Qty —" : `${formatNumber(totalQuantity, 2)} qty`}
           </Badge>
         </div>
       </div>
@@ -207,7 +215,18 @@ export function SalesTransactionDetail({
           </p>
         </div>
 
-        {sortedItems.length === 0 ? (
+        {itemsUnavailable ? (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+            <p className="font-medium text-destructive">
+              Item transaksi gagal dimuat
+            </p>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Header transaksi masih tersedia. Nilai Item, Qty, Subunit, HPP, dan Gross Profit
+              tidak ditampilkan sebagai 0 karena data item belum berhasil dibaca.
+            </p>
+          </div>
+        ) : sortedItems.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-center">
             <Package className="mx-auto h-8 w-8 text-muted-foreground" />
 
@@ -216,7 +235,7 @@ export function SalesTransactionDetail({
             </p>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Header transaksi tersedia, tetapi tidak ada item yang dapat
+              Header transaksi tersedia, tetapi transaksi memang tidak memiliki item yang dapat
               ditampilkan.
             </p>
           </div>
@@ -423,17 +442,16 @@ export function SalesTransactionDetail({
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <SummaryMetric
               label="Jumlah baris"
-              value={String(
-                sortedItems.length,
-              )}
+              value={itemsUnavailable ? "—" : String(sortedItems.length)}
             />
 
             <SummaryMetric
               label="Total quantity"
-              value={formatNumber(
-                totalQuantity,
-                2,
-              )}
+              value={
+                totalQuantity === null
+                  ? "—"
+                  : formatNumber(totalQuantity, 2)
+              }
             />
 
             <SummaryMetric
@@ -594,7 +612,7 @@ function SummaryMetric({
 
 interface MoneySummaryRowProps {
   label: string;
-  value: number;
+  value: number | null;
 }
 
 function MoneySummaryRow({
@@ -608,9 +626,7 @@ function MoneySummaryRow({
       </span>
 
       <span className="font-medium">
-        {formatRupiah(
-          value,
-        )}
+        {value === null ? "—" : formatRupiah(value)}
       </span>
     </div>
   );
