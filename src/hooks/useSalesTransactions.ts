@@ -10,6 +10,7 @@ import {
   buildCreateTransactionPayload,
   buildUpdateTransactionPayload,
   calculateLineSubtotal,
+  chunkSalesTransactionIds,
   type CreateSalesTransactionInput,
   type LinkedVisitSummary,
   type SalesEntrySource,
@@ -285,29 +286,59 @@ export function useSalesTransactions() {
         return [];
       }
 
-      const { data, error } = await supabase
-        .from("sales_items")
-        .select("*")
-        .in("sales_transaction_id", transactionIds)
-        .order("sales_transaction_id", {
-          ascending: true,
-        })
-        .order("line_no", {
-          ascending: true,
-        });
+      const rows: SalesTransactionItemRow[] = [];
+      const pageSize = 500;
 
-      if (error) {
-        throw error;
+      // Jangan kirim seluruh histori transaction ID ke satu `.in(...)`.
+      // Filter PostgREST tersebut berada di query string dan dapat melewati
+      // batas panjang URL setelah jumlah transaksi production membesar.
+      //
+      // Setiap batch juga dipaginasi agar batas row response Supabase/PostgREST
+      // tidak diam-diam memotong histori item ketika jumlah line sudah besar.
+      for (const batch of chunkSalesTransactionIds(transactionIds)) {
+        let offset = 0;
+
+        while (true) {
+          const { data, error } = await supabase
+            .from("sales_items")
+            .select("*")
+            .in("sales_transaction_id", batch)
+            .order("sales_transaction_id", {
+              ascending: true,
+            })
+            .order("line_no", {
+              ascending: true,
+            })
+            .range(offset, offset + pageSize - 1);
+
+          if (error) {
+            throw error;
+          }
+
+          const page = data ?? [];
+          rows.push(...page);
+
+          if (page.length < pageSize) {
+            break;
+          }
+
+          offset += pageSize;
+        }
       }
 
-      return data ?? [];
+      return rows;
     },
   });
 
+  // Data item hanya boleh dianggap [] jika query memang sukses dan hasilnya kosong.
+  // Ketika query error, UI menerima flag itemsLoadError agar tidak menampilkan
+  // angka 0/HPP 0/Gross Profit palsu dari array fallback kosong.
   const transactionItemRows = useMemo(
     () => transactionItemsQuery.data ?? [],
     [transactionItemsQuery.data],
   );
+
+  const itemsLoadError = transactionItemsQuery.error ?? null;
 
   const linkedVisitsQuery = useQuery({
     queryKey: salesTransactionQueryKeys.linkedVisits(outletId, transactionIds),
@@ -897,6 +928,7 @@ export function useSalesTransactions() {
     isFetching,
     isMutating,
     error,
+    itemsLoadError,
 
     // --------------------------------------------------------
     // Queries
