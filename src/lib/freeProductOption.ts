@@ -15,6 +15,15 @@ export interface ParsedProductSearch {
 
 const FREE_KEYWORDS = new Set(["free", "gratis"]);
 const LOVIN_MILK_SUBUNIT_CODE = "LOVIN_MILK";
+const FREE_ELIGIBLE_PRODUCT_SKUS = new Set([
+  "LM-D589E3AEE2", // Crispy French Fries
+  "LM-CCAC0264E2", // Crispy Fried Banana
+  "LM-80A8BA9C58", // Zesty Lemon Tea
+  "LM-9DDF56CA1E", // Ice Tea
+  "LM-81B1B22A3D", // Vanilla Milkshake
+  "LM-BF98BE2823", // Butter Rice Ball with Popcorn Chicken
+  "LM-3A8E206706", // Katsu Nori Rice Kids Meal
+]);
 
 export function parseProductSearch(query: string): ParsedProductSearch {
   const terms = query.trim().split(/\s+/).filter(Boolean);
@@ -32,13 +41,19 @@ export function isLovinMilkProduct(product: SalesProductOption): boolean {
   return product.subunitCode === LOVIN_MILK_SUBUNIT_CODE;
 }
 
+export function isFreeEligibleProduct(product: SalesProductOption): boolean {
+  const sku = product.productSku?.trim();
+
+  return isLovinMilkProduct(product) && sku !== undefined && FREE_ELIGIBLE_PRODUCT_SKUS.has(sku);
+}
+
 export function buildProductPickerOptions(
   products: readonly SalesProductOption[],
   query: string,
 ): SalesProductPickerOption[] {
   const parsed = parseProductSearch(query);
   const candidates = products.filter((product) => {
-    if (parsed.pricingMode === "free" && !isLovinMilkProduct(product)) return false;
+    if (parsed.pricingMode === "free" && !isFreeEligibleProduct(product)) return false;
     if (!parsed.productQuery) return true;
 
     const haystack = [
@@ -77,6 +92,6 @@ export function inferPricingMode(
 
 export function productPickerLabel(option: SalesProductPickerOption): string {
   return option.pricingMode === "free"
-    ? `FREE · ${option.product.productName}`
+    ? `FREE ${String.fromCharCode(183)} ${option.product.productName}`
     : option.product.productName;
 }
