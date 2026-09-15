@@ -20,6 +20,7 @@ const FREE_ELIGIBLE_PRODUCT_SKUS = new Set([
   "LM-CCAC0264E2", // Crispy Fried Banana
   "LM-80A8BA9C58", // Zesty Lemon Tea
   "LM-9DDF56CA1E", // Ice Tea
+  "LM-A0C9396E6D", // Original Milk
   "LM-81B1B22A3D", // Vanilla Milkshake
   "LM-BF98BE2823", // Butter Rice Ball with Popcorn Chicken
   "LM-3A8E206706", // Katsu Nori Rice Kids Meal
