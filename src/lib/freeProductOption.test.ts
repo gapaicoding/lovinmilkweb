@@ -27,6 +27,8 @@ const APPROVED_SKUS = [
   "LM-3A8E206706",
   "LM-F976DC88F7",
   "LM-63B15631C3",
+  "LM-3D867F8D2D",
+  "LM-DC11DC406F",
 ] as const;
 
 const productId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
@@ -62,13 +64,32 @@ const approvedProducts: SalesProductOption[] = [
   product(productId(8), "Katsu Nori Rice Kids Meal", "LM-3A8E206706", "Kids Meal Package"),
   { ...product(productId(12), "Cheese Mix Platter", "LM-F976DC88F7", "Snack Series"), sellingPrice: 17000 },
   { ...product(productId(13), "Fried Noodle Kids Meal", "LM-63B15631C3", "Kids Meal Package"), sellingPrice: 21000 },
+  product(productId(14), "Date Milk", "LM-3D867F8D2D", "Milks Series"),
+  product(productId(15), "Strawberry Milk", "LM-DC11DC406F", "Milks Series"),
 ];
 
 const originalMilk = approvedProducts[4];
+const dateMilk = approvedProducts[10];
+const strawberryMilk = approvedProducts[11];
 const mineralWater = product(productId(9), "Mineral Water", "LM-MINERAL", "Complementary Series");
 const chocolateIceCreamFloat = product(productId(10), "Chocolate Ice Cream Float", "LM-CHOCFLOAT", "Milks Series");
 const arayyaProduct = product(productId(11), "Crispy Fries", "AR-FRIES", "Snack Series", "ARAYYA");
-const allProducts = [...approvedProducts, mineralWater, chocolateIceCreamFloat, arayyaProduct];
+const strawberryIceCreamFloat = product(productId(16), "Strawberry Ice Cream Float", "LM-STRAWFLOAT", "Milks Series");
+const strawberryJellyDelight = product(productId(17), "Strawberry Jelly Delight", "LM-STRAWJELLY", "Dessert Series");
+const strawberryMilkshake = product(productId(18), "Strawberry Milkshake", "LM-STRAWKSHAKE", "Milkshake Series");
+const chocolateMilk = product(productId(19), "Chocolate Milk", "LM-CHOCMILK", "Milks Series");
+const matchaMilk = product(productId(20), "Matcha Milk", "LM-MATCHAMILK", "Milks Series");
+const allProducts = [
+  ...approvedProducts,
+  mineralWater,
+  chocolateIceCreamFloat,
+  arayyaProduct,
+  strawberryIceCreamFloat,
+  strawberryJellyDelight,
+  strawberryMilkshake,
+  chocolateMilk,
+  matchaMilk,
+];
 
 describe("virtual free product option", () => {
   it("parses free and gratis as mode tokens", () => {
@@ -77,10 +98,10 @@ describe("virtual free product option", () => {
     expect(parseProductSearch("original")).toEqual({ pricingMode: "normal", productQuery: "original" });
   });
 
-  it("offers exactly the ten approved SKUs as free options", () => {
+  it("offers exactly the twelve approved SKUs as free options", () => {
     const options = buildProductPickerOptions(allProducts, "free");
 
-    expect(options).toHaveLength(10);
+    expect(options).toHaveLength(12);
     expect(options.map(({ product: item }) => item.productSku)).toEqual(APPROVED_SKUS);
     expect(new Set(options.map(({ product: item }) => item.productSku))).toEqual(new Set(APPROVED_SKUS));
     expect(options.every(({ pricingMode }) => pricingMode === "free")).toBe(true);
@@ -109,6 +130,20 @@ describe("virtual free product option", () => {
     expect(buildProductPickerOptions(allProducts, "free milk ice")).toEqual([]);
   });
 
+  it("keeps strawberry lookalikes normal-only", () => {
+    expect(buildProductPickerOptions(allProducts, "free strawberry ice cream")).toEqual([]);
+    expect(buildProductPickerOptions(allProducts, "free strawberry jelly")).toEqual([]);
+    expect(buildProductPickerOptions(allProducts, "free strawberry milkshake")).toEqual([]);
+    expect(buildProductPickerOptions(allProducts, "strawberry ice cream").map(({ product: item }) => item.productName)).toEqual(["Strawberry Ice Cream Float"]);
+  });
+
+  it("keeps other Milks Series products normal-only", () => {
+    expect(buildProductPickerOptions(allProducts, "chocolate milk").map(({ product: item }) => item.productName)).toEqual(["Chocolate Milk"]);
+    expect(buildProductPickerOptions(allProducts, "free chocolate milk")).toEqual([]);
+    expect(buildProductPickerOptions(allProducts, "matcha milk").map(({ product: item }) => item.productName)).toEqual(["Matcha Milk"]);
+    expect(buildProductPickerOptions(allProducts, "free matcha milk")).toEqual([]);
+  });
+
   it("supports targeted searches only within the approved catalog", () => {
     expect(buildProductPickerOptions(allProducts, "free french").map(({ product: item }) => item.productName)).toEqual(["Crispy French Fries"]);
     expect(buildProductPickerOptions(allProducts, "free lemon").map(({ product: item }) => item.productName)).toEqual(["Zesty Lemon Tea"]);
@@ -125,6 +160,36 @@ describe("virtual free product option", () => {
     expect(buildProductPickerOptions(allProducts, "free fried noodle").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
     expect(buildProductPickerOptions(allProducts, "free fried noodle kids meal").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
     expect(buildProductPickerOptions(allProducts, "gratis fried noodle").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
+    expect(buildProductPickerOptions(allProducts, "free date").map(({ product: item }) => item.productName)).toEqual(["Date Milk"]);
+    expect(buildProductPickerOptions(allProducts, "free date milk").map(({ product: item }) => item.productName)).toEqual(["Date Milk"]);
+    expect(buildProductPickerOptions(allProducts, "gratis date").map(({ product: item }) => item.productName)).toEqual(["Date Milk"]);
+    expect(buildProductPickerOptions(allProducts, "free strawberry").map(({ product: item }) => item.productName)).toEqual(["Strawberry Milk"]);
+    expect(buildProductPickerOptions(allProducts, "free strawberry milk").map(({ product: item }) => item.productName)).toEqual(["Strawberry Milk"]);
+    expect(buildProductPickerOptions(allProducts, "gratis strawberry milk").map(({ product: item }) => item.productName)).toEqual(["Strawberry Milk"]);
+  });
+
+  it("keeps Date Milk normal and free variants on the same canonical product", () => {
+    const normal = buildProductPickerOptions([dateMilk], "date milk")[0];
+    const free = buildProductPickerOptions([dateMilk], "free date milk")[0];
+
+    expect(normal.optionId).toBe(`normal:${dateMilk.productId}`);
+    expect(free.optionId).toBe(`free:${dateMilk.productId}`);
+    expect(normal.product.productId).toBe(free.product.productId);
+    expect(selectProductPickerOption(normal)).toEqual({ productId: dateMilk.productId, pricingMode: "normal", unitPriceText: "15000" });
+    expect(selectProductPickerOption(free)).toEqual({ productId: dateMilk.productId, pricingMode: "free", unitPriceText: "0" });
+    expect(productPickerLabel(free)).toBe(`FREE ${String.fromCharCode(183)} Date Milk`);
+  });
+
+  it("keeps Strawberry Milk normal and free variants on the same canonical product", () => {
+    const normal = buildProductPickerOptions([strawberryMilk], "strawberry milk")[0];
+    const free = buildProductPickerOptions([strawberryMilk], "free strawberry milk")[0];
+
+    expect(normal.optionId).toBe(`normal:${strawberryMilk.productId}`);
+    expect(free.optionId).toBe(`free:${strawberryMilk.productId}`);
+    expect(normal.product.productId).toBe(free.product.productId);
+    expect(selectProductPickerOption(normal)).toEqual({ productId: strawberryMilk.productId, pricingMode: "normal", unitPriceText: "15000" });
+    expect(selectProductPickerOption(free)).toEqual({ productId: strawberryMilk.productId, pricingMode: "free", unitPriceText: "0" });
+    expect(productPickerLabel(free)).toBe(`FREE ${String.fromCharCode(183)} Strawberry Milk`);
   });
 
   it("keeps the new normal and free variants on canonical products", () => {
@@ -178,10 +243,10 @@ describe("virtual free product option", () => {
     expect(JSON.stringify(payload)).not.toContain("free:");
   });
 
-  it("retains the normal picker limit while free results max at ten", () => {
+  it("retains the normal picker limit while free results max at twelve", () => {
     const normalProducts = Array.from({ length: 31 }, (_, index) => product(productId(index + 20), `Milk ${index}`, `LM-NORMAL-${index}`, "Milks Series"));
 
     expect(buildProductPickerOptions(normalProducts, "")).toHaveLength(30);
-    expect(buildProductPickerOptions(allProducts, "free")).toHaveLength(10);
+    expect(buildProductPickerOptions(allProducts, "free")).toHaveLength(12);
   });
 });
