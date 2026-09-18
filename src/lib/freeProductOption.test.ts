@@ -25,6 +25,8 @@ const APPROVED_SKUS = [
   "LM-81B1B22A3D",
   "LM-BF98BE2823",
   "LM-3A8E206706",
+  "LM-F976DC88F7",
+  "LM-63B15631C3",
 ] as const;
 
 const productId = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
@@ -58,6 +60,8 @@ const approvedProducts: SalesProductOption[] = [
   product(productId(6), "Vanilla Milkshake", "LM-81B1B22A3D", "Milkshake Series"),
   product(productId(7), "Butter Rice Ball with Popcorn Chicken", "LM-BF98BE2823", "Kids Meal Package"),
   product(productId(8), "Katsu Nori Rice Kids Meal", "LM-3A8E206706", "Kids Meal Package"),
+  { ...product(productId(12), "Cheese Mix Platter", "LM-F976DC88F7", "Snack Series"), sellingPrice: 17000 },
+  { ...product(productId(13), "Fried Noodle Kids Meal", "LM-63B15631C3", "Kids Meal Package"), sellingPrice: 21000 },
 ];
 
 const originalMilk = approvedProducts[4];
@@ -73,11 +77,12 @@ describe("virtual free product option", () => {
     expect(parseProductSearch("original")).toEqual({ pricingMode: "normal", productQuery: "original" });
   });
 
-  it("offers exactly the eight approved SKUs as free options", () => {
+  it("offers exactly the ten approved SKUs as free options", () => {
     const options = buildProductPickerOptions(allProducts, "free");
 
-    expect(options).toHaveLength(8);
+    expect(options).toHaveLength(10);
     expect(options.map(({ product: item }) => item.productSku)).toEqual(APPROVED_SKUS);
+    expect(new Set(options.map(({ product: item }) => item.productSku))).toEqual(new Set(APPROVED_SKUS));
     expect(options.every(({ pricingMode }) => pricingMode === "free")).toBe(true);
     expect(isFreeEligibleProduct(mineralWater)).toBe(false);
     expect(isFreeEligibleProduct(arayyaProduct)).toBe(false);
@@ -113,6 +118,33 @@ describe("virtual free product option", () => {
     expect(buildProductPickerOptions(allProducts, "gratis vanilla").map(({ product: item }) => item.productName)).toEqual(["Vanilla Milkshake"]);
     expect(buildProductPickerOptions(allProducts, "free butter rice").map(({ product: item }) => item.productName)).toEqual(["Butter Rice Ball with Popcorn Chicken"]);
     expect(buildProductPickerOptions(allProducts, "free katsu nori").map(({ product: item }) => item.productName)).toEqual(["Katsu Nori Rice Kids Meal"]);
+    expect(buildProductPickerOptions(allProducts, "free cheese").map(({ product: item }) => item.productName)).toEqual(["Cheese Mix Platter"]);
+    expect(buildProductPickerOptions(allProducts, "free cheese mix").map(({ product: item }) => item.productName)).toEqual(["Cheese Mix Platter"]);
+    expect(buildProductPickerOptions(allProducts, "free cheese mix platter").map(({ product: item }) => item.productName)).toEqual(["Cheese Mix Platter"]);
+    expect(buildProductPickerOptions(allProducts, "gratis cheese").map(({ product: item }) => item.productName)).toEqual(["Cheese Mix Platter"]);
+    expect(buildProductPickerOptions(allProducts, "free fried noodle").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
+    expect(buildProductPickerOptions(allProducts, "free fried noodle kids meal").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
+    expect(buildProductPickerOptions(allProducts, "gratis fried noodle").map(({ product: item }) => item.productName)).toEqual(["Fried Noodle Kids Meal"]);
+  });
+
+  it("keeps the new normal and free variants on canonical products", () => {
+    const cheese = approvedProducts[8];
+    const normalCheese = buildProductPickerOptions([cheese], "cheese mix platter")[0];
+    const freeCheese = buildProductPickerOptions([cheese], "free cheese mix platter")[0];
+    expect(normalCheese.optionId).toBe(`normal:${cheese.productId}`);
+    expect(freeCheese.optionId).toBe(`free:${cheese.productId}`);
+    expect(selectProductPickerOption(normalCheese)).toEqual({ productId: cheese.productId, pricingMode: "normal", unitPriceText: "17000" });
+    expect(selectProductPickerOption(freeCheese)).toEqual({ productId: cheese.productId, pricingMode: "free", unitPriceText: "0" });
+    expect(productPickerLabel(freeCheese)).toBe(`FREE ${String.fromCharCode(183)} Cheese Mix Platter`);
+
+    const noodle = approvedProducts[9];
+    const normalNoodle = buildProductPickerOptions([noodle], "fried noodle kids meal")[0];
+    const freeNoodle = buildProductPickerOptions([noodle], "free fried noodle kids meal")[0];
+    expect(normalNoodle.optionId).toBe(`normal:${noodle.productId}`);
+    expect(freeNoodle.optionId).toBe(`free:${noodle.productId}`);
+    expect(selectProductPickerOption(normalNoodle)).toEqual({ productId: noodle.productId, pricingMode: "normal", unitPriceText: "21000" });
+    expect(selectProductPickerOption(freeNoodle)).toEqual({ productId: noodle.productId, pricingMode: "free", unitPriceText: "0" });
+    expect(productPickerLabel(freeNoodle)).toBe(`FREE ${String.fromCharCode(183)} Fried Noodle Kids Meal`);
   });
 
   it("keeps Original Milk normal and free variants on the same canonical product", () => {
@@ -146,10 +178,10 @@ describe("virtual free product option", () => {
     expect(JSON.stringify(payload)).not.toContain("free:");
   });
 
-  it("retains the normal picker limit while free results max at eight", () => {
+  it("retains the normal picker limit while free results max at ten", () => {
     const normalProducts = Array.from({ length: 31 }, (_, index) => product(productId(index + 20), `Milk ${index}`, `LM-NORMAL-${index}`, "Milks Series"));
 
     expect(buildProductPickerOptions(normalProducts, "")).toHaveLength(30);
-    expect(buildProductPickerOptions(allProducts, "free")).toHaveLength(8);
+    expect(buildProductPickerOptions(allProducts, "free")).toHaveLength(10);
   });
 });
