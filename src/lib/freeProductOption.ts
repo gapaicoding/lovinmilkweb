@@ -24,6 +24,8 @@ const FREE_ELIGIBLE_PRODUCT_SKUS = new Set([
   "LM-81B1B22A3D", // Vanilla Milkshake
   "LM-BF98BE2823", // Butter Rice Ball with Popcorn Chicken
   "LM-3A8E206706", // Katsu Nori Rice Kids Meal
+  "LM-F976DC88F7", // Cheese Mix Platter
+  "LM-63B15631C3", // Fried Noodle Kids Meal
 ]);
 
 export function parseProductSearch(query: string): ParsedProductSearch {
