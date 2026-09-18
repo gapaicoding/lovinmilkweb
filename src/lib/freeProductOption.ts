@@ -26,6 +26,8 @@ const FREE_ELIGIBLE_PRODUCT_SKUS = new Set([
   "LM-3A8E206706", // Katsu Nori Rice Kids Meal
   "LM-F976DC88F7", // Cheese Mix Platter
   "LM-63B15631C3", // Fried Noodle Kids Meal
+  "LM-3D867F8D2D", // Date Milk
+  "LM-DC11DC406F", // Strawberry Milk
 ]);
 
 export function parseProductSearch(query: string): ParsedProductSearch {
